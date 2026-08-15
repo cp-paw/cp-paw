@@ -13,6 +13,174 @@ See https://cppaw.org for further information (Currently, the
 description on https://cppaw.org refers to an older release and does
 not apply to the present implementation.)
 
+## `cp-paw-nvhpc` development features
+
+> [!WARNING]
+> The NVIDIA accelerator paths and the Skala functional on this branch are
+> experimental. CPU fallbacks remain available, and optional accelerator
+> features are either selected by a dedicated build target or guarded by a
+> run-time switch. Validate energies, forces, stress, and parallel parity for
+> the intended system before using these paths for production calculations.
+
+The build system detects the NVIDIA HPC SDK, CUDA, and individual libraries
+instead of assuming that every NVIDIA installation provides the same stack.
+With the installer's default `auto` policy, unavailable optional targets are
+skipped. Set an installer option to `require` to turn a missing dependency or
+failed build into an installation error.
+
+### NVIDIA library coverage
+
+| Component | CP-PAW integration | Build targets |
+| --- | --- | --- |
+| NVPL | CPU BLAS, LAPACK, and FFTW backend when found; the NVHPC compiler BLAS/LAPACK libraries remain a fallback | `nvhpc_fast*`, `nvhpc_profile*` |
+| NVBLAS | BLAS-3 interposition experiment for existing DGEMM, ZGEMM, DSYRK, and ZHERK calls | `nvhpc_nvblas_*` |
+| NVLAMATH | NVIDIA LAPACK/cuSOLVER wrapper path | `nvhpc_nvlamath_*`, `nvhpc_gpu_all_*` |
+| cuFFTW | FFTW3-compatible cuFFT wrapper that preserves the existing CP-PAW FFT call structure | `nvhpc_cufftw_*`, `nvhpc_gpu_all_*` |
+| cuFFT | Native cuFFT/OpenACC path for selected batched complex FFTs; the 1-D and diagnostic 3-D paths are opt-in at run time | `nvhpc_cufft_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
+| cuBLAS | Explicit OpenACC/cuBLAS path for selected dense matrix, overlap, orthogonalization, projection, and one-center operations | `nvhpc_cublas_acc_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
+| cuSOLVER | Standard and generalized real/complex eigensolvers plus an opt-in Gram-Cholesky path | `nvhpc_cusolver_acc_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
+| FTorch/LibTorch | Optional bridge to the experimental Skala 1.1 PAW functional | composable with every build target |
+
+The combined `nvhpc_gpu_acc_*` targets enable the native cuFFT, explicit
+cuBLAS, and explicit cuSOLVER integrations in one executable. The optional
+`nvhpc_gpu_all_*` targets additionally link cuFFTW and NVLAMATH so that the
+complete implemented library stack can be compiled and tested together.
+NVBLAS remains separate because it interposes the host BLAS interface.
+
+```sh
+# Combined release builds
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast -j16 -z
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast_parallel -j16 -z
+
+# Combined profiling build with the device-residency defaults
+CPPAW_TOOLCHAIN=nvhpc \
+  src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile -j16 -z
+
+# Integration build containing all composable NVIDIA libraries
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_fast -j16 -z
+```
+
+Important run-time defaults are deliberately conservative:
+
+- explicit cuBLAS is enabled in builds that contain it, with an offload
+  threshold of `CPPAW_CUBLAS_ACC_MINFLOP=1e7`;
+- cuSOLVER is enabled for supported problems of size 256 or larger and can be
+  disabled with `CPPAW_CUSOLVER_ACC=0`;
+- native cuFFT is disabled until `CPPAW_CUFFT_ACC=1` is set; its default 1-D
+  threshold is 512 batched elements, while the native 3-D path remains a
+  separate diagnostic option;
+- focused residency defaults are enabled by the
+  `nvhpc_gpu_acc_residency_profile*` targets; the broader all-in-one stack is
+  opt-in via `CPPAW_GPU_RESIDENCY_STACK=1`;
+- Skala application and cuBLAS FP64 emulation are disabled by default.
+
+The all-library builds do not add cuFFTMp, cuBLASMp, cuSOLVERMp, cuEST, or
+ALCHEMI. In particular, the Ozaki implementation described below uses the
+CUDA 13 cuBLAS API and has no cuEST dependency.
+
+### CUDA 13 FP64 Ozaki emulation
+
+CUDA 13.0 Update 2 introduced a cuBLAS fixed-point emulation API for FP64
+matrix operations. CP-PAW detects this API with a compile probe and, when it is
+available, compiles an opt-in dynamic-mantissa Ozaki path into every explicit
+cuBLAS target. Older CUDA toolkits and unsupported operations continue to use
+native FP64 without another source or link dependency.
+
+```sh
+export CPPAW_CUBLAS_FP64_EMULATION=1
+export CPPAW_CUBLAS_FP64_STRATEGY=performant
+export CPPAW_CUBLAS_FP64_WORKSPACE_MB=2048
+```
+
+Safe per-kernel defaults after the main switch is enabled are
+`CPPAW_CUBLAS_FP64_DGEMM=1`, `CPPAW_CUBLAS_FP64_ZGEMM=1`, and
+`CPPAW_CUBLAS_FP64_ZHERK=0`. Dynamic mantissa control, the `performant`
+dispatch strategy, and one persistent 2048 MiB cuBLAS workspace are used. The
+workspace is rebound after stream changes. `CPPAW_CUBLAS_FP64_STRATEGY=eager`
+is intended for capability and correctness checks rather than routine use.
+
+Set `CPPAW_CUBLAS_FP64_TELEMETRY=1` to record whether each selected operation
+used emulation, fell back to native FP64, or could not report its mode. Set
+`CPPAW_CUBLAS_FP64_CHECK=1` for machine-readable energy, orthonormality, force,
+stress, and k-point validation data. These diagnostics synchronize additional
+GPU work and should be disabled for timing runs. The complete switch reference
+and the 1024/2048/4096-band validation driver are documented in
+[`tests/profile/README.md`](tests/profile/README.md) and implemented by
+[`tests/profile/si64/run_ozaki_bands.sh`](tests/profile/si64/run_ozaki_bands.sh).
+
+### Experimental Skala 1.1 PAW functional
+
+The optional Skala path uses FTorch and LibTorch to evaluate a TorchScript
+Skala 1.1 model on CP-PAW's native smooth grid and atom-centered PAW grids. It
+assembles each atom block as smooth plus all-electron one-center minus pseudo
+one-center fields before model inference. This is a PAW-specific integration;
+it is not a literal copy of CP2K's GAPW implementation.
+
+Skala consumes the density, its gradient, and the positive kinetic-energy
+density. CP-PAW constructs the corresponding generalized Kohn-Sham scalar and
+positive-tau operators, one-center contributions, and the spatial derivatives
+needed for analytic forces and stress. Higher spatial derivatives enter those
+operator and moving-grid contractions even though the model input itself does
+not contain a density Hessian.
+
+Build a pinned FTorch bridge and download the model, then compose the bridge
+with the desired CP-PAW target:
+
+```sh
+src/Buildtools/paw_skala_setup.sh --device auto --download-model
+
+CPPAW_USE_SKALA_FTORCH=yes \
+CPPAW_SKALA_FTORCH_ROOT="$PWD/bin/skala_ftorch_cuda" \
+  src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast -j16 -z
+```
+
+The functional is selected in the input with a `!SKALA` block. The conservative
+starting point evaluates the Skala path while keeping CP-PAW's conventional XC
+operator active:
+
+```text
+!SKALA
+ MODEL='path/to/skala-1.1-rev1-cuda.fun'
+ DEVICE='AUTO'
+ RADIALPOINTS=200
+ LEBEDEVEXACTNESS=53
+ LEBEDEVORIENTATIONS=1
+ APPLY=F
+ APPLYSMOOTH=T
+ APPLYTAU=T
+ APPLYONECENTER=T
+ INTERPOLATEPARTITION=F
+ DISTRIBUTEGPU=F
+ CHECK=F
+!END
+```
+
+`APPLY=T` enables the experimental electronic operator. CUDA inference runs on
+the MPI root by default because that is the reproducible multi-rank mode for
+the current float32 model; `DISTRIBUTEGPU=T` is experimental. `CHECK=T` enables
+variational diagnostics and should be used for correctness runs. Complete
+setup notes, SCF cautions, quadrature guidance, force/stress finite-difference
+drivers, MPI and k-point validation, and the exact field contract are in
+[`src/SkalaBridge/README.md`](src/SkalaBridge/README.md).
+
+### Profiling and validation
+
+Profiling builds record FFT, BLAS/LAPACK, accelerator, MPI transpose, transfer,
+residency, and Skala phase data in `cppaw_accel_profile*.csv`. The Si64 harness
+can compare CPU and GPU configurations and emit machine-readable TSV plus
+Markdown summaries. These cases are intentionally outside the default test
+suite and make no general performance guarantee.
+
+```sh
+src/Tools/Scripts/paw_gpu_capabilities.sh
+cd tests/profile/si64
+NSTEPS=1 ./run_gpu_exploration.sh
+```
+
+See [`tests/profile/README.md`](tests/profile/README.md) for the build/case
+matrix, run-time switches, correctness checks, and interpretation of profiler
+columns.
+
 
 # Configuration and Installation instructions
 
@@ -27,7 +195,11 @@ not apply to the present implementation.)
 - bash, cpp, ar
 - tex (latex) distribution (e.g. TeX Live) 
 - LAPACK, BLAS, FFTW3, MPI (optional), LIBXC (optional)
-- optional NVIDIA HPC SDK stack. When `nvfortran` is detected, `./paw_install` also tries `nvhpc_fast` and `nvhpc_fast_parallel` builds using NVPL when available and HPC-X MPI for parallel targets. If CUDA plus NVBLAS are available, optional `nvhpc_nvblas_*` builds link the existing BLAS-3 calls through NVIDIA's GPU BLAS interposition layer. If CUDA plus NVLAMATH are available, optional `nvhpc_nvlamath_*` builds use NVIDIA's LAPACK/cuSOLVER wrapper path. If CUDA plus cuFFTW/cuFFT are available, optional `nvhpc_cufftw_*` builds route CP-PAW's existing FFTW3 calls through cuFFT's FFTW3-compatible wrapper. The experimental `nvhpc_cufft_*` builds require CUDA and use native cuFFT/OpenACC for selected batched 1-D complex FFTs while keeping NVPL FFTW as the fallback. The experimental `nvhpc_cublas_acc_*` builds require CUDA and use OpenACC data regions plus cuBLAS-v2 for selected large complex BLAS-3 kernels. The experimental `nvhpc_cusolver_acc_*` builds require CUDA and use OpenACC data regions plus cuSOLVER-Dn for selected dense real/complex standard and generalized eigensolvers. The combined `nvhpc_gpu_acc_*` builds enable native cuFFT, cuBLAS/OpenACC and cuSOLVER/OpenACC for one-GPU profiling. The recommended profiled GPU path is `nvhpc_gpu_acc_residency_profile`, which defaults to `CPPAW_GPU_RESIDENCY=1` and focuses on keeping selected wavefunction/projection/overlap regions resident on the device. The opt-in `nvhpc_gpu_all_*` builds link NVPL fallbacks plus cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and NVLAMATH in one binary; NVBLAS remains a separate interposition experiment. Set `CPPAW_INSTALL_NVHPC=no` to skip NVIDIA builds, `CPPAW_INSTALL_NVHPC=require` to make them mandatory, `CPPAW_INSTALL_NVBLAS=no` to skip NVBLAS variants, `CPPAW_INSTALL_NVLAMATH=no` to skip NVLAMATH variants, `CPPAW_INSTALL_CUFFTW=no` to skip cuFFTW variants, `CPPAW_INSTALL_CUFFT=no` to skip native cuFFT variants, `CPPAW_INSTALL_GPU_ACC=no` to skip combined GPU variants, `CPPAW_INSTALL_GPU_RESIDENCY_PROFILE=no` to skip the recommended residency profile when `CPPAW_INSTALL_PROFILE=yes`, `CPPAW_INSTALL_GPU_ALL=yes` to add all-library GPU variants, `CPPAW_INSTALL_CUBLAS_ACC=no` to skip cuBLAS/OpenACC variants, or `CPPAW_INSTALL_CUSOLVER_ACC=no` to skip cuSOLVER/OpenACC variants.
+- optional NVIDIA HPC SDK and CUDA libraries, as summarized in the
+  [`cp-paw-nvhpc` development features](#cp-paw-nvhpc-development-features)
+  section above
+- optional CMake, Python, FTorch, and LibTorch for the Skala bridge; the setup
+  helper installs the pinned bridge dependencies
 - tools: xmgrace, gnuplot, avogadro1
 
 ## Installation
