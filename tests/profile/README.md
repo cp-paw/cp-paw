@@ -152,7 +152,10 @@ the phase columns to localize unexplained wall time before adding lower-level
 kernel instrumentation. Nested `SKALA_*` timers are likewise kept out of
 `rank_s` and reported as `skala_s` plus per-phase columns for partitioning,
 atom-grid construction, model evaluation, one-center work, its adjoint, and
-grid back-projection. The aggregate copy estimate `copy_gb` is split into
+grid back-projection. Skala runs also expose protocol values as
+`static_total_energy`, `model_xc_energy`, `hybrid_grid_rows`, and
+`partition_classes`; use the first two instead of the Car-Parrinello
+`CONSTANT ENERGY` when checking MPI invariance. The aggregate copy estimate `copy_gb` is split into
 semantic buckets for the GPU-residency work: `copy_wave_gb` for wavefunction
 arrays, `copy_proj_gb` for projector/projection arrays, `copy_offden_gb` for
 off-site density-matrix transfers, and `copy_denmat_gb` for one-center

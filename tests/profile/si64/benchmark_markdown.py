@@ -99,6 +99,10 @@ def main(argv):
         ("update_offden_gb", 2),
         ("update_denmat_gb", 2),
         ("energy", 6),
+        ("static_total_energy", 6),
+        ("model_xc_energy", 6),
+        ("hybrid_grid_rows", 0),
+        ("partition_classes", 0),
         ("energy_delta", 6),
     ]
     labels = ["coverage_%" if key == "coverage_pct" else key for key, _ in columns]

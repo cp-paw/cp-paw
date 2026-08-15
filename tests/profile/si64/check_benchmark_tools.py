@@ -133,6 +133,13 @@ def check_summary_and_markdown(tmpdir):
         "CONSTANT ENERGY 302.280854\nNORMAL STOP\n",
     )
     write(
+        os.path.join(run_dir, "case.prot"),
+        "HYBRID-GRID ROWS 1348944\n"
+        "PARTITION TRANSLATION CLASSES 2\n"
+        "MODEL XC ENERGY -1.21801589257683E+03\n"
+        "TOTAL ENERGY : -8.483135182E+02 H\n",
+    )
+    write(
         os.path.join(run_dir, "run.env"),
         "ranks=1\nnsteps=1\nexpected_energy=302.280854\n",
     )
@@ -155,6 +162,10 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["skala_s"], "2", "skala_s")
     assert_equal(row["skala_partition_s"], "0.5", "skala_partition_s")
     assert_equal(row["skala_model_s"], "1.5", "skala_model_s")
+    assert_equal(row["hybrid_grid_rows"], "1348944", "hybrid_grid_rows")
+    assert_equal(row["partition_classes"], "2", "partition_classes")
+    assert_equal(row["model_xc_energy"], "-1218.01589", "model_xc_energy")
+    assert_equal(row["static_total_energy"], "-848.313518", "static_total_energy")
     assert_equal(row["transfer_gb"], "18.75", "transfer_gb")
     assert_equal(row["copy_gb"], "17.5", "copy_gb")
     assert_equal(row["copy_wave_gb"], "1.75", "copy_wave_gb")
@@ -170,6 +181,7 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(markdown, "copy_wave_gb", "benchmark markdown header")
     assert_contains(markdown, "update_wave_gb", "benchmark markdown update header")
     assert_contains(markdown, "skala_atom_grid_s", "benchmark markdown Skala header")
+    assert_contains(markdown, "model_xc_energy", "benchmark markdown energy header")
     assert_contains(markdown, "|  | case | 1 | yes | 10.00 |", "benchmark markdown row")
 
     profile_summary = run_tool(

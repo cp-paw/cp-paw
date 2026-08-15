@@ -188,6 +188,38 @@ def final_energy(run_dir):
     return energy
 
 
+def protocol_metrics(run_dir):
+    metrics = {
+        "static_total_energy": None,
+        "model_xc_energy": None,
+        "hybrid_grid_rows": None,
+        "partition_classes": None,
+    }
+    number = r"[-+]?\d+(?:\.\d*)?(?:[EeDd][-+]?\d+)?"
+    labels = {
+        "TOTAL ENERGY": "static_total_energy",
+        "MODEL XC ENERGY": "model_xc_energy",
+        "HYBRID-GRID ROWS": "hybrid_grid_rows",
+        "PARTITION TRANSLATION CLASSES": "partition_classes",
+    }
+    for path in sorted(glob.glob(os.path.join(run_dir, "*.prot"))):
+        with open(path, errors="replace") as handle:
+            for line in handle:
+                stripped = line.strip()
+                for label, key in labels.items():
+                    if not stripped.startswith(label):
+                        continue
+                    values = re.findall(number, stripped[len(label):])
+                    if not values:
+                        continue
+                    value = values[0].replace("D", "E").replace("d", "e")
+                    if key in ("hybrid_grid_rows", "partition_classes"):
+                        metrics[key] = int(float(value))
+                    else:
+                        metrics[key] = float(value)
+    return metrics
+
+
 def run_env(run_dir):
     values = {}
     path = os.path.join(run_dir, "run.env")
@@ -247,6 +279,7 @@ def main(argv):
         wall = wall_time(run_dir)
         wall_rank = wall_rank_time(wall, env.get("ranks"))
         energy = final_energy(run_dir)
+        protocol = protocol_metrics(run_dir)
         energy_delta, energy_is_ok = energy_check(energy, env)
         ok = run_ok(run_dir) and (energy_is_ok is not False)
         gap = None
@@ -305,6 +338,10 @@ def main(argv):
                 "update_offden_gb": totals["update_offden_gb"],
                 "update_denmat_gb": totals["update_denmat_gb"],
                 "energy": energy,
+                "static_total_energy": protocol["static_total_energy"],
+                "model_xc_energy": protocol["model_xc_energy"],
+                "hybrid_grid_rows": protocol["hybrid_grid_rows"],
+                "partition_classes": protocol["partition_classes"],
                 "energy_delta": energy_delta,
                 "energy_ok": (
                     "" if energy_is_ok is None else ("yes" if energy_is_ok else "no")
@@ -364,6 +401,10 @@ def main(argv):
         "update_offden_gb",
         "update_denmat_gb",
         "energy",
+        "static_total_energy",
+        "model_xc_energy",
+        "hybrid_grid_rows",
+        "partition_classes",
         "energy_delta",
         "energy_ok",
         "env",

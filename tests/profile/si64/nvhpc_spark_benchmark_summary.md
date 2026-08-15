@@ -4442,6 +4442,41 @@ in the automatic standard/resource benchmark recommendations. This keeps the
 runtime default conservative while ensuring future PR comments compare the
 validated full-stack case against the base residency stack and CPU references.
 
+## Skala PAW Hybrid-Grid Profiling
+
+Spark GB10 runs on 2026-08-15 used the periodic Si64 Skala input, `NSTEPS=1`,
+one MPI rank and one GPU unless stated otherwise. `CHECK=F` avoids the
+finite-difference validation quadratures. The relevant correctness quantities
+are the static `TOTAL ENERGY` and `MODEL XC ENERGY`; `CONSTANT ENERGY` also
+contains the rank-sensitive fictitious wave-function kinetic energy.
+
+| Exact-grid stage | Wall time | Skala detail | Atom grid | Model | Model XC energy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Validation gating only | 540.83 s | not split | not split | not split | -1218.0158926 H |
+| Cached smooth-grid partition | 109.51 s | 39.68 s | 25.27 s | 6.98 s | -1218.0158926 H |
+| Reused smooth-grid selections | 105.84 s | 38.18 s | 24.76 s | 6.30 s | -1218.0158926 H |
+| Reused cell inverse | 103.37 s | 38.80 s | 25.10 s | 6.48 s | -1218.0158926 H |
+| Translational local-partition cache | 88.41 s | 19.44 s | 6.08 s | 6.25 s | -1218.0158918 H |
+| Interpolated local partition diagnostic | 88.23 s | 20.14 s | 6.57 s | 6.41 s | -1218.0070782 H |
+
+The exact translational cache detects two periodic environment classes and
+reuses 62 of the 64 local 11,000-point Becke partitions. Relative to the first
+uncached Si64 run it gives a `6.12x` wall-time improvement; relative to the
+previous exact selection-cache stage it is `1.20x` faster. Its composite
+electron count differs by `1.4e-10` and the model energy by `8.1e-7 H`,
+consistent with reordered floating-point evaluation of translation-equivalent
+weights. The interpolated diagnostic is no faster and shifts the model energy
+by `8.81e-3 H`, so `INTERPOLATEPARTITION=F` remains the production default.
+
+A pre-translation-cache four-rank run sharing the same GPU took 349.80 s,
+`3.19x` longer than its one-rank reference. Its static total and model XC
+energies agreed within `3.4e-5 H`; the apparent `6.12 H` difference in
+`CONSTANT ENERGY` came entirely from the fictitious wave-function kinetic
+term. Multiple MPI/Torch contexts on one GPU are therefore not recommended for
+this workload. With the exact atom-grid bottleneck reduced, the one-rank
+profile is now dominated by the 66.20 s plane-wave FFT envelope; Skala model
+batching is secondary at 6.25 s.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
