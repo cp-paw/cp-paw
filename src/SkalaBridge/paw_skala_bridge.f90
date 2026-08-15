@@ -173,6 +173,7 @@ contains
     integer(ftorch_int), parameter :: layout2(2) = [1, 2]
     integer(ftorch_int), parameter :: layout3(3) = [1, 2, 3]
     real(real64), allocatable, target :: density_t_data(:,:), grad_t_data(:,:,:), kin_t_data(:,:)
+    real(real64), allocatable, target :: grid_coord_t_data(:,:), atom_coord_t_data(:,:)
     integer(int64), allocatable, target :: bound_shape(:,:)
     type(torch_tensor) :: tensors(9)
     type(c_ptr) :: dict_handle
@@ -212,7 +213,8 @@ contains
     max_grid_size = int(maxval(atomic_grid_sizes))
 
     allocate(density_t_data(2, npoint), grad_t_data(2, 3, npoint), &
-      & kin_t_data(2, npoint), bound_shape(max_grid_size, 0))
+      & kin_t_data(2, npoint), grid_coord_t_data(3, npoint), &
+      & atom_coord_t_data(3, natom), bound_shape(max_grid_size, 0))
     do ipoint = 1, npoint
       density_t_data(:, ipoint) = density(ipoint, :)
       kin_t_data(:, ipoint) = kin(ipoint, :)
@@ -270,12 +272,16 @@ contains
     call copy_gradient(derivative_handles(1), density_deriv, int(size(density_deriv), int64))
     if (status == 0) call copy_gradient(derivative_handles(2), grad_deriv, int(size(grad_deriv), int64))
     if (status == 0) call copy_gradient(derivative_handles(3), kin_deriv, int(size(kin_deriv), int64))
-    if (status == 0 .and. present(grid_coord_deriv)) &
-      & call copy_gradient(derivative_handles(4), grid_coord_deriv, int(size(grid_coord_deriv), int64))
+    if (status == 0 .and. present(grid_coord_deriv)) then
+      call copy_gradient(derivative_handles(4), grid_coord_t_data, int(size(grid_coord_t_data), int64))
+      if (status == 0) grid_coord_deriv = transpose(grid_coord_t_data)
+    end if
     if (status == 0 .and. present(grid_weight_deriv)) &
       & call copy_gradient(derivative_handles(5), grid_weight_deriv, int(size(grid_weight_deriv), int64))
-    if (status == 0 .and. present(atom_coord_deriv)) &
-      & call copy_gradient(derivative_handles(6), atom_coord_deriv, int(size(atom_coord_deriv), int64))
+    if (status == 0 .and. present(atom_coord_deriv)) then
+      call copy_gradient(derivative_handles(6), atom_coord_t_data, int(size(atom_coord_t_data), int64))
+      if (status == 0) atom_coord_deriv = transpose(atom_coord_t_data)
+    end if
     if (status == 0 .and. present(atomic_weight_deriv)) &
       & call copy_gradient(derivative_handles(7), atomic_weight_deriv, int(size(atomic_weight_deriv), int64))
     call cleanup()

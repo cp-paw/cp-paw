@@ -13,8 +13,12 @@ program skala_bridge_smoke
   real(real64), target :: atom_coords(natom, 3), atomic_grid_weights(npoint)
   real(real64), target :: density_deriv(npoint, 2), grad_deriv(npoint, 3, 2)
   real(real64), target :: kin_deriv(npoint, 2)
+  real(real64), target :: grid_coord_deriv(npoint, 3), grid_weight_deriv(npoint)
+  real(real64), target :: atom_coord_deriv(natom, 3), atomic_weight_deriv(npoint)
   integer(int64), target :: atomic_grid_sizes(natom)
-  real(real64) :: energy, angle, radius
+  real(real64), parameter :: fd_step = 1.0e-4_real64, fd_tolerance = 2.0e-5_real64
+  real(real64) :: energy, angle, radius, eplus, eminus, original, max_error
+  real(real64) :: analytic(7)
   integer :: device_index, i, iatom, ipoint, status
   character(len=1024) :: model_path, device, device_index_text, message
 
@@ -66,7 +70,8 @@ program skala_bridge_smoke
   end if
   call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
     & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
-    & grad_deriv, kin_deriv, status, message)
+    & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
+    & atom_coord_deriv, atomic_weight_deriv)
   if (status /= 0) then
     write (*, '(a)') "Skala evaluation failed: " // trim(message)
     stop 4
@@ -76,6 +81,106 @@ program skala_bridge_smoke
     write (*, '(a)') "Skala evaluation returned a non-finite value"
     stop 5
   end if
+  if (.not. all(ieee_is_finite(grid_coord_deriv)) &
+      .or. .not. all(ieee_is_finite(grid_weight_deriv)) &
+      .or. .not. all(ieee_is_finite(atom_coord_deriv)) &
+      .or. .not. all(ieee_is_finite(atomic_weight_deriv))) then
+    write (*, '(a)') "Skala coordinate or weight gradient is non-finite"
+    stop 5
+  end if
+
+  analytic = [density_deriv(3, 2), grad_deriv(4, 2, 1), kin_deriv(5, 2), &
+    & grid_coord_deriv(6, 3), grid_weight_deriv(7), atom_coord_deriv(2, 3), &
+    & atomic_weight_deriv(9)]
+  max_error = 0.0_real64
+
+  original = density(3, 2)
+  density(3, 2) = original + fd_step
+  call evaluate_energy(eplus)
+  density(3, 2) = original - fd_step
+  call evaluate_energy(eminus)
+  density(3, 2) = original
+  call compare_gradient("density", analytic(1), eplus, eminus)
+
+  original = grad(4, 2, 1)
+  grad(4, 2, 1) = original + fd_step
+  call evaluate_energy(eplus)
+  grad(4, 2, 1) = original - fd_step
+  call evaluate_energy(eminus)
+  grad(4, 2, 1) = original
+  call compare_gradient("grad", analytic(2), eplus, eminus)
+
+  original = kin(5, 2)
+  kin(5, 2) = original + fd_step
+  call evaluate_energy(eplus)
+  kin(5, 2) = original - fd_step
+  call evaluate_energy(eminus)
+  kin(5, 2) = original
+  call compare_gradient("kin", analytic(3), eplus, eminus)
+
+  original = grid_coords(6, 3)
+  grid_coords(6, 3) = original + fd_step
+  call evaluate_energy(eplus)
+  grid_coords(6, 3) = original - fd_step
+  call evaluate_energy(eminus)
+  grid_coords(6, 3) = original
+  call compare_gradient("grid_coords", analytic(4), eplus, eminus)
+
+  original = grid_weights(7)
+  grid_weights(7) = original + fd_step
+  call evaluate_energy(eplus)
+  grid_weights(7) = original - fd_step
+  call evaluate_energy(eminus)
+  grid_weights(7) = original
+  call compare_gradient("grid_weights", analytic(5), eplus, eminus)
+
+  original = atom_coords(2, 3)
+  atom_coords(2, 3) = original + fd_step
+  call evaluate_energy(eplus)
+  atom_coords(2, 3) = original - fd_step
+  call evaluate_energy(eminus)
+  atom_coords(2, 3) = original
+  call compare_gradient("atom_coords", analytic(6), eplus, eminus)
+
+  original = atomic_grid_weights(9)
+  atomic_grid_weights(9) = original + fd_step
+  call evaluate_energy(eplus)
+  atomic_grid_weights(9) = original - fd_step
+  call evaluate_energy(eminus)
+  atomic_grid_weights(9) = original
+  call compare_gradient("atomic_grid_weights", analytic(7), eplus, eminus)
+
   write (*, '(a,es24.16)') "SKALA_BRIDGE_SMOKE energy=", energy
+  write (*, '(a,es12.4)') "SKALA_BRIDGE_SMOKE max gradient error=", max_error
   write (*, '(a)') "SKALA_BRIDGE_SMOKE passed"
+
+contains
+
+  subroutine evaluate_energy(current_energy)
+    real(real64), intent(out) :: current_energy
+    call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
+      & atom_coords, atomic_grid_weights, atomic_grid_sizes, current_energy, density_deriv, &
+      & grad_deriv, kin_deriv, status, message)
+    if (status /= 0) then
+      write (*, '(a)') "Skala finite-difference evaluation failed: " // trim(message)
+      stop 6
+    end if
+  end subroutine evaluate_energy
+
+  subroutine compare_gradient(label, expected, plus_energy, minus_energy)
+    character(len=*), intent(in) :: label
+    real(real64), intent(in) :: expected, plus_energy, minus_energy
+    real(real64) :: error, finite_difference, scale
+    finite_difference = (plus_energy - minus_energy) / (2.0_real64 * fd_step)
+    error = abs(expected - finite_difference)
+    scale = max(1.0_real64, abs(expected), abs(finite_difference))
+    max_error = max(max_error, error / scale)
+    write (*, '(a,1x,a,2(a,es16.8),a,es12.4)') "SKALA_BRIDGE_FD", trim(label), &
+      & " analytic=", expected, " finite_difference=", finite_difference, &
+      & " relative_error=", error / scale
+    if (error > fd_tolerance * scale) then
+      write (*, '(a)') "Skala feature-gradient finite-difference check failed"
+      stop 7
+    end if
+  end subroutine compare_gradient
 end program skala_bridge_smoke

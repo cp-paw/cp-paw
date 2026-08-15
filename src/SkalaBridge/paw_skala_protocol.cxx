@@ -78,6 +78,41 @@ bool is_differentiable_feature(const std::string &key) {
          key == "coarse_0_atomic_coords" || key == "atomic_grid_weights";
 }
 
+void require_shape(const TensorDict &features,
+                   const char *key,
+                   const std::vector<int64_t> &expected) {
+  const auto &tensor = features.at(key);
+  if (tensor.dim() != static_cast<int64_t>(expected.size())) {
+    throw std::runtime_error(std::string("Skala feature '") + key +
+                             "' has the wrong rank");
+  }
+  for (std::size_t i = 0; i < expected.size(); ++i) {
+    if (expected[i] >= 0 && tensor.size(static_cast<int64_t>(i)) != expected[i]) {
+      throw std::runtime_error(std::string("Skala feature '") + key +
+                               "' has an incompatible tensor shape");
+    }
+  }
+}
+
+void validate_feature_shapes(const TensorDict &features) {
+  const auto &density = features.at("density");
+  const auto &atom_coords = features.at("coarse_0_atomic_coords");
+  if (density.dim() != 2 || atom_coords.dim() != 2) {
+    throw std::runtime_error("Skala density or atom coordinates have the wrong rank");
+  }
+  const int64_t npoint = density.size(1);
+  const int64_t natom = atom_coords.size(0);
+  require_shape(features, "density", {2, npoint});
+  require_shape(features, "grad", {2, 3, npoint});
+  require_shape(features, "kin", {2, npoint});
+  require_shape(features, "grid_coords", {npoint, 3});
+  require_shape(features, "grid_weights", {npoint});
+  require_shape(features, "coarse_0_atomic_coords", {natom, 3});
+  require_shape(features, "atomic_grid_weights", {npoint});
+  require_shape(features, "atomic_grid_sizes", {natom});
+  require_shape(features, "atomic_grid_size_bound_shape", {-1, 0});
+}
+
 torch::Tensor *new_tensor(torch::Tensor tensor) {
   return new torch::Tensor(std::move(tensor));
 }
@@ -187,6 +222,7 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
   try {
     auto &model = *static_cast<SkalaModel *>(model_handle);
     const auto &input = *static_cast<TensorDict *>(input_handle);
+    validate_feature_shapes(input);
 
     TensorDict features;
     std::vector<torch::Tensor> leaves;
