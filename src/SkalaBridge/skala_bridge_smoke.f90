@@ -18,6 +18,7 @@ program skala_bridge_smoke
   integer(int64), target :: atomic_grid_sizes(natom)
   real(real64), parameter :: fd_step = 1.0e-4_real64, fd_tolerance = 2.0e-5_real64
   real(real64), parameter :: repeat_tolerance = 2.0e-8_real64
+  real(real64), parameter :: nontrivial_tolerance = 1.0e-12_real64
   real(real64) :: energy, angle, radius, eplus, eminus, original, max_error
   real(real64) :: repeat_energy, repeat_error, repeat_values(7)
   real(real64) :: translation_error, translation_gradient(3)
@@ -89,6 +90,17 @@ program skala_bridge_smoke
       .or. .not. all(ieee_is_finite(atom_coord_deriv)) &
       .or. .not. all(ieee_is_finite(atomic_weight_deriv))) then
     write (*, '(a)') "Skala coordinate or weight gradient is non-finite"
+    stop 5
+  end if
+  if (abs(energy) <= nontrivial_tolerance) then
+    write (*, '(a)') "Skala evaluation returned a degenerate zero energy"
+    stop 5
+  end if
+  if (max(maxval(abs(density_deriv)), maxval(abs(grad_deriv)), &
+      & maxval(abs(kin_deriv)), maxval(abs(grid_coord_deriv)), &
+      & maxval(abs(grid_weight_deriv)), maxval(abs(atom_coord_deriv)), &
+      & maxval(abs(atomic_weight_deriv))) <= nontrivial_tolerance) then
+    write (*, '(a)') "Skala evaluation returned only zero gradients"
     stop 5
   end if
 
