@@ -230,6 +230,57 @@ function find_nvhpc_cufft_libdir {
   done
 }
 
+function find_nvhpc_cublas_includedir {
+  local D
+  for D in "${NVHPC_ROOT}"/math_libs/*/targets/*/include \
+           "${NVHPC_ROOT}"/math_libs/*/include \
+           "${CPPAW_CUDA_ROOT}"/include ; do
+    if [[ -f ${D}/cublas_v2.h ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
+function nvhpc_cublas_fp64_emulation_works {
+  local INCLUDEDIR
+  local CCOMPILER
+  local CUDA_INCLUDE_FLAG
+  local TMPDIR_
+  local RC
+
+  INCLUDEDIR=$(find_nvhpc_cublas_includedir)
+  CCOMPILER="${NVHPC_ROOT}/compilers/bin/nvc"
+  CUDA_INCLUDE_FLAG=
+  if [[ -f ${CPPAW_CUDA_ROOT}/include/cuda_runtime_api.h ]] ; then
+    CUDA_INCLUDE_FLAG="-I${CPPAW_CUDA_ROOT}/include"
+  fi
+  if [[ -z ${INCLUDEDIR} || ! -x ${CCOMPILER} ]] ; then
+    return 1
+  fi
+
+  TMPDIR_=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-cublas-fp64.XXXXXX") \
+    || return 1
+  printf '%s\n' \
+    '#include <cublas_v2.h>' \
+    'static void probe(cublasHandle_t handle, void *workspace, int *bits) {' \
+    '  cublasMath_t mode = CUBLAS_FP64_EMULATED_FIXEDPOINT_MATH;' \
+    '  (void)mode;' \
+    '  (void)cublasSetWorkspace(handle, workspace, 0);' \
+    '  (void)cublasSetEmulationStrategy(handle, CUBLAS_EMULATION_STRATEGY_PERFORMANT);' \
+    '  (void)cublasSetFixedPointEmulationMantissaControl(' \
+    '      handle, CUDA_EMULATION_MANTISSA_CONTROL_DYNAMIC);' \
+    '  (void)cublasSetFixedPointEmulationMantissaBitCountPointer(handle, bits);' \
+    '}' \
+    > "${TMPDIR_}/probe.c"
+  "${CCOMPILER}" -I"${INCLUDEDIR}" ${CUDA_INCLUDE_FLAG} \
+    -c "${TMPDIR_}/probe.c" \
+    -o "${TMPDIR_}/probe.o" >/dev/null 2>&1
+  RC=$?
+  rm -rf "${TMPDIR_}"
+  return ${RC}
+}
+
 function find_nvhpc_nvlamath_libdir {
   local D
   for D in "${NVHPC_ROOT}"/compilers/lib \
@@ -666,6 +717,11 @@ function enable_nvhpc_cublas_acc {
   fi
   append_nvhpc_openacc_flags
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUBLAS_ACC"
+  if nvhpc_cublas_fp64_emulation_works ; then
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUBLAS_FP64_EMULATION"
+    FCFLAGS="${FCFLAGS} -cuda"
+    LDFLAGS="${LDFLAGS} -cuda"
+  fi
   LDFLAGS="${LDFLAGS} -cudalib=cublas"
   INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cublas_v2.mod"
   INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cudafor.mod"
