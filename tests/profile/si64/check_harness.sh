@@ -95,9 +95,12 @@ case ":${LD_LIBRARY_PATH}:" in *":/tmp/fftw/lib:"*) ;; *) exit 1 ;; esac'
 
 DRY_RUN=yes \
   RUN_ROOT="${tmpdir}/dry-run" \
-  CASES="gpu_resident_stack gpu_resident_stack_force_dedpro gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_setup_psim_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack gpu_no_cufft" \
+  CASES="cufft_force_all gpu_all_resident_stack gpu_all_resident_stack_cufft gpu_resident_stack gpu_resident_stack_force_dedpro gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_setup_psim_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack gpu_no_cufft" \
   tests/profile/si64/run_benchmark.sh > "${tmpdir}/dry-run.out"
 grep -q "Benchmark dry-run metadata:" "${tmpdir}/dry-run.out"
+grep -q "case=cufft_force_all" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_all_resident_stack" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_all_resident_stack_cufft" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case=gpu_resident_stack" "${tmpdir}/dry-run/metadata.txt"
 grep -q "^empty_bands=$" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1" "${tmpdir}/dry-run/metadata.txt"
