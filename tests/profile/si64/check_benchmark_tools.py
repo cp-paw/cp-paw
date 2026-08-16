@@ -323,6 +323,42 @@ def check_compare(tmpdir):
     assert_contains(compare, "| empty=512, nsteps=2 | gpu_resident_stack | 1 | yes | 10.00 | gpu_resident | 2.00 |  |  |", "gpu-only base speedup")
     assert_contains(compare, "| gpu_1rank | gpu_resident_stack | 1 | yes | 20.00 | gpu_resident_stack | 1.00 | 4.00 | 1.60 |", "standard speedups")
 
+    medians = run_tool("benchmark_medians.py", path)
+    assert_contains(
+        medians,
+        "| gpu_1rank | gpu_resident_stack | 1 | 1/1 | 20.00 | 20.00 | 20.00 |  | 4.00 | 1.60 | 0.00000000 |",
+        "standard median speedups",
+    )
+    assert_contains(
+        medians,
+        "| cpu_1rank | nvhpc_cpu | 1 | 1/1 | 80.00 | 80.00 | 80.00 |  | 1.00 | 0.40 | 0.00000000 |",
+        "NVHPC median baseline",
+    )
+
+    median_path = os.path.join(tmpdir, "median.tsv")
+    median_header = "suite\tcase\trepeat\tranks\tok\twall_s\tenergy_delta"
+    median_rows = [
+        "gpu_1rank\tgpu_resident_stack\trep1\t1\tyes\t20\t0",
+        "gpu_1rank\tgpu_resident_stack\trep2\t1\tyes\t22\t1e-9",
+        "gpu_1rank\tgpu_resident_stack\trep3\t1\tyes\t100\t2e-9",
+        "cpu_1rank\tcpu\trep1\t1\tyes\t100\t0",
+        "cpu_1rank\tcpu\trep2\t1\tyes\t110\t0",
+        "cpu_1rank\tcpu\trep3\t1\tyes\t120\t0",
+        "cpu_1rank\tnvhpc_cpu\trep1\t1\tyes\t80\t0",
+        "cpu_1rank\tnvhpc_cpu\trep2\t1\tyes\t90\t0",
+        "cpu_1rank\tnvhpc_cpu\trep3\t1\tyes\t100\t0",
+        "cpu_8rank_ref\tnvhpc_cpu\trep1\t8\tyes\t32\t0",
+        "cpu_8rank_ref\tnvhpc_cpu\trep2\t8\tyes\t36\t0",
+        "cpu_8rank_ref\tnvhpc_cpu\trep3\t8\tyes\t40\t0",
+    ]
+    write(median_path, "\n".join([median_header, *median_rows]) + "\n")
+    medians = run_tool("benchmark_medians.py", median_path)
+    assert_contains(
+        medians,
+        "| gpu_1rank | gpu_resident_stack | 1 | 3/3 | 22.00 | 20.00 | 100.00 | 5.00 | 4.09 | 1.64 | 0.00000000 |",
+        "median aggregation and speedups",
+    )
+
     markdown = run_tool("benchmark_markdown.py", path)
     header_cells, data_rows = markdown_table(markdown)
     transfer_index = header_cells.index("transfer_gb")

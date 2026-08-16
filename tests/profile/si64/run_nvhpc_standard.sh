@@ -314,6 +314,8 @@ if [[ -f "${COMBINED}" ]]; then
     > "${NVHPC_STANDARD_ROOT}/combined_benchmark.md" || true
   python3 "${HERE}/benchmark_compare.py" "${COMBINED}" \
     > "${NVHPC_STANDARD_ROOT}/combined_compare.md" || true
+  python3 "${HERE}/benchmark_medians.py" "${COMBINED}" \
+    > "${NVHPC_STANDARD_ROOT}/combined_medians.md" || true
   log "combined=${COMBINED}"
 fi
 
