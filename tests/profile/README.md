@@ -577,6 +577,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
 | `gpu_all` / `gpu_all_nosync` / `gpu_all_invbatch_off` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time; cuFFT uses the conservative threshold by default, and inversion scalarproduct batching can be disabled for comparison. |
+| `gpu_all_resident_stack` / `gpu_all_resident_stack_cufft` | All-library build with the same focused residency stack used by the combined GPU recommendation; the first disables native cuFFT while the second enables its normal threshold. These cases isolate cuFFTW/NVLAMATH overhead without withholding residency from the all-library executable. |
 | `gpu_all_3dfft` | All-library diagnostic build with the opt-in native cuFFT 3-D wrapper enabled as well, also threshold-gated by default. |
 | `gpu_all_off` | Same all-library binary with native cuFFT/cuBLAS/cuSOLVER disabled; cuFFTW/NVLAMATH remain compiled in. |
 | `gpu_force_all` | Diagnostic combined profile that forces cuFFT, cuBLAS and small cuSOLVER offload. |
