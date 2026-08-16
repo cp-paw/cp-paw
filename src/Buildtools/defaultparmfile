@@ -819,6 +819,7 @@ function enable_nvhpc_nvlamath {
   LDFLAGS="${LDFLAGS} -cudalib=nvlamath"
   LDFLAGS="${LDFLAGS} -L${NVLAMATH_LIBDIR} -Wl,-rpath,${NVLAMATH_LIBDIR}"
   INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/nvhpc_nvlamath.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/openacc.mod"
 }
 
 function enable_skala_ftorch {

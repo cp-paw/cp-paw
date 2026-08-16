@@ -92,6 +92,25 @@ def check_nsys_case_coverage():
         )
 
 
+def check_nvlamath_openacc_module():
+    root = os.path.abspath(os.path.join(HERE, "../../.."))
+    path = os.path.join(root, "src", "Buildtools", "defaultparmfile")
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    match = re.search(
+        r"function enable_nvhpc_nvlamath \{(?P<body>.*?)\n\}",
+        text,
+        re.DOTALL,
+    )
+    if match is None:
+        raise AssertionError("enable_nvhpc_nvlamath function not found")
+    assert_contains(
+        match.group("body"),
+        "compilers/include/openacc.mod",
+        "NVLAMATH OpenACC module dependency",
+    )
+
+
 def check_summary_and_markdown(tmpdir):
     run_dir = os.path.join(tmpdir, "case", "rep1")
     os.makedirs(run_dir)
@@ -363,6 +382,7 @@ def main():
         check_compare(tmpdir)
         check_ozaki_validate(tmpdir)
     check_nsys_case_coverage()
+    check_nvlamath_openacc_module()
     return 0
 
 
