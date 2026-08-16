@@ -217,6 +217,11 @@ kernel because they enable OpenACC for the other accelerator paths.
 The dedicated targets retain CP-PAW's host FFT backend: bundled NVPL FFTW is
 used where present, while x86 NVHPC installations without NVPL require a
 normal FFTW3 development installation discoverable through `pkg-config`.
+NVHPC otherwise uses the CUDA toolkit bundled with the compiler. On a host
+whose driver supports only an older co-installed toolkit, set
+`NVHPC_CUDA_HOME` before a clean CP-PAW build and build the CUDA FTorch bridge
+for the same CUDA major/minor version. This keeps both OpenACC device images
+and LibTorch below the driver's supported CUDA level.
 
 Set `CPPAW_SKALA_GRID_BACK_ACC=1` to use it; the default is off. The output
 density, gradient, and kinetic-energy-density adjoint grids remain resident

@@ -173,6 +173,14 @@ without NVPL, make a conventional FFTW3 installation visible through
 `pkg-config` and the dynamic loader, for example with `PKG_CONFIG_PATH` and
 `LD_LIBRARY_PATH`.
 
+NVHPC normally targets the CUDA toolkit bundled with the selected compiler.
+If a cluster driver supports only an older installed toolkit, set
+`NVHPC_CUDA_HOME` before a clean build so every OpenACC object and the final
+executable use that compatible toolkit. For example, an NVHPC 26.5 compiler
+can target a co-installed CUDA 12.4 toolkit with
+`NVHPC_CUDA_HOME=/opt/nvidia/hpc_sdk/Linux_x86_64/24.5/cuda/12.4`. A CUDA
+FTorch bridge should be built against the same CUDA major/minor version.
+
 The functional is selected in the input with a `!SKALA` block. The conservative
 starting point evaluates the Skala path while keeping CP-PAW's conventional XC
 operator active:
