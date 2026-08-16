@@ -88,7 +88,7 @@ case_target() {
     nvblas)
       target="nvhpc_nvblas_profile${gpu_suffix}"
       ;;
-    gpu_recommended*|gpu_transfer|gpu_off)
+    gpu_default|gpu_recommended*|gpu_transfer|gpu_off)
       target="nvhpc_gpu_profile${gpu_suffix}"
       ;;
     gpu_resident*)

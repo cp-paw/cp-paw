@@ -59,7 +59,7 @@ MPIRUN=${MPIRUN:-$(default_mpirun)}
 
 serial_exe() {
   case "$1" in
-    gpu_recommended*|gpu_transfer|gpu_off) echo "${ROOT}/bin/nvhpc_gpu_profile/paw_nvhpc_gpu_profile.x" ;;
+    gpu_default|gpu_recommended*|gpu_transfer|gpu_off) echo "${ROOT}/bin/nvhpc_gpu_profile/paw_nvhpc_gpu_profile.x" ;;
     gpu_all*) echo "${ROOT}/bin/nvhpc_gpu_all_profile/paw_nvhpc_gpu_all_profile.x" ;;
     gpu_resident*) echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile/paw_nvhpc_gpu_acc_residency_profile.x" ;;
     gpu_managed*) echo "${ROOT}/bin/nvhpc_gpu_acc_managed_profile/paw_nvhpc_gpu_acc_managed_profile.x" ;;
@@ -77,7 +77,7 @@ serial_exe() {
 
 parallel_exe() {
   case "$1" in
-    gpu_recommended*|gpu_transfer|gpu_off) echo "${ROOT}/bin/nvhpc_gpu_profile_parallel/ppaw_nvhpc_gpu_profile.x" ;;
+    gpu_default|gpu_recommended*|gpu_transfer|gpu_off) echo "${ROOT}/bin/nvhpc_gpu_profile_parallel/ppaw_nvhpc_gpu_profile.x" ;;
     gpu_all*) echo "${ROOT}/bin/nvhpc_gpu_all_profile_parallel/ppaw_nvhpc_gpu_all_profile.x" ;;
     gpu_resident*) echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile_parallel/ppaw_nvhpc_gpu_acc_residency_profile.x" ;;
     gpu_managed*) echo "${ROOT}/bin/nvhpc_gpu_acc_managed_profile_parallel/ppaw_nvhpc_gpu_acc_managed_profile.x" ;;
@@ -233,6 +233,7 @@ case_env() {
     cufft) cufft_env ;;
     cufft_force_all) cufft_force_env ;;
     cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;
+    gpu_default) echo "" ;;
     gpu_recommended) echo "CPPAW_GPU_MODE=resident" ;;
     gpu_recommended_ozaki_native) echo "CPPAW_GPU_MODE=resident $(cublas_fp64_env native)" ;;
     gpu_recommended_ozaki_dgemm) echo "CPPAW_GPU_MODE=resident $(cublas_fp64_env dgemm)" ;;
