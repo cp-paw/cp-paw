@@ -132,7 +132,11 @@ INTEGER(4)                     :: SERIAL3D_ACC_CACHE_INIT=0
 INTEGER(4)                     :: SERIAL3D_ACC_CACHE_NR1=0
 INTEGER(4)                     :: SERIAL3D_ACC_CACHE_NR2=0
 INTEGER(4)                     :: SERIAL3D_ACC_CACHE_NR3=0
+#IF DEFINED(CPPVAR_GPU_RECOMMENDED)
+LOGICAL(4)                     :: SERIAL3D_ACC_CACHE_ENABLED=.TRUE.
+#ELSE
 LOGICAL(4)                     :: SERIAL3D_ACC_CACHE_ENABLED=.FALSE.
+#ENDIF
 #ENDIF
 END MODULE PLANEWAVE_MODULE
 !*******************************************************************************
@@ -2023,7 +2027,11 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                 :: IFFT
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4),SAVE            :: SERIAL3D_INIT=0
+#IF DEFINED(CPPVAR_GPU_RECOMMENDED)
+      LOGICAL(4),SAVE            :: TSERIAL3D=.TRUE.
+#ELSE
       LOGICAL(4),SAVE            :: TSERIAL3D=.FALSE.
+#ENDIF
       LOGICAL(4)                 :: SERIAL_ACC_USED
       CHARACTER(128)             :: ENVVAL
       INTEGER(4)                 :: ENVSTATUS
@@ -2055,6 +2063,17 @@ END MODULE PLANEWAVE_MODULE
       NSTRIPELX=MAXVAL(THIS%NSTRIPELARR)
       IF(SERIAL3D_INIT.EQ.0) THEN
         SERIAL3D_INIT=1
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_MODE',ENVVAL &
+     &                               ,STATUS=ENVSTATUS)
+        IF(ENVSTATUS.EQ.0) THEN
+          ENVVAL=ADJUSTL(ENVVAL)
+          SELECT CASE(ENVVAL(1:MIN(LEN(ENVVAL),MAX(1,LEN_TRIM(ENVVAL)))))
+          CASE('resident','RESIDENT','recommended','RECOMMENDED')
+            TSERIAL3D=.TRUE.
+          CASE DEFAULT
+            TSERIAL3D=.FALSE.
+          END SELECT
+        END IF
         CALL GET_ENVIRONMENT_VARIABLE('CPPAW_FFT_SERIAL_3D',ENVVAL &
      &                               ,STATUS=ENVSTATUS)
         IF(ENVSTATUS.EQ.0) THEN
@@ -2144,7 +2163,11 @@ END MODULE PLANEWAVE_MODULE
 #IF DEFINED(CPPVAR_CUFFT_ACC)
       LOGICAL(4)                :: ACCEL_CUFFT_USED
       INTEGER(4),SAVE           :: ACCMAP_INIT=0
+#IF DEFINED(CPPVAR_GPU_RECOMMENDED)
+      LOGICAL(4),SAVE           :: TACC_MAP=.TRUE.
+#ELSE
       LOGICAL(4),SAVE           :: TACC_MAP=.FALSE.
+#ENDIF
       CHARACTER(128)            :: ENVVAL_ACC
       INTEGER(4)                :: ENVSTATUS_ACC
 #ENDIF
@@ -2166,6 +2189,18 @@ END MODULE PLANEWAVE_MODULE
 #IF DEFINED(CPPVAR_CUFFT_ACC)
       IF(ACCMAP_INIT.EQ.0) THEN
         ACCMAP_INIT=1
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_MODE',ENVVAL_ACC &
+     &                               ,STATUS=ENVSTATUS_ACC)
+        IF(ENVSTATUS_ACC.EQ.0) THEN
+          ENVVAL_ACC=ADJUSTL(ENVVAL_ACC)
+          SELECT CASE(ENVVAL_ACC(1:MIN(LEN(ENVVAL_ACC) &
+     &                                ,MAX(1,LEN_TRIM(ENVVAL_ACC)))))
+          CASE('resident','RESIDENT','recommended','RECOMMENDED')
+            TACC_MAP=.TRUE.
+          CASE DEFAULT
+            TACC_MAP=.FALSE.
+          END SELECT
+        END IF
         CALL GET_ENVIRONMENT_VARIABLE('CPPAW_FFT_SERIAL_3D_ACC_MAP' &
      &                               ,ENVVAL_ACC,STATUS=ENVSTATUS_ACC)
         IF(ENVSTATUS_ACC.EQ.0) THEN
@@ -2320,6 +2355,18 @@ END MODULE PLANEWAVE_MODULE
       IF(.NOT.(ID.EQ.'GTOR'.OR.ID.EQ.'RTOG')) RETURN
       IF(CACHE_INIT.EQ.0) THEN
         CACHE_INIT=1
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_MODE',ENVVAL_CACHE &
+     &                               ,STATUS=ENVSTATUS_CACHE)
+        IF(ENVSTATUS_CACHE.EQ.0) THEN
+          ENVVAL_CACHE=ADJUSTL(ENVVAL_CACHE)
+          SELECT CASE(ENVVAL_CACHE(1:MIN(LEN(ENVVAL_CACHE) &
+     &                                  ,MAX(1,LEN_TRIM(ENVVAL_CACHE)))))
+          CASE('resident','RESIDENT','recommended','RECOMMENDED')
+            TCACHE=.TRUE.
+          CASE DEFAULT
+            TCACHE=.FALSE.
+          END SELECT
+        END IF
         CALL GET_ENVIRONMENT_VARIABLE('CPPAW_FFT_SERIAL_3D_ACC_CACHE' &
      &                               ,ENVVAL_CACHE,STATUS=ENVSTATUS_CACHE)
         IF(ENVSTATUS_CACHE.EQ.0) THEN

@@ -218,6 +218,8 @@ capture_metadata() {
           "${ROOT}/bin/nvhpc_nvlamath_profile_parallel/ppaw_nvhpc_nvlamath_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_profile/paw_nvhpc_cufft_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" \
+          "${ROOT}/bin/nvhpc_gpu_profile/paw_nvhpc_gpu_profile.x" \
+          "${ROOT}/bin/nvhpc_gpu_profile_parallel/ppaw_nvhpc_gpu_profile.x" \
           "${ROOT}/bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x" \
           "${ROOT}/bin/nvhpc_gpu_acc_profile_parallel/ppaw_nvhpc_gpu_acc_profile.x" \
           "${ROOT}/bin/nvhpc_gpu_all_profile/paw_nvhpc_gpu_all_profile.x" \

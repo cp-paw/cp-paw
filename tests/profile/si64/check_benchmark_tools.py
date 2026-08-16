@@ -133,6 +133,34 @@ def check_nvhpc_cuda_root_validation():
         raise AssertionError("CUDA root must be validated before assignment")
 
 
+def check_public_gpu_profiles():
+    root = os.path.abspath(os.path.join(HERE, "../../.."))
+    paths = {
+        "build targets": os.path.join(root, "src", "Buildtools", "defaultparmfile"),
+        "installer": os.path.join(root, "paw_install"),
+        "cuBLAS mode": os.path.join(root, "src", "paw_accel_cublas.f90"),
+        "cuFFT mode": os.path.join(root, "src", "paw_accel_cufft.f90"),
+        "cuSOLVER mode": os.path.join(root, "src", "paw_accel_cusolver.f90"),
+        "FFT mode": os.path.join(root, "src", "paw_fft.f90"),
+    }
+    texts = {}
+    for label, path in paths.items():
+        with open(path, encoding="utf-8") as handle:
+            texts[label] = handle.read()
+
+    assert_contains(texts["build targets"], "nvhpc_gpu_fast)", "release GPU profile")
+    assert_contains(texts["build targets"], "nvhpc_gpu_profile)", "instrumented GPU profile")
+    assert_contains(
+        texts["build targets"],
+        "-DCPPVAR_GPU_RECOMMENDED",
+        "recommended GPU defaults macro",
+    )
+    assert_contains(texts["installer"], "for X in nvhpc_gpu_fast", "installed GPU profile")
+    for label in ("cuBLAS mode", "cuFFT mode", "cuSOLVER mode", "FFT mode"):
+        assert_contains(texts[label], "CPPAW_GPU_MODE", label)
+        assert_contains(texts[label], "resident", f"{label} resident mode")
+
+
 def check_summary_and_markdown(tmpdir):
     run_dir = os.path.join(tmpdir, "case", "rep1")
     os.makedirs(run_dir)
@@ -442,6 +470,7 @@ def main():
     check_nsys_case_coverage()
     check_nvhpc_cuda_root_validation()
     check_nvlamath_openacc_module()
+    check_public_gpu_profiles()
     return 0
 
 

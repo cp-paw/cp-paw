@@ -38,6 +38,11 @@
       LOGICAL(4)                      :: CONFIG_READY=.FALSE.
       LOGICAL(4)                      :: ENABLED=.FALSE.
       LOGICAL(4)                      :: ENABLED_3D=.FALSE.
+#IF DEFINED(CPPVAR_GPU_RECOMMENDED)
+      LOGICAL(4)                      :: GPU_RECOMMENDED_ENABLED=.TRUE.
+#ELSE
+      LOGICAL(4)                      :: GPU_RECOMMENDED_ENABLED=.FALSE.
+#ENDIF
       REAL(8)                         :: MINELEMENTS=512.D0
       REAL(8)                         :: MIN3DELEMENTS=1.D6
       CONTAINS
@@ -87,6 +92,23 @@
 !     **************************************************************************
       IF(CONFIG_READY) RETURN
       CONFIG_READY=.TRUE.
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_MODE',VALUE,STATUS=STATUS)
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('resident','RESIDENT','recommended','RECOMMENDED')
+            GPU_RECOMMENDED_ENABLED=.TRUE.
+          CASE DEFAULT
+            GPU_RECOMMENDED_ENABLED=.FALSE.
+          END SELECT
+        END IF
+      END IF
+      IF(GPU_RECOMMENDED_ENABLED) THEN
+        ENABLED=.TRUE.
+        ENABLED_3D=.TRUE.
+        MIN3DELEMENTS=0.D0
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUFFT_ACC',VALUE,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
         VALUE=ADJUSTL(VALUE)

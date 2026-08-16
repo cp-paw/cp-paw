@@ -27,7 +27,7 @@ PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
 PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
 
 GPU_CASES=$(cppaw_resolve_recommended_cases \
-  "${GPU_CASES}" recommended_gpu_cases "gpu_resident_stack gpu_resident_off")
+  "${GPU_CASES}" recommended_gpu_cases "gpu_recommended gpu_transfer")
 CPU_CASES=$(cppaw_resolve_recommended_cases \
   "${CPU_CASES}" recommended_cpu_cases "cpu nvhpc_cpu")
 
@@ -36,7 +36,7 @@ if [[ -n ${GPU_CASES// } ]]; then
     GPU_CASES="${GPU_CASES} gpu_all gpu_all_off"
   fi
   if [[ ${ADD_GPU_FALLBACK} == yes || ${ADD_GPU_FALLBACK} == true || ${ADD_GPU_FALLBACK} == 1 ]]; then
-    GPU_CASES=$(cppaw_append_case "${GPU_CASES}" gpu_resident_off)
+    GPU_CASES=$(cppaw_append_case "${GPU_CASES}" gpu_off)
   fi
 fi
 
@@ -87,6 +87,9 @@ case_target() {
       ;;
     nvblas)
       target="nvhpc_nvblas_profile${gpu_suffix}"
+      ;;
+    gpu_recommended*|gpu_transfer|gpu_off)
+      target="nvhpc_gpu_profile${gpu_suffix}"
       ;;
     gpu_resident*)
       target="nvhpc_gpu_acc_residency_profile${gpu_suffix}"
@@ -143,6 +146,10 @@ target_binary() {
       echo "${ROOT}/bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x" ;;
     nvhpc_gpu_acc_profile_parallel)
       echo "${ROOT}/bin/nvhpc_gpu_acc_profile_parallel/ppaw_nvhpc_gpu_acc_profile.x" ;;
+    nvhpc_gpu_profile)
+      echo "${ROOT}/bin/nvhpc_gpu_profile/paw_nvhpc_gpu_profile.x" ;;
+    nvhpc_gpu_profile_parallel)
+      echo "${ROOT}/bin/nvhpc_gpu_profile_parallel/ppaw_nvhpc_gpu_profile.x" ;;
     nvhpc_gpu_acc_residency_profile)
       echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile/paw_nvhpc_gpu_acc_residency_profile.x" ;;
     nvhpc_gpu_acc_residency_profile_parallel)

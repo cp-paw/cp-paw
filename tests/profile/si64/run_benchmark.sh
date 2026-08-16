@@ -232,6 +232,7 @@ serial_exe() {
     nvlamath) echo "${ROOT}/bin/nvhpc_nvlamath_profile/paw_nvhpc_nvlamath_profile.x" ;;
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile/paw_nvhpc_cufftw_profile.x" ;;
     cufft*) echo "${ROOT}/bin/nvhpc_cufft_profile/paw_nvhpc_cufft_profile.x" ;;
+    gpu_recommended*|gpu_transfer|gpu_off) echo "${ROOT}/bin/nvhpc_gpu_profile/paw_nvhpc_gpu_profile.x" ;;
     gpu_all*) echo "${ROOT}/bin/nvhpc_gpu_all_profile/paw_nvhpc_gpu_all_profile.x" ;;
     gpu_resident*|gpu_psim_propagate|gpu_hpsi_psim_propagate) echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile/paw_nvhpc_gpu_acc_residency_profile.x" ;;
     gpu_managed*) echo "${ROOT}/bin/nvhpc_gpu_acc_managed_profile/paw_nvhpc_gpu_acc_managed_profile.x" ;;
@@ -251,6 +252,7 @@ parallel_exe() {
     nvlamath) echo "${ROOT}/bin/nvhpc_nvlamath_profile_parallel/ppaw_nvhpc_nvlamath_profile.x" ;;
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_profile.x" ;;
     cufft*) echo "${ROOT}/bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" ;;
+    gpu_recommended*|gpu_transfer|gpu_off) echo "${ROOT}/bin/nvhpc_gpu_profile_parallel/ppaw_nvhpc_gpu_profile.x" ;;
     gpu_all*) echo "${ROOT}/bin/nvhpc_gpu_all_profile_parallel/ppaw_nvhpc_gpu_all_profile.x" ;;
     gpu_resident*|gpu_psim_propagate|gpu_hpsi_psim_propagate) echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile_parallel/ppaw_nvhpc_gpu_acc_residency_profile.x" ;;
     gpu_managed*) echo "${ROOT}/bin/nvhpc_gpu_acc_managed_profile_parallel/ppaw_nvhpc_gpu_acc_managed_profile.x" ;;
@@ -686,6 +688,13 @@ case_env() {
     cufft) cufft_env ;;
     cufft_force_all) cufft_force_env ;;
     cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;
+    gpu_recommended) echo "CPPAW_GPU_MODE=resident" ;;
+    gpu_recommended_ozaki_native) echo "CPPAW_GPU_MODE=resident $(cublas_fp64_env native)" ;;
+    gpu_recommended_ozaki_dgemm) echo "CPPAW_GPU_MODE=resident $(cublas_fp64_env dgemm)" ;;
+    gpu_recommended_ozaki_zgemm) echo "CPPAW_GPU_MODE=resident $(cublas_fp64_env zgemm)" ;;
+    gpu_recommended_ozaki_zherk) echo "CPPAW_GPU_MODE=resident $(cublas_fp64_env zherk)" ;;
+    gpu_recommended_ozaki_all) echo "CPPAW_GPU_MODE=resident $(cublas_fp64_env all)" ;;
+    gpu_transfer) echo "CPPAW_GPU_MODE=transfer" ;;
     gpu) cublas_env ;;
     gpu_nosync) echo "$(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_invbatch_off) echo "$(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
@@ -796,7 +805,7 @@ case_env() {
     gpu_no_cufft) echo "CPPAW_CUFFT_ACC=0 $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_no_cublas) echo "$(cufft_force_env) CPPAW_CUBLAS_ACC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_no_cusolver) echo "$(cufft_force_env) $(cublas_env) CPPAW_CUSOLVER_ACC=0" ;;
-    gpu_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
+    gpu_off) echo "CPPAW_GPU_MODE=off" ;;
     *) echo "" ;;
   esac
 }

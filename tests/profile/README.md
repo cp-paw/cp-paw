@@ -3,6 +3,23 @@
 These cases are not part of the default test suite. They are intended to
 exercise larger kernels for CPU/GPU porting decisions.
 
+The normal NVIDIA interface deliberately has only three characteristic
+profiles. The longer case names below are benchmark experiments, not user
+visible CP-PAW editions.
+
+| Build or case | Meaning |
+| --- | --- |
+| `nvhpc_fast*` / `nvhpc_cpu` | NVIDIA CPU build, using NVPL when available |
+| `nvhpc_gpu_fast*` / `gpu_recommended` | Recommended cuBLAS, cuSOLVER, native cuFFT, and resident OpenACC combination |
+| `nvhpc_gpu_profile*` | Instrumented form of the same GPU build |
+| `gpu_transfer` | Same GPU binary without broad residency and native 3-D cuFFT defaults |
+| `gpu_off` | Explicit GPU paths disabled in the same binary |
+
+`CPPAW_GPU_MODE=resident`, `transfer`, or `off` selects these run-time modes.
+The `nvhpc_gpu_*` builds default to `resident`; individual accelerator and
+legacy `nvhpc_gpu_acc_*` targets retain their conservative defaults unless the
+mode is selected explicitly.
+
 Build a profiling executable first, for example:
 
 ```
@@ -122,15 +139,14 @@ OpenACC, and copies back only the final density. It requires the serial 3-D
 ACCMAP FFT path and is exposed in the harness as
 `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache`.
 
-To profile the combined native GPU paths on one GPU, build an
-`nvhpc_gpu_acc_*` target. This enables explicit cuBLAS by default, keeps native
-cuFFT opt-in, and uses cuSOLVER only above its default size threshold. The same
-binary can selectively force or disable each accelerator path:
+To profile the recommended native GPU paths on one GPU, build the public
+instrumented profile. The same binary can compare resident, transfer, and
+disabled modes:
 
 ```
-CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_profile
 cd tests/profile/si64
-NSTEPS=1 CASES="cpu nvhpc_cpu gpu_resident gpu_off" ./run_benchmark.sh
+NSTEPS=1 CASES="cpu nvhpc_cpu gpu_recommended gpu_transfer gpu_off" ./run_benchmark.sh
 NSTEPS=1 RANKS=8 CASES="cpu nvhpc_cpu" ./run_benchmark.sh
 ```
 
@@ -830,9 +846,8 @@ NSTEPS=1 ./run_gpu_exploration.sh
 
 The exploration run also defaults to `GPU_CASES=auto`: it combines the
 capability helper's routine GPU recommendations with its diagnostic
-recommendations, typically the current residency stack, a same-binary
-residency-off fallback, threshold-gated cuFFT, one-rank serial 3-D cuFFT, the
-force-DEDPRO diagnostic, and the cached ACCMAP diagnostic. It writes the same
+recommendations: the three public modes plus selected threshold, residency,
+single-rank 3-D cuFFT, force-DEDPRO, and cached-ACCMAP experiments. It writes the same
 combined benchmark, comparison, transfer-row, and present-row reports as the
 standard benchmark, plus `gpu_capabilities.txt` when the capability helper is
 available.
@@ -886,11 +901,11 @@ FP64 path without additional source or link dependencies.
   run together with energy and k-point count.
 
 `run_ozaki_bands.sh` executes separate native, DGEMM, ZGEMM, ZHERK, and combined
-GPU cases at 1024, 2048, and 4096 empty bands with one MD step. It also runs the
-one-rank and eight-rank NVHPC CPU references and a two-k-point Si2
-force/stress correctness case. The performance matrix uses an 8 GiB persistent
-workspace by default and reports actual emulation/fallback counts and maximum
-mantissa bits in `benchmark.tsv`.
+Ozaki modes inside `gpu_recommended` at 1024, 2048, and 4096 empty bands with
+one MD step. It also runs the one-rank and eight-rank NVHPC CPU references and
+a two-k-point Si2 force/stress correctness case. The performance matrix uses an
+8 GiB persistent workspace by default and reports actual emulation/fallback
+counts and maximum mantissa bits in `benchmark.tsv`.
 
 The global threshold is still the default for all cuBLAS call sites, but it can
 be overridden by kernel category:
@@ -1167,12 +1182,10 @@ It reports CUDA devices, NVIDIA HPC SDK library presence, host FFTW
 library/include and BLAS/LAPACK availability, current `recommended_cpu_cases`,
 `recommended_gpu_cases`, `recommended_gpu_diagnostic_cases`,
 `recommended_large_band_gpu_cases`, `recommended_resource_cases`, and a
-best-effort CUDA-aware MPI hint. On CUDA systems with cuBLAS and a usable host
-numerical stack, the recommended routine GPU cases start from
-`gpu_resident_stack`; when `libcufft.so` and `libcusolver.so` are both found,
-the measured full Projection/AddPRO stack case is added to automatic benchmark
-comparisons while remaining opt-in at runtime. cuFFT-dependent diagnostics are
-only listed when `libcufft.so` is found. Future-candidate libraries such as
+best-effort CUDA-aware MPI hint. On CUDA systems with cuFFT, cuBLAS, cuSOLVER,
+and a usable host numerical stack, the routine cases are `gpu_recommended`,
+`gpu_transfer`, and `gpu_off`. Long residency and single-library combinations
+remain in the separate diagnostic list. Future-candidate libraries such as
 cuBLASLt, cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning
 but are not linked into CP-PAW unless a concrete code path uses them.
 The standard, exploration, resource-comparison, and overnight wrappers consume

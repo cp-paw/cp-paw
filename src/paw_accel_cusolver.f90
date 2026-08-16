@@ -34,7 +34,11 @@
       INTEGER(4)             :: MIN_N_DSYGVD=256
       INTEGER(4)             :: MIN_N_ZHEGVD=256
       INTEGER(4)             :: MIN_N_GRAM_CHOLESKY=256
+#IF DEFINED(CPPVAR_GPU_RECOMMENDED)
+      LOGICAL(4)             :: GRAM_CHOLESKY_ENABLED=.TRUE.
+#ELSE
       LOGICAL(4)             :: GRAM_CHOLESKY_ENABLED=.FALSE.
+#ENDIF
       TYPE(CUBLASHANDLE)     :: CUBLAS_HANDLE
       LOGICAL(4)             :: CUBLAS_HANDLE_READY=.FALSE.
       REAL(8)                :: CHECK_TOL=1.D-7
@@ -104,6 +108,24 @@
 !     **************************************************************************
       IF(CONFIG_READY) RETURN
       CONFIG_READY=.TRUE.
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_MODE',VALUE,STATUS=STATUS)
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('resident','RESIDENT','recommended','RECOMMENDED')
+            GRAM_CHOLESKY_ENABLED=.TRUE.
+          CASE('transfer','TRANSFER','basic','BASIC')
+            GRAM_CHOLESKY_ENABLED=.FALSE.
+          CASE('off','OFF','0')
+            GRAM_CHOLESKY_ENABLED=.FALSE.
+            ENABLED=.FALSE.
+          CASE('auto','AUTO')
+          CASE DEFAULT
+            GRAM_CHOLESKY_ENABLED=.FALSE.
+          END SELECT
+        END IF
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUSOLVER_ACC',VALUE,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
         VALUE=ADJUSTL(VALUE)

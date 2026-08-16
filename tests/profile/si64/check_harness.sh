@@ -65,10 +65,10 @@ host_fftw=yes path=/tmp/fftw/lib/libfftw3 include=/tmp/fftw/include/fftw3.f03
 host_fftw_ld_library_path=/tmp/fftw/lib
 host_fftw_pkg_config_path=/tmp/fftw/lib/pkgconfig
 recommended_cpu_cases=cpu nvhpc_cpu
-recommended_gpu_cases=gpu_resident_stack gpu_resident_off gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack gpu_resident_stack_cufft
+recommended_gpu_cases=gpu_recommended gpu_transfer
 recommended_gpu_diagnostic_cases=gpu_resident_stack_force_dedpro gpu_resident_nosync gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache
-recommended_large_band_gpu_cases=gpu_resident_stack gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache
-recommended_resource_cases=cpu nvhpc_cpu gpu_resident_stack gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack
+recommended_large_band_gpu_cases=gpu_recommended gpu_transfer
+recommended_resource_cases=cpu nvhpc_cpu gpu_recommended
 EOF
 
 cat > "${tmpdir}/fake_nohost_capabilities.txt" <<'EOF'
@@ -95,10 +95,17 @@ case ":${LD_LIBRARY_PATH}:" in *":/tmp/fftw/lib:"*) ;; *) exit 1 ;; esac'
 
 DRY_RUN=yes \
   RUN_ROOT="${tmpdir}/dry-run" \
-  CASES="cufft_force_all gpu_all_resident_stack gpu_all_resident_stack_cufft gpu_resident_stack gpu_resident_stack_force_dedpro gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_setup_psim_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack gpu_no_cufft" \
+  CASES="cufft_force_all gpu_recommended gpu_transfer gpu_off gpu_recommended_ozaki_all gpu_all_resident_stack gpu_all_resident_stack_cufft gpu_resident_stack gpu_resident_stack_force_dedpro gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_setup_psim_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack gpu_no_cufft" \
   tests/profile/si64/run_benchmark.sh > "${tmpdir}/dry-run.out"
 grep -q "Benchmark dry-run metadata:" "${tmpdir}/dry-run.out"
 grep -q "case=cufft_force_all" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_recommended" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case_env=CPPAW_GPU_MODE=resident" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_transfer" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case_env=CPPAW_GPU_MODE=transfer" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_off" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case_env=CPPAW_GPU_MODE=off" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_recommended_ozaki_all" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case=gpu_all_resident_stack" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case=gpu_all_resident_stack_cufft" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case=gpu_resident_stack" "${tmpdir}/dry-run/metadata.txt"
@@ -216,17 +223,15 @@ DRY_RUN=yes \
     > "${tmpdir}/standard-auto-dry-run.out" 2>&1
 standard_auto_dry_run_status=$?
 set -e
-grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_off gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack gpu_resident_stack_cufft' cpu='cpu nvhpc_cpu'" \
+grep -q "selected_cases gpu='gpu_recommended gpu_transfer gpu_off' cpu='cpu nvhpc_cpu'" \
   "${tmpdir}/standard-auto-dry-run/nvhpc_standard.log"
-grep -q "^recommended_gpu_cases=gpu_resident_stack gpu_resident_off gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack gpu_resident_stack_cufft" \
+grep -q "^recommended_gpu_cases=gpu_recommended gpu_transfer" \
   "${tmpdir}/standard-auto-dry-run/gpu_capabilities.txt"
-grep -q "case=gpu_resident_stack" \
+grep -q "case=gpu_recommended" \
   "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt"
-grep -q "case=gpu_resident_off" \
+grep -q "case=gpu_transfer" \
   "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt"
-grep -q "case=gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack" \
-  "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt"
-grep -q "case=gpu_resident_stack_cufft" \
+grep -q "case=gpu_off" \
   "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt"
 grep -q "case=cpu" "${tmpdir}/standard-auto-dry-run/cpu_1rank/metadata.txt"
 grep -q "case=nvhpc_cpu" \

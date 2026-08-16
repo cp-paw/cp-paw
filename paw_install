@@ -25,7 +25,7 @@ export CPPAW_INSTALL_CUFFT="${CPPAW_INSTALL_CUFFT:-auto}"
 export CPPAW_INSTALL_GPU_ACC="${CPPAW_INSTALL_GPU_ACC:-auto}"
 export CPPAW_INSTALL_GPU_ALL="${CPPAW_INSTALL_GPU_ALL:-no}"
 export CPPAW_INSTALL_GPU_MEMORY_PROFILES="${CPPAW_INSTALL_GPU_MEMORY_PROFILES:-no}"
-export CPPAW_INSTALL_GPU_RESIDENCY_PROFILE="${CPPAW_INSTALL_GPU_RESIDENCY_PROFILE:-auto}"
+export CPPAW_INSTALL_GPU_RESIDENCY_PROFILE="${CPPAW_INSTALL_GPU_RESIDENCY_PROFILE:-no}"
 export CPPAW_INSTALL_CUBLAS_ACC="${CPPAW_INSTALL_CUBLAS_ACC:-auto}"
 export CPPAW_INSTALL_CUSOLVER_ACC="${CPPAW_INSTALL_CUSOLVER_ACC:-auto}"
 export CPPAW_INSTALL_SKALA_CPU="${CPPAW_INSTALL_SKALA_CPU:-no}"
@@ -557,14 +557,14 @@ function build_gpu_acc_choices {
     return 0
   fi
 
-  for X in nvhpc_gpu_acc_fast nvhpc_gpu_acc_fast_parallel ; do
+  for X in nvhpc_gpu_fast nvhpc_gpu_fast_parallel ; do
     build_choice "${X}" "${REQUIRED}" "nvhpc"
     if [[ ${LAST_BUILD_OK} = true ]] ; then
       GPU_ACC_BUILT=true
     fi
   done
   if profile_requested ; then
-    for X in nvhpc_gpu_acc_profile nvhpc_gpu_acc_profile_parallel ; do
+    for X in nvhpc_gpu_profile nvhpc_gpu_profile_parallel ; do
       build_choice "${X}" "${REQUIRED}" "nvhpc"
       if [[ ${LAST_BUILD_OK} = true ]] ; then
         GPU_ACC_PROFILE_BUILT=true
@@ -930,10 +930,10 @@ if [[ ${CUFFT_PROFILE_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_cufft_profile:\${PAWDIR}/bin/nvhpc_cufft_profile_parallel:\${PATH}"
 fi
 if [[ ${GPU_ACC_BUILT} = true ]] ; then
-  echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_acc_fast:\${PAWDIR}/bin/nvhpc_gpu_acc_fast_parallel:\${PATH}"
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_fast:\${PAWDIR}/bin/nvhpc_gpu_fast_parallel:\${PATH}"
 fi
 if [[ ${GPU_ACC_PROFILE_BUILT} = true ]] ; then
-  echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_acc_profile:\${PAWDIR}/bin/nvhpc_gpu_acc_profile_parallel:\${PATH}"
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_profile:\${PAWDIR}/bin/nvhpc_gpu_profile_parallel:\${PATH}"
 fi
 if [[ ${GPU_ALL_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_all_fast:\${PAWDIR}/bin/nvhpc_gpu_all_fast_parallel:\${PATH}"

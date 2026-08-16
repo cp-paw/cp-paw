@@ -37,52 +37,54 @@ With the installer's default `auto` policy, unavailable optional targets are
 skipped. Set an installer option to `require` to turn a missing dependency or
 failed build into an installation error.
 
-### NVIDIA library coverage
+### NVIDIA build profiles
 
-| Component | CP-PAW integration | Build targets |
+The normal user interface has three build profiles. Library-by-library targets
+remain available for development and reproducible profiling, but are not
+separate recommended CP-PAW variants.
+
+| Profile | Purpose | Main libraries |
 | --- | --- | --- |
-| NVPL | CPU BLAS, LAPACK, and FFTW backend when found; the NVHPC compiler BLAS/LAPACK libraries remain a fallback | `nvhpc_fast*`, `nvhpc_profile*` |
-| NVBLAS | BLAS-3 interposition experiment for existing DGEMM, ZGEMM, DSYRK, and ZHERK calls | `nvhpc_nvblas_*` |
-| NVLAMATH | NVIDIA LAPACK/cuSOLVER wrapper path | `nvhpc_nvlamath_*`, `nvhpc_gpu_all_*` |
-| cuFFTW | FFTW3-compatible cuFFT wrapper that preserves the existing CP-PAW FFT call structure | `nvhpc_cufftw_*`, `nvhpc_gpu_all_*` |
-| cuFFT | Native cuFFT/OpenACC path for selected batched complex FFTs; the 1-D and diagnostic 3-D paths are opt-in at run time | `nvhpc_cufft_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
-| cuBLAS | Explicit OpenACC/cuBLAS path for selected dense matrix, overlap, orthogonalization, projection, and one-center operations | `nvhpc_cublas_acc_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
-| cuSOLVER | Standard and generalized real/complex eigensolvers plus an opt-in Gram-Cholesky path | `nvhpc_cusolver_acc_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
-| OpenACC Skala grid | Optional native-grid adjoint back-projection with persistent output-grid residency | `nvhpc_skala_grid_acc_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
-| FTorch/LibTorch | Optional bridge to the experimental Skala 1.1 PAW functional | composable with every build target |
+| `nvhpc_fast*` | NVIDIA CPU build | NVPL BLAS, LAPACK, and FFTW when available |
+| `nvhpc_gpu_fast*` | Recommended NVIDIA GPU build | cuBLAS, cuSOLVER, native cuFFT, OpenACC residency |
+| `nvhpc_gpu_profile*` | Instrumented form of the recommended GPU build | same as `nvhpc_gpu_fast*` plus accelerator telemetry |
 
-The combined `nvhpc_gpu_acc_*` targets enable the native cuFFT, explicit
-cuBLAS, and explicit cuSOLVER integrations in one executable. The optional
-`nvhpc_gpu_all_*` targets additionally link cuFFTW and NVLAMATH so that the
-complete implemented library stack can be compiled and tested together.
-NVBLAS remains separate because it interposes the host BLAS interface.
+The GPU executable provides three run-time modes through `CPPAW_GPU_MODE`:
+
+- `resident` is the default and keeps wavefunctions, projections, and selected
+  work arrays on the GPU across neighboring operations. On one MPI rank it
+  also uses the native full-grid 3-D cuFFT path with device-side mapping.
+- `transfer` keeps cuBLAS and cuSOLVER available but disables the broad
+  residency and native 3-D FFT defaults. It is the main comparison and
+  compatibility mode.
+- `off` disables the explicit cuBLAS, cuSOLVER, and native cuFFT paths in the
+  same executable. Use `nvhpc_fast*` for a clean CPU performance reference.
 
 ```sh
-# Combined release builds
-CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast -j16 -z
-CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast_parallel -j16 -z
+# CPU and recommended GPU release builds
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast -j16 -z
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_fast -j16 -z
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_fast_parallel -j16 -z
 
-# Combined profiling build with the device-residency defaults
-CPPAW_TOOLCHAIN=nvhpc \
-  src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile -j16 -z
-
-# Integration build containing all composable NVIDIA libraries
-CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_fast -j16 -z
+# Same GPU profile with instrumentation
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_profile -j16 -z
 ```
 
-Important run-time defaults are deliberately conservative:
+The `resident` defaults use a cuBLAS offload threshold of `1e7`, cuSOLVER for
+supported problems of size 256 or larger, and Gram-Cholesky at size 4096 or
+larger. CUDA 13 FP64 Ozaki emulation remains disabled until
+`CPPAW_CUBLAS_FP64_EMULATION=1` is set.
 
-- explicit cuBLAS is enabled in builds that contain it, with an offload
-  threshold of `CPPAW_CUBLAS_ACC_MINFLOP=1e7`;
-- cuSOLVER is enabled for supported problems of size 256 or larger and can be
-  disabled with `CPPAW_CUSOLVER_ACC=0`;
-- native cuFFT is disabled until `CPPAW_CUFFT_ACC=1` is set; its default 1-D
-  threshold is 512 batched elements, while the native 3-D path remains a
-  separate diagnostic option;
-- focused residency defaults are enabled by the
-  `nvhpc_gpu_acc_residency_profile*` targets; the broader all-in-one stack is
-  opt-in via `CPPAW_GPU_RESIDENCY_STACK=1`;
-- Skala application and cuBLAS FP64 emulation are disabled by default.
+Advanced targets include `nvhpc_gpu_acc_*` for the unconfigured combined
+libraries, `nvhpc_gpu_acc_residency_profile*` for the earlier focused-residency
+experiments, and individual cuBLAS, cuSOLVER, cuFFT, cuFFTW, NVLAMATH, and
+NVBLAS targets. `nvhpc_gpu_all_*` is an integration test that additionally
+links cuFFTW and NVLAMATH. It is not the fastest-library preset: on the Spark
+GB10, cuFFTW's many small compatibility calls make it substantially slower.
+NVBLAS remains separate because it interposes the host BLAS interface.
+
+The combined GPU sources also contain the optional OpenACC Skala native-grid
+back-projection. FTorch/LibTorch can be composed with every build profile.
 
 The all-library builds do not add cuFFTMp, cuBLASMp, cuSOLVERMp, cuEST, or
 ALCHEMI. In particular, the Ozaki implementation described below uses the
@@ -154,8 +156,8 @@ CPPAW_SKALA_FTORCH_ROOT="$PWD/bin/skala_ftorch_cuda" \
   src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_fast -j16 -z
 ```
 
-The combined `nvhpc_gpu_acc_*` and `nvhpc_gpu_all_*` builds contain the same
-OpenACC kernel. At run time it remains disabled by default. Set
+The public `nvhpc_gpu_*` and advanced `nvhpc_gpu_acc_*`/`nvhpc_gpu_all_*`
+builds contain the same OpenACC kernel. At run time it remains disabled by default. Set
 `CPPAW_SKALA_GRID_BACK_ACC=1` to keep the smooth adjoint grids resident across
 all atom blocks and offload their native-grid back-projection. The default
 `CPPAW_SKALA_GRID_BACK_ACC_MIN_POINTS=32768` avoids small grids; set it to `1`
@@ -283,37 +285,23 @@ columns.
    ```
    CPPAW_INSTALL_NVHPC=require ./paw_install
    ```
-   to make those builds mandatory. CUDA-dependent NVBLAS, NVLAMATH, cuFFTW, native cuFFT, combined GPU, all-library GPU, cuBLAS/OpenACC and cuSOLVER/OpenACC variants are only attempted when CUDA is detected, unless requested explicitly with `CPPAW_INSTALL_NVBLAS=require`, `CPPAW_INSTALL_NVLAMATH=require`, `CPPAW_INSTALL_CUFFTW=require`, `CPPAW_INSTALL_CUFFT=require`, `CPPAW_INSTALL_GPU_ACC=require`, `CPPAW_INSTALL_GPU_ALL=require`, `CPPAW_INSTALL_CUBLAS_ACC=require` or `CPPAW_INSTALL_CUSOLVER_ACC=require`.
-   With `CPPAW_INSTALL_PROFILE=yes`, the installer now also attempts the
-   recommended GPU residency profile when CUDA/cuFFT/cuBLAS/cuSOLVER are
-   available. Set `CPPAW_INSTALL_GPU_RESIDENCY_PROFILE=no` to skip it, or
-   `CPPAW_INSTALL_GPU_RESIDENCY_PROFILE=require` to make it mandatory.
+   to make those builds mandatory. The installer adds `nvhpc_gpu_fast*` only
+   when CUDA, cuFFT, cuBLAS, and cuSOLVER are detected. Set
+   `CPPAW_INSTALL_GPU_ACC=require` to make that profile mandatory. Individual
+   and all-library targets are opt-in diagnostics; their installer switches
+   are described in `tests/profile/README.md`.
+   With `CPPAW_INSTALL_PROFILE=yes`, the installer also builds
+   `nvhpc_gpu_profile*`. The legacy focused-residency profile is skipped by
+   default and remains available with
+   `CPPAW_INSTALL_GPU_RESIDENCY_PROFILE=yes`.
    The NVIDIA builds can also be selected directly:
    ```
    CPPAW_TOOLCHAIN=gnu src/Buildtools/paw_build.sh -c skala_cpu_fast
    CPPAW_TOOLCHAIN=gnu src/Buildtools/paw_build.sh -c skala_cpu_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_fast_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_fast
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_fast_parallel
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_fast
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_fast_parallel
    ```
    Profiling builds add CP-PAW hotspot instrumentation for FFT, BLAS/LAPACK-style kernels and MPI transposes:
    ```
@@ -321,32 +309,15 @@ columns.
    src/Buildtools/paw_build.sh -c profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_profile
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile_parallel
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_managed_profile
-   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_unified_profile
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_profile
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_profile_parallel
    ```
-   Profiled runs write `cppaw_accel_profile.csv` in serial mode and `cppaw_accel_profile.rankNNNNN.csv` in parallel mode. Set `CPPAW_ACCEL_PROFILE_FILE=<prefix>` to choose another file prefix, or `CPPAW_ACCEL_PROFILE=0` to disable collection at run time. In `nvhpc_cufft_*` and `nvhpc_gpu_acc_*` builds, the native cuFFT path is opt-in: set `CPPAW_CUFFT_ACC=1` to enable it; the profiled default offload threshold is 512 batched elements and `CPPAW_CUFFT_ACC_MIN_ELEMENTS=<elements>` overrides it. `CPPAW_CUFFT_ACC_3D=1` additionally enables the experimental 3-D cuFFT wrapper for diagnostics. Set `CPPAW_FFT_SERIAL_3D=1` only for single-rank diagnostics that route `PLANEWAVE$FFT` through a full-grid 3-D transform; the benchmark case is `gpu_resident_stack_serial3dfft`. `CPPAW_FFT_SERIAL_3D_ACC_MAP=1` additionally tests device-side sparse/full-grid mapping and is intentionally a separate diagnostic case (`gpu_resident_stack_serial3dfft_accmap`) because it is architecture-sensitive. Combined GPU targets use explicit NVHPC GPU memory mode by default (`CPPAW_NVHPC_GPU_MEMORY_MODE=separate`); the `nvhpc_gpu_acc_managed_profile` and `nvhpc_gpu_acc_unified_profile` targets build `-gpu=mem:managed` and `-gpu=mem:unified` variants for device-residency experiments. The `nvhpc_gpu_acc_residency_profile*` targets default to `CPPAW_GPU_RESIDENCY=1`; set `CPPAW_GPU_RESIDENCY=0` to run the same binary with residency disabled. Residency lets cuBLAS scalarproducts and addproducts reuse OpenACC-present operands where wavefunction loops already keep data on the device; eligible projection loops, including superwave cases with the gamma correction applied on device, also scatter `PROPSI` on the device, expand per-atom projector blocks on the GPU, and copy the final projection array back once, the setup/orthogonalization path can keep `PSI0` and phase-eligible `PSIM` resident across Gram-Schmidt, projection, propagation, and pseudo-overlap boundaries (`CPPAW_GPU_SETUP_PSIM_RESIDENCY=0` disables only the setup `PSIM` extension), and the opt-in HPSI diagnostic keeps ETOT-local `HPSI`/`PSI0` data present for the immediate expectation/Hamiltonian overlaps. Set `CPPAW_GPU_PRO_EXPANSION=0` to keep projector expansion on the host for diagnostics. In `nvhpc_cublas_acc_*` and `nvhpc_gpu_acc_*` builds, `CPPAW_CUBLAS_ACC=0` disables the cuBLAS path at run time and `CPPAW_CUBLAS_ACC_MINFLOP=<flops>` adjusts the offload threshold. The opt-in `CPPAW_GPU_DENMAT_ENERGY=1` diagnostic offloads the time-inversion one-center DENMAT energy/Lambda contraction; `CPPAW_GPU_DENMAT_MINFLOP=<flops>` adjusts that threshold. In `nvhpc_cusolver_acc_*` and `nvhpc_gpu_acc_*` builds, `CPPAW_CUSOLVER_ACC=0` disables the cuSOLVER path at run time and `CPPAW_CUSOLVER_ACC_MIN_N=<n>` adjusts the dense eigensolver offload threshold; `CPPAW_CUSOLVER_MIN_N=<n>` is accepted as a shorter alias. The default cuBLAS threshold is `1e7`; the Si64 profile favors this over more conservative thresholds. The default cuSOLVER threshold is `256`; smaller Si64 profiling runs can set `CPPAW_CUSOLVER_ACC_MIN_N=1` to force offload. Set `CPPAW_CUSOLVER_ACC_CHECK=1` to validate cuSOLVER eigensolver results by residual and orthonormality before accepting them; failures fall back to the CPU LAPACK path.
+   Profiled runs write `cppaw_accel_profile.csv` in serial mode and
+   `cppaw_accel_profile.rankNNNNN.csv` in parallel mode. Set
+   `CPPAW_ACCEL_PROFILE_FILE=<prefix>` to choose another prefix, or
+   `CPPAW_ACCEL_PROFILE=0` to disable collection. Fine-grained accelerator
+   switches, thresholds, memory-mode experiments, and diagnostic build targets
+   are documented in `tests/profile/README.md`.
    To include profile targets in the installer run:
    ```
    CPPAW_INSTALL_PROFILE=yes ./paw_install
@@ -401,7 +372,7 @@ columns.
    For the recommended combined GPU residency profiling path:
    ```
    cd tests/profile/si64
-   PAWX="../../../bin/nvhpc_gpu_acc_residency_profile/paw_nvhpc_gpu_acc_residency_profile.x" \
+   PAWX="../../../bin/nvhpc_gpu_profile/paw_nvhpc_gpu_profile.x" \
    make all
    ```
    To scan GPU/NVIDIA-library capabilities and run a short diagnostic matrix:
@@ -412,8 +383,8 @@ columns.
    ```
    The capability helper reports host FFTW library/include and BLAS/LAPACK
    availability plus current `recommended_*` case lists. On CUDA systems with
-   cuBLAS and a usable host numerical stack it points routine GPU checks at the
-   residency stack rather than the older force-all diagnostic cases. The
+   cuFFT, cuBLAS, cuSOLVER, and a usable host numerical stack it points routine
+   checks at `gpu_recommended`, `gpu_transfer`, and `gpu_off`. The
    standard, exploration, and overnight benchmark wrappers consume those
    recommendations through their `auto` case-list defaults.
    To force all native paths for diagnostics, add `CPPAW_CUFFT_ACC=1` and
