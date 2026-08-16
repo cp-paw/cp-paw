@@ -75,6 +75,16 @@ supported problems of size 256 or larger, and Gram-Cholesky at size 4096 or
 larger. CUDA 13 FP64 Ozaki emulation remains disabled until
 `CPPAW_CUBLAS_FP64_EMULATION=1` is set.
 
+The profile names deliberately describe user intent rather than every linked
+library combination. On the Spark GB10 reference system, the periodic Si64
+case with 1024 empty bands and one step took a median 8.79 s with the default
+resident GPU profile, compared with 44.21 s in `transfer` mode, 68.40 s for the
+one-rank GNU CPU build, and 72.10 s for the one-rank NVHPC/NVPL CPU build.
+This is a 7.79x and 8.21x speedup for that profiling case; it is not a general
+application-wide performance guarantee. The full library matrix, repeat
+policy, correctness checks, and larger-band results are recorded in
+`tests/profile/si64/nvhpc_spark_benchmark_summary.md`.
+
 Advanced targets include `nvhpc_gpu_acc_*` for the unconfigured combined
 libraries, `nvhpc_gpu_acc_residency_profile*` for the earlier focused-residency
 experiments, and individual cuBLAS, cuSOLVER, cuFFT, cuFFTW, NVLAMATH, and

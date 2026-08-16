@@ -10,6 +10,108 @@ The intent is decision support, not a universal performance claim. Si64 is a
 good smoke and orthogonalization/projection case, but larger systems still need
 dedicated follow-up runs before promoting any path to production default.
 
+## 2026-08-16 Public Profile Decision
+
+This refresh used commit `e5c12b1` on Spark: one NVIDIA GB10 GPU, 20 Arm CPU
+cores, NVHPC 26.5, and the CUDA 13 toolchain. GPU timings use one MPI rank and
+one GPU. The primary case has 1024 empty bands and `NSTEPS=1`. Every case was
+run twice; only `gpu_transfer` and `gpu_off`, whose first two timings differed
+by more than 5%, received a third run. Tables report medians.
+
+The normal interface is intentionally small:
+
+| Public profile or mode | Meaning |
+| --- | --- |
+| `nvhpc_fast*` | NVIDIA CPU build, using NVPL when available |
+| `nvhpc_gpu_fast*` | Recommended GPU release build; residency is the default |
+| `nvhpc_gpu_profile*` | Instrumented form of the same GPU build |
+| `CPPAW_GPU_MODE=transfer` | Same GPU binary with broad residency and native 3-D GPU FFT defaults disabled |
+| `CPPAW_GPU_MODE=off` | Same binary with explicit cuBLAS, cuSOLVER, and cuFFT paths disabled |
+
+Library-by-library targets and long `gpu_resident_stack_*` cases remain
+developer diagnostics. They are not separate CP-PAW editions.
+
+### Public 1024-band result
+
+| Case | Valid runs | Median | vs 1-rank GNU CPU | vs 1-rank NVHPC/NVPL CPU | vs 8-rank NVHPC/NVPL CPU |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| GPU default, no environment override | 2/2 | 8.79 s | 7.79x | 8.21x | 18.93x |
+| GPU explicit `resident` | 2/2 | 8.65 s | 7.91x | 8.34x | 19.22x |
+| GPU `transfer` | 3/3 | 44.21 s | 1.55x | 1.63x | 3.76x |
+| GPU `off` | 3/3 | 68.97 s | 0.99x | 1.05x | 2.41x |
+| GPU resident plus Ozaki DGEMM/ZGEMM | 2/2 | 6.44 s | 10.62x | 11.20x | 25.82x |
+| GNU CPU, 1 rank | 3/3 | 68.40 s | 1.00x | - | - |
+| NVHPC/NVPL CPU, 1 rank | 3/3 | 72.10 s | - | 1.00x | - |
+| NVHPC/NVPL CPU, 8 ranks | 3/3 | 166.26 s | - | - | 1.00x |
+
+The unconfigured default and explicit `resident` mode agree within ordinary
+run-to-run variation, confirming that the public GPU build really defaults to
+the intended broad residency path. Eight MPI ranks are slower here because
+Si64/one-step is a small fixed workload with substantial MPI and setup
+overhead; this is not evidence that eight CPU cores are generally slower than
+one core. The uninstrumented `nvhpc_gpu_fast` smoke completed in 8.51 s with
+the same energy, and the public parallel profile passed a two-rank Si2 smoke.
+
+### Why this library combination
+
+| Diagnostic configuration | Median | Interpretation |
+| --- | ---: | --- |
+| cuBLAS only | 44.77 s | Main useful individual GPU library |
+| cuSOLVER only | 66.52 s | Small isolated gain; useful inside residency |
+| native cuFFT only | 71.66 s | Small 1-D calls do not pay for transfer/setup |
+| cuFFTW compatibility layer | 171.74 s | Many small wrapper calls make it unsuitable as a default |
+| NVLAMATH | 68.65 s | Approximately neutral for this case |
+| NVBLAS interposition | 88.58 s | Slower than the explicit cuBLAS path |
+| managed/unified-memory profiles | 48.12/48.62 s | Better than CPU, much slower than explicit residency |
+| all-library integration target | 44.38 s | Links and runs correctly, but is not the best combination |
+| base explicit residency | 12.12 s | Residency is the dominant design decision |
+| widest focused resident diagnostic | 8.31 s | Confirms projection, AddPRO, density, Gram, and force-side reuse |
+| public resident profile | 8.79 s | Stable, supported default with the selected combined stack |
+
+The public GPU build therefore combines explicit cuBLAS, cuSOLVER, native
+cuFFT where the full-grid resident path is profitable, OpenACC residency, and
+NVPL host fallbacks. It does not enable cuFFTW, NVBLAS, or NVLAMATH merely
+because they can be linked. The `gpu_all` target remains an integration test
+for that distinction.
+
+### Ozaki scaling
+
+All four CUDA 13 selections were measured twice in the earlier focused
+residency profile before checking the final public combination:
+
+| Empty bands | Native FP64 | DGEMM only | ZGEMM only | ZHERK selected | All selected | All vs native |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1024 | 11.50 s | 11.48 s | 11.23 s | 11.97 s | 10.41 s | 1.10x |
+| 2048 | 32.20 s | 27.59 s | 29.88 s | 33.76 s | 24.52 s | 1.31x |
+| 4096 | 138.28 s | 93.19 s | 125.14 s | 137.18 s | 82.04 s | 1.69x |
+
+With the final public resident profile, native FP64 versus combined
+DGEMM/ZGEMM Ozaki measured 8.79/6.44 s at 1024 bands, 24.99/14.97 s at 2048,
+and 110.23/50.81 s at 4096, corresponding to 1.36x, 1.67x, and 2.17x. Ozaki
+therefore becomes more valuable as the matrix dimension grows.
+
+The correctness comparison passed at all three sizes: native-versus-Ozaki
+energy differences were at most `1.1e-11` Ha, orthonormality residuals stayed
+below `7.8e-9`, and force differences stayed below `6.3e-14`. A separate Si2
+case passed with two k-points, `1.7e-13` Ha energy difference, `3.1e-13`
+orthonormality residual, `4.5e-14` force difference, and `1.6e-13` stress
+difference. DGEMM and ZGEMM executed without reported fallback. ZHERK did not
+produce a confirmed emulated dispatch in these cases, so it remains disabled
+by default. Despite the strong large-band result, Ozaki remains opt-in pending
+broader systems, forces, stress, and k-point coverage.
+
+The fresh run roots are:
+
+```
+/home/kuehne88/cp-paw-nvhpc-library-defaults-20260816/tests/profile/si64/runs/spark-library-defaults-1024-n1-r3-20260816
+/home/kuehne88/cp-paw-nvhpc-library-defaults-20260816/tests/profile/si64/runs/spark-library-defaults-1024-gpu-r3-v2-20260816
+/home/kuehne88/cp-paw-nvhpc-library-defaults-20260816/tests/profile/si64/runs/spark-ozaki-fixed-si64-1024-4096-r2-20260816
+/home/kuehne88/cp-paw-nvhpc-library-defaults-20260816/tests/profile/si64/runs/spark-public-si64-1024-r2-20260816
+/home/kuehne88/cp-paw-nvhpc-library-defaults-20260816/tests/profile/si64/runs/spark-public-si64-2048-r2-20260816
+/home/kuehne88/cp-paw-nvhpc-library-defaults-20260816/tests/profile/si64/runs/spark-public-si64-4096-r2-20260816
+/home/kuehne88/cp-paw-nvhpc-library-defaults-20260816/tests/profile/si64/runs/spark-public-si2-ozaki-correctness-20260816
+```
+
 ## Run Overview
 
 | Run directory | Scope | Best GPU case | 1-rank CPU references | 8-rank CPU references | Conclusion |
