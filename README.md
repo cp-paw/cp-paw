@@ -166,6 +166,13 @@ derivative contractions remain on the CPU. Without OpenACC support, or with
 the switch unset, the same source uses its CPU batch implementation and adds
 no CUDA dependency.
 
+The dedicated `nvhpc_skala_grid_acc_*` target changes only the native-grid
+back-projection and retains the normal host FFT provider. NVHPC installations
+with bundled NVPL FFTW satisfy that dependency directly; on x86 systems
+without NVPL, make a conventional FFTW3 installation visible through
+`pkg-config` and the dynamic loader, for example with `PKG_CONFIG_PATH` and
+`LD_LIBRARY_PATH`.
+
 The functional is selected in the input with a `!SKALA` block. The conservative
 starting point evaluates the Skala path while keeping CP-PAW's conventional XC
 operator active:

@@ -214,6 +214,9 @@ OpenACC native-grid adjoint kernel. They still require
 `CPPAW_USE_SKALA_FTORCH=yes` and a CUDA FTorch root for model inference. The
 combined `nvhpc_gpu_acc_*` and `nvhpc_gpu_all_*` targets already compile this
 kernel because they enable OpenACC for the other accelerator paths.
+The dedicated targets retain CP-PAW's host FFT backend: bundled NVPL FFTW is
+used where present, while x86 NVHPC installations without NVPL require a
+normal FFTW3 development installation discoverable through `pkg-config`.
 
 Set `CPPAW_SKALA_GRID_BACK_ACC=1` to use it; the default is off. The output
 density, gradient, and kinetic-energy-density adjoint grids remain resident
