@@ -111,6 +111,28 @@ def check_nvlamath_openacc_module():
     )
 
 
+def check_nvhpc_cuda_root_validation():
+    root = os.path.abspath(os.path.join(HERE, "../../.."))
+    path = os.path.join(root, "src", "Buildtools", "defaultparmfile")
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    match = re.search(
+        r"function detect_cuda \{(?P<body>.*?)\n\}",
+        text,
+        re.DOTALL,
+    )
+    if match is None:
+        raise AssertionError("detect_cuda function not found")
+    body = match.group("body")
+    assert_contains(
+        body,
+        "${D}/include/cuda_runtime_api.h",
+        "CUDA root header validation",
+    )
+    if body.find("cuda_runtime_api.h") > body.find("CPPAW_CUDA_ROOT=${D}"):
+        raise AssertionError("CUDA root must be validated before assignment")
+
+
 def check_summary_and_markdown(tmpdir):
     run_dir = os.path.join(tmpdir, "case", "rep1")
     os.makedirs(run_dir)
@@ -418,6 +440,7 @@ def main():
         check_compare(tmpdir)
         check_ozaki_validate(tmpdir)
     check_nsys_case_coverage()
+    check_nvhpc_cuda_root_validation()
     check_nvlamath_openacc_module()
     return 0
 

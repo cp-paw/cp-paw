@@ -180,6 +180,7 @@ function find_nvhpc_mpifort {
 function detect_cuda {
   local D
   local CC
+  local NVCC_PATH
 
   CPPAW_CUDA_AVAILABLE=false
   CPPAW_CUDA_ROOT=
@@ -192,14 +193,18 @@ function detect_cuda {
     if [[ -n ${CC} ]] ; then CPPAW_CUDA_CC=${CC} ; fi
   fi
 
-  if command_path nvcc >/dev/null ; then
+  NVCC_PATH=$(command_path nvcc)
+  if [[ -n ${NVCC_PATH} ]] ; then
     CPPAW_CUDA_AVAILABLE=true
-    CPPAW_CUDA_ROOT=$(dirname "$(dirname "$(command_path nvcc)")")
+    D=$(dirname "$(dirname "${NVCC_PATH}")")
+    if [[ -f ${D}/include/cuda_runtime_api.h ]] ; then
+      CPPAW_CUDA_ROOT=${D}
+    fi
   fi
 
   for D in "${NVHPC_ROOT}"/cuda/* "${NVHPC_ROOT}/cuda" \
            /usr/local/cuda /usr/local/cuda-* ; do
-    if [[ -x ${D}/bin/nvcc ]] ; then
+    if [[ -x ${D}/bin/nvcc && -f ${D}/include/cuda_runtime_api.h ]] ; then
       CPPAW_CUDA_AVAILABLE=true
       if [[ -z ${CPPAW_CUDA_ROOT} ]] ; then CPPAW_CUDA_ROOT=${D} ; fi
       break
