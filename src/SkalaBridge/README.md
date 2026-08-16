@@ -224,7 +224,7 @@ eighth-order interpolation stencils use atomic accumulation. Set
 32768 smooth-grid cells. The CPU batch path remains available in every build,
 including builds without OpenACC or CUDA. Profile builds report kernel time as
 `SKALA_GRID_BACK_ACC_SCATTER` and transfers as
-`ACC_COPY_SKALA_GRID_BACK_{RESIDENCY_IN,INPUT,RESIDENCY_OUT}`.
+`ACC_COPY_SKALA_GRID_BACK_{IN,INPUT,OUT}`.
 
 For CUDA, the setup script selects an `nvcc` whose major and minor toolkit
 version matches the selected PyTorch package. Set `CUDACXX` to require a

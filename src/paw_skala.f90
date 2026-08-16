@@ -458,7 +458,7 @@
      &                         *REAL(SMOOTH_NR2,KIND=8) &
      &                         *REAL(SMOOTH_NR3,KIND=8) &
      &                         *REAL(SMOOTH_NDIMD,KIND=8)
-        CALL ACCELPROFILE$ADD('ACC_COPY_SKALA_GRID_BACK_RESIDENCY_IN' &
+        CALL ACCELPROFILE$ADD('ACC_COPY_SKALA_GRID_BACK_IN' &
      &      ,INT(SMOOTH_NR1,KIND=8),INT(SMOOTH_NR2,KIND=8) &
      &      ,INT(SMOOTH_NR3,KIND=8),INT(SMOOTH_NDIMD,KIND=8) &
      &      ,0.D0,GRID_BACK_BYTES,ACCEL_T1-ACCEL_T0)
@@ -1370,7 +1370,7 @@
      &                         *REAL(SMOOTH_NR2,KIND=8) &
      &                         *REAL(SMOOTH_NR3,KIND=8) &
      &                         *REAL(SMOOTH_NDIMD,KIND=8)
-        CALL ACCELPROFILE$ADD('ACC_COPY_SKALA_GRID_BACK_RESIDENCY_OUT' &
+        CALL ACCELPROFILE$ADD('ACC_COPY_SKALA_GRID_BACK_OUT' &
      &      ,INT(SMOOTH_NR1,KIND=8),INT(SMOOTH_NR2,KIND=8) &
      &      ,INT(SMOOTH_NR3,KIND=8),INT(SMOOTH_NDIMD,KIND=8) &
      &      ,0.D0,GRID_BACK_BYTES,ACCEL_T1-ACCEL_T0)
