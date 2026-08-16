@@ -48,6 +48,7 @@ failed build into an installation error.
 | cuFFT | Native cuFFT/OpenACC path for selected batched complex FFTs; the 1-D and diagnostic 3-D paths are opt-in at run time | `nvhpc_cufft_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
 | cuBLAS | Explicit OpenACC/cuBLAS path for selected dense matrix, overlap, orthogonalization, projection, and one-center operations | `nvhpc_cublas_acc_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
 | cuSOLVER | Standard and generalized real/complex eigensolvers plus an opt-in Gram-Cholesky path | `nvhpc_cusolver_acc_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
+| OpenACC Skala grid | Optional native-grid adjoint back-projection with persistent output-grid residency | `nvhpc_skala_grid_acc_*`, `nvhpc_gpu_acc_*`, `nvhpc_gpu_all_*` |
 | FTorch/LibTorch | Optional bridge to the experimental Skala 1.1 PAW functional | composable with every build target |
 
 The combined `nvhpc_gpu_acc_*` targets enable the native cuFFT, explicit
@@ -150,8 +151,20 @@ preceding step. A CUDA bridge can instead be composed with an NVIDIA target:
 src/Buildtools/paw_skala_setup.sh --device cuda --download-model
 CPPAW_USE_SKALA_FTORCH=yes \
 CPPAW_SKALA_FTORCH_ROOT="$PWD/bin/skala_ftorch_cuda" \
-  src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast -j16 -z
+  src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_fast -j16 -z
 ```
+
+The combined `nvhpc_gpu_acc_*` and `nvhpc_gpu_all_*` builds contain the same
+OpenACC kernel. At run time it remains disabled by default. Set
+`CPPAW_SKALA_GRID_BACK_ACC=1` to keep the smooth adjoint grids resident across
+all atom blocks and offload their native-grid back-projection. The default
+`CPPAW_SKALA_GRID_BACK_ACC_MIN_POINTS=32768` avoids small grids; set it to `1`
+for correctness and instrumentation runs. The input batches are copied once
+per atom, while the output grids cross the host/device boundary only at the
+beginning and end of the full back-projection phase. Force and stress
+derivative contractions remain on the CPU. Without OpenACC support, or with
+the switch unset, the same source uses its CPU batch implementation and adds
+no CUDA dependency.
 
 The functional is selected in the input with a `!SKALA` block. The conservative
 starting point evaluates the Skala path while keeping CP-PAW's conventional XC
@@ -278,6 +291,8 @@ columns.
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast_parallel
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_fast
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_fast
@@ -303,6 +318,8 @@ columns.
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_profile
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_profile_parallel
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_profile
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_skala_grid_acc_profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_profile

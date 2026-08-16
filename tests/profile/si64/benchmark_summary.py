@@ -7,6 +7,8 @@ import sys
 
 
 def transfer_kind(op):
+    if "SKALA_GRID_BACK" in op:
+        return "skala"
     if "OFFDEN" in op:
         return "offden"
     if "DENMAT" in op:
@@ -90,6 +92,7 @@ def profile_totals(run_dir):
         "copy_proj_gb": 0.0,
         "copy_offden_gb": 0.0,
         "copy_denmat_gb": 0.0,
+        "copy_skala_gb": 0.0,
         "update_gb": 0.0,
         "update_wave_gb": 0.0,
         "update_proj_gb": 0.0,
@@ -359,6 +362,7 @@ def main(argv):
                 "copy_proj_gb": totals["copy_proj_gb"],
                 "copy_offden_gb": totals["copy_offden_gb"],
                 "copy_denmat_gb": totals["copy_denmat_gb"],
+                "copy_skala_gb": totals["copy_skala_gb"],
                 "update_gb": totals["update_gb"],
                 "update_wave_gb": totals["update_wave_gb"],
                 "update_proj_gb": totals["update_proj_gb"],
@@ -431,6 +435,7 @@ def main(argv):
         "copy_proj_gb",
         "copy_offden_gb",
         "copy_denmat_gb",
+        "copy_skala_gb",
         "update_gb",
         "update_wave_gb",
         "update_proj_gb",

@@ -6,6 +6,8 @@ import sys
 
 
 def transfer_kind(op):
+    if "SKALA_GRID_BACK" in op:
+        return "skala"
     if "OFFDEN" in op:
         return "offden"
     if "DENMAT" in op:

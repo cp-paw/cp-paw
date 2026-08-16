@@ -102,6 +102,7 @@ def main(argv):
         ("copy_proj_gb", 2),
         ("copy_offden_gb", 2),
         ("copy_denmat_gb", 2),
+        ("copy_skala_gb", 2),
         ("update_gb", 2),
         ("update_wave_gb", 2),
         ("update_proj_gb", 2),

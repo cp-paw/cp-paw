@@ -209,6 +209,23 @@ root with an NVIDIA target in the same way. `CPPAW_INSTALL_SKALA_CPU` defaults
 to `no`, and the conventional `dbg`, `fast`, and `fast_parallel` binaries never
 enable Skala implicitly, so they retain their dependency set and behavior.
 
+The dedicated `nvhpc_skala_grid_acc_{fast,profile}` targets add the optional
+OpenACC native-grid adjoint kernel. They still require
+`CPPAW_USE_SKALA_FTORCH=yes` and a CUDA FTorch root for model inference. The
+combined `nvhpc_gpu_acc_*` and `nvhpc_gpu_all_*` targets already compile this
+kernel because they enable OpenACC for the other accelerator paths.
+
+Set `CPPAW_SKALA_GRID_BACK_ACC=1` to use it; the default is off. The output
+density, gradient, and kinetic-energy-density adjoint grids remain resident
+from the forward-begin boundary through all atom blocks and return to the host
+at forward-end. Smooth points use a conflict-free device loop, while local
+eighth-order interpolation stencils use atomic accumulation. Set
+`CPPAW_SKALA_GRID_BACK_ACC_MIN_POINTS` to override the default threshold of
+32768 smooth-grid cells. The CPU batch path remains available in every build,
+including builds without OpenACC or CUDA. Profile builds report kernel time as
+`SKALA_GRID_BACK_ACC_SCATTER` and transfers as
+`ACC_COPY_SKALA_GRID_BACK_{RESIDENCY_IN,INPUT,RESIDENCY_OUT}`.
+
 For CUDA, the setup script selects an `nvcc` whose major and minor toolkit
 version matches the selected PyTorch package. Set `CUDACXX` to require a
 specific compiler. It probes the CUDA host C++ compiler and, when necessary,

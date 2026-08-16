@@ -106,6 +106,9 @@ def check_summary_and_markdown(tmpdir):
                 "ACC_COPY_ADDPRO_HPSI_PROPSI_IN,1,1,1,0,1,0,0,0,0,0.5,0,0",
                 "ACC_COPY_OFFDEN_DPACK_PROJ_IN,1,1,1,0,1,0,0,0,0,3.5,0,0",
                 "ACC_COPY_DENMAT_LAGR_IN,1,1,1,0,1,0,0,0,0,4.5,0,0",
+                "ACC_COPY_SKALA_GRID_BACK_RESIDENCY_IN,1,1,1,0,1,0,0,0,0,0.25,0,0",
+                "ACC_COPY_SKALA_GRID_BACK_INPUT,1,1,1,0,1,0,0,0,0,0.5,0,0",
+                "ACC_COPY_SKALA_GRID_BACK_RESIDENCY_OUT,1,1,1,0,1,0,0,0,0,0.75,0,0",
                 "ACC_COPY_MISC_IN,1,1,1,0,1,0,0,0,0,0.75,0,0",
                 "ACC_COPY_SERIAL3D_ACC_MAP,1,1,1,0,1,0,0,0,0,4.0,0,0",
                 "ACC_COPY_SERIAL3D_ACC_INPUT,1,1,1,0,1,0,0,0,0,1.0,0,0",
@@ -170,12 +173,13 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["partition_classes"], "2", "partition_classes")
     assert_equal(row["model_xc_energy"], "-1218.01589", "model_xc_energy")
     assert_equal(row["static_total_energy"], "-848.313518", "static_total_energy")
-    assert_equal(row["transfer_gb"], "18.75", "transfer_gb")
-    assert_equal(row["copy_gb"], "17.5", "copy_gb")
+    assert_equal(row["transfer_gb"], "20.25", "transfer_gb")
+    assert_equal(row["copy_gb"], "19", "copy_gb")
     assert_equal(row["copy_wave_gb"], "1.75", "copy_wave_gb")
     assert_equal(row["copy_proj_gb"], "3", "copy_proj_gb")
     assert_equal(row["copy_offden_gb"], "3.5", "copy_offden_gb")
     assert_equal(row["copy_denmat_gb"], "4.5", "copy_denmat_gb")
+    assert_equal(row["copy_skala_gb"], "1.5", "copy_skala_gb")
     assert_equal(row["update_gb"], "1.25", "update_gb")
     assert_equal(row["update_wave_gb"], "1.25", "update_wave_gb")
     assert_equal(row["update_proj_gb"], "0", "update_proj_gb")
@@ -189,6 +193,7 @@ def check_summary_and_markdown(tmpdir):
     markdown = run_tool("benchmark_markdown.py", tsv_path)
     assert_contains(markdown, "transfer_gb", "benchmark markdown transfer header")
     assert_contains(markdown, "copy_wave_gb", "benchmark markdown header")
+    assert_contains(markdown, "copy_skala_gb", "benchmark markdown Skala copy header")
     assert_contains(markdown, "update_wave_gb", "benchmark markdown update header")
     assert_contains(markdown, "skala_atom_grid_s", "benchmark markdown Skala header")
     assert_contains(markdown, "model_xc_energy", "benchmark markdown energy header")
@@ -202,8 +207,9 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(profile_summary, "ACC copy proj", "profile copy proj bucket")
     assert_contains(profile_summary, "ACC copy offden", "profile copy offden bucket")
     assert_contains(profile_summary, "ACC copy denmat", "profile copy denmat bucket")
+    assert_contains(profile_summary, "ACC copy skala", "profile copy Skala bucket")
     assert_contains(profile_summary, "ACC update wave", "profile update wave bucket")
-    assert_contains(profile_summary, "transfer estimate: 18.750000 GB", "profile transfer total")
+    assert_contains(profile_summary, "transfer estimate: 20.250000 GB", "profile transfer total")
     assert_contains(
         profile_summary,
         "Skala detail rank-seconds (nested): 2.000000",

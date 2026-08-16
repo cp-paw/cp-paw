@@ -159,7 +159,8 @@ grid back-projection. Skala runs also expose protocol values as
 semantic buckets for the GPU-residency work: `copy_wave_gb` for wavefunction
 arrays, `copy_proj_gb` for projector/projection arrays, `copy_offden_gb` for
 off-site density-matrix transfers, and `copy_denmat_gb` for one-center
-density-matrix transfers. `transfer_gb` is the combined host/device movement
+density-matrix transfers. `copy_skala_gb` isolates native-grid Skala adjoint
+inputs and the persistent grid-residency boundaries. `transfer_gb` is the combined host/device movement
 estimate (`copy_gb + update_gb`). OpenACC `ACC_UPDATE_*` rows are reported
 separately as `update_gb` with matching `update_wave_gb`, `update_proj_gb`,
 `update_offden_gb`, and `update_denmat_gb` buckets, so required boundary
@@ -174,10 +175,18 @@ default `302.280854`) with `ENERGY_TOL=1e-5`. A run with normal termination but
 an energy mismatch is reported as `ok=no` and carries `energy_delta` in the TSV
 and Markdown summaries.
 The harness also records inherited `CPPAW_GPU_*`, `CPPAW_CUBLAS_ACC_*`,
-`CPPAW_CUSOLVER_ACC_*`, `CPPAW_CUFFT_ACC*`, and `CPPAW_GRAM_CHOLESKY`
+`CPPAW_CUSOLVER_ACC_*`, `CPPAW_CUFFT_ACC*`, `CPPAW_SKALA_*`, and
+`CPPAW_GRAM_CHOLESKY`
 environment switches in `run.env` and the benchmark `env` column. Case-specific
 settings are appended after inherited settings, so explicit `CASES` keywords
 remain reproducible and override broader shell defaults.
+
+For a Skala-enabled OpenACC binary, use `CASES="skala_grid_host
+skala_grid_acc"` to compare the CPU and GPU native-grid back-projection in the
+same executable. `skala_grid_acc` keeps the production size threshold unless
+`CPPAW_SKALA_GRID_BACK_ACC_MIN_POINTS` is inherited explicitly. The profile
+rows separate `SKALA_GRID_BACK_ACC_SCATTER` kernel time from the
+`ACC_COPY_SKALA_GRID_BACK_*` transfer estimates.
 
 `WAVES$ETOT` is split further by `PAW_ETOT_*` rows, and the initial
 Gram-Schmidt setup is split by `PAW_GRAM_*` rows. These are nested PAW

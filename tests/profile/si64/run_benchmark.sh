@@ -656,7 +656,7 @@ inherited_accel_env() {
   local name value env_line=""
   while IFS='=' read -r name value; do
     case "${name}" in
-      CPPAW_GPU_*|CPPAW_FFT_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUBLAS_FP64_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_GRAM_CHOLESKY)
+      CPPAW_GPU_*|CPPAW_FFT_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUBLAS_FP64_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_SKALA_*|CPPAW_GRAM_CHOLESKY)
         if [[ "${value}" =~ ^[A-Za-z0-9_./:+-]+$ ]]; then
           env_line="${env_line:+${env_line} }${name}=${value}"
         fi
@@ -701,6 +701,8 @@ case_env() {
     gpu_all_invbatch_off) echo "$(cufft_env) $(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_all_3dfft) echo "$(cufft3d_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_all_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
+    skala_grid_host) echo "CPPAW_SKALA_GRID_BACK_ACC=0" ;;
+    skala_grid_acc) echo "CPPAW_SKALA_GRID_BACK_ACC=1" ;;
     gpu_resident) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_resident_invbatch_off) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
