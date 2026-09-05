@@ -767,6 +767,7 @@ USE PERIODICTABLE_MODULE
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
       REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
+      CHARACTER(80)              :: FMTREPORT='(50("."),":",F20.5," ",A,T1,A)'
 !     **************************************************************************
 !     CALL ATOMLIB$TEST_ATOMLIB$BOUNDSTATE()
 !
@@ -1065,6 +1066,23 @@ USE PERIODICTABLE_MODULE
           CALL ATOMLIB_EFINITENUCSIZE(GID,NR,RBOX,AEZ,RHO,EFS)
 !
 !         ======================================================================
+!         == ADD RELATIVISTIC CORRECTION (MCDONALD AND VOSKO) TO EXC          ==
+!         == MACDONALD,VOSKO, J.PHYS.C: SOLID STATE PHYS 12, 2977 (1979)      ==
+!         ======================================================================
+IF(.NOT.TREL)PRINT*,'WARNING!!!!! RELATIVISTIC EFFECTS ARE SWITCHED OFF'
+          IF(TREL) THEN
+            DO IR=1,NR
+              CALL DFT$MACDONALD(RHO(IR)*Y0,AUX(IR),AUX1(IR))
+            ENDDO
+            AUX(:)=4.D0*PI*AUX(:)*R(:)**2
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
+            WRITE(*,FMT=FMTREPORT) &
+        &        SVAR,'H','MACDONALD1979 RELATIVISTIC CORRECTION'
+            EXC=EXC+SVAR
+          END IF
+!
+!         ======================================================================
 !         == WORK OUT FOCK EXCHANGE ENERGY =====================================
 !         ======================================================================
           IF(TFOCK.AND.TSECOND) THEN
@@ -1145,6 +1163,14 @@ USE PERIODICTABLE_MODULE
 !       ========================================================================
         CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EXC)
 !
+!       == ADD RELATIVISTIC EXCHANGE CORRECTION OF MACDONALD AND VOSKO
+        IF(TREL) THEN
+          DO IR=1,NR
+            CALL DFT$MACDONALD(RHO(IR)*Y0,AUX(IR),AUX1(IR))
+            POT(IR)=POT(IR)+AUX1(IR)/Y0
+          ENDDO
+        END IF
+!
 !       == DETERMINE WAVE FUNCTIONS FOR FOCK POTENTIAL =========================
         IF(TFOCK.AND.(TSECOND.OR.CONVG)) THEN
 !!$! A TEST FOR HELIUM SHOWS THAT RESTRICTING RFOCK TO ONLY 1.1 OF THE COVALENT
@@ -1212,7 +1238,6 @@ USE PERIODICTABLE_MODULE
         CALL BROYDEN$STEP(NR,POTIN,POT-POTIN)
         POT=POTIN
       ENDDO
-
       CALL BROYDEN$CLEAR
       IF(.NOT.CONVG) THEN
         CALL ERROR$MSG('SELFCONSISTENCY LOOP NOT CONVERGED')
@@ -2324,8 +2349,9 @@ RETURN
       AUX(:)=R(:)**2*GRHO(:)
       CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
       GRHO(2:)=AUX1(2:)/R(2:)**2
-      GRHO(1:5)=GRHO(5) ! AVOID ERRORS DUE TO TERMINATION OF THE GRID
-                        ! 5 POINTS OFFSET FOR 5-POINT FORMULA APPLIED TWICE...
+!!$      GRHO(1:5)=GRHO(5) ! AVOID ERRORS DUE TO TERMINATION OF THE GRID
+!!$                        ! 5 POINTS OFFSET FOR 5-POINT FORMULA APPLIED TWICE..
+      GRHO(1)=GRHO(2) ! AVOID divide by zero
       POTXC(:)=POTXC(:)-GRHO(:)
 !
 !     == EXCHANGE CORRELATION POTENTIAL IS SET TO ZERO OUTSIDE THE BOX. 

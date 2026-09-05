@@ -916,64 +916,86 @@ END MODULE STOPIT_MODULE
 !       __PAW_WAVES1.F90________________________________________________________
         CALL ENERGYLIST$GET('PS  KINETIC',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'pskinetic ',etot,svar
 !       __PAW_AUGMENTATION.F90__________________________________________________
         CALL ENERGYLIST$GET('AE1-PS1 KINETIC',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'ae1-ps1 kinetic ',etot,svar
         CALL ENERGYLIST$GET('AE1 EXCHANGE-CORRELATION',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'ae1 xc ',etot,svar
         CALL ENERGYLIST$GET('PS1 EXCHANGE-CORRELATION',SVAR)
         ETOT=ETOT-SVAR
+write(*,fmt='(a,t30,2f20.10)')'ps1 xc ',etot,svar
         CALL ENERGYLIST$GET('AE1 ELECTROSTATIC',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'ae1 el ',etot,svar
         CALL ENERGYLIST$GET('PS1 ELECTROSTATIC',SVAR)
         ETOT=ETOT-SVAR
+write(*,fmt='(a,t30,2f20.10)')'ps1 el ',etot,svar
         CALL ENERGYLIST$GET('AE1 BACKGROUND',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'ae1 background ',etot,svar
         CALL ENERGYLIST$GET('PS1 BACKGROUND',SVAR)
         ETOT=ETOT-SVAR
+write(*,fmt='(a,t30,2f20.10)')'ps1 background ',etot,svar
         CALL ENERGYLIST$GET('LDA+U EXCHANGE',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'ldaplusU ',etot,svar
         CALL ENERGYLIST$GET('CORE RELAXATION',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'core relaxation ',etot,svar
         CALL ENERGYLIST$GET('EXTERNAL 1CENTER POTENTIAL',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'external 1cpot ',etot,svar
 !       __PAW_POTENTIAL.F90_____________________________________________________
         CALL ENERGYLIST$GET('SOLVENT PAULI REPULSION',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'solvent pauli ',etot,svar
 !       __PAW_POTENTIAL.F90_____________________________________________________
 !       __NOTE: 'PAIRPOTENTIAL' IS PART OF 'PS  ELECTROSTATIC'__________________
         CALL ENERGYLIST$GET('PS  ELECTROSTATIC',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'ps hartree ',etot,svar
 !       __PAW_POTENTIAL.F90_____________________________________________________
         CALL ENERGYLIST$GET('PS  EXCHANGE-CORRELATION',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'ps xc ',etot,svar
 !       __PAW_SIMPLELMTO.F90____________________________________________________
         CALL ENERGYLIST$GET('LOCAL CORRELATION',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'local corr ',etot,svar
 !       __SRC/PAW_DRIVER.F90____________________________________________________
         CALL ENERGYLIST$GET('OCCUPATIONAL ENTROPY TERM (-TS)',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'-TS ',etot,svar
 !       __SRC/PAW_DRIVER.F90____________________________________________________
         CALL ENERGYLIST$GET('CELLOSTAT POTENTIAL',SVAR)
         ETOT=ETOT+SVAR
 !       __SRC/PAW_EXTPOT.F90____________________________________________________
         CALL ENERGYLIST$GET('EXTERNAL POTENTIAL',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'cellostat ',etot,svar
 !       __SRC/PAW_ISOLATE.F90___________________________________________________
         CALL ENERGYLIST$GET('BACKGROUND ENERGY',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'background ',etot,svar
 !       __PAW_ISOLATE.F90_______________________________________________________
         CALL ENERGYLIST$GET('ISOLATE ENERGY',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'isolate ',etot,svar
 !       __PAW_ISOLATE.F90_______________________________________________________
         CALL ENERGYLIST$GET('QMMM POTENTIAL ENERGY',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'qmmm ',etot,svar
 !       __PAW_ISOLATE.F90_______________________________________________________
         CALL ENERGYLIST$GET('COSMO POTENTIAL ENERGY',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'cosmo ',etot,svar
 !       __PAW_ISOLATE.F90_______________________________________________________
         CALL ENERGYLIST$GET('VAN DER WAALS ENERGY',SVAR)
         ETOT=ETOT+SVAR
+write(*,fmt='(a,t30,2f20.10)')'vdw ',etot,svar
 !
 !!$SRC/PAW_DMFT.F90:      CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
 !!$SRC/PAW_DMFT_BACKES.F90:      CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
@@ -1093,6 +1115,13 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         IF(TPRINT) THEN
           CALL ENERGYLIST$PRINTHEADER(NFILO)     
 !         ==  BASIC LDA ========================================================
+          CALL ENERGYLIST$GET('CORE ENERGY',SVAR)
+          CALL ENERGYLIST$SET('ENERGY WITH CORE',SVAR)
+          CALL ENERGYLIST$GET('TOTAL ENERGY',SVAR)
+          CALL ENERGYLIST$ADD('ENERGY WITH CORE',SVAR)
+
+          CALL ENERGYLIST$PRINTONE(NFILO,'ENERGY WITH CORE')     
+          CALL ENERGYLIST$PRINTONE(NFILO,'CORE ENERGY')     
           CALL ENERGYLIST$PRINTONE(NFILO,'TOTAL ENERGY')     
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  KINETIC')     
 !         == AE ELECTROSTATIC ENERGY DOES NOT INCLUDE ISOLATE ENERGY  ==========

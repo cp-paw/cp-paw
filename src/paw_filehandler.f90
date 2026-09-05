@@ -197,6 +197,32 @@ END MODULE FILEHANDLER_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE FILEHANDLER$INQUIRE(ID_,TCHK)
+!     **************************************************************************
+!     **  RETURN WHERE A FILE EXISTS                                          **
+!     **************************************************************************
+      USE FILEHANDLER_MODULE, ONLY : FILE,FILEHANDLER_CREATE,FILEHANDLER_LOOKUP
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID_
+      LOGICAL(4)  ,INTENT(OUT):: TCHK  ! TRUE IF FILE EXISTS
+      INTEGER(4)              :: IFIL
+!     **************************************************************************
+      IF(.NOT.ALLOCATED(FILE))CALL FILEHANDLER_CREATE
+      CALL FILEHANDLER_LOOKUP(ID_,IFIL)
+      IF(IFIL.EQ.0) THEN
+        CALL ERROR$MSG('FILE IDENTIFIER NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',TRIM(ID_))
+        CALL ERROR$STOP('FILEHANDLER$EXISTS')
+      END IF
+      IF(FILE(IFIL)%OPEN) THEN
+        TCHK=.TRUE.
+      ELSE 
+        INQUIRE(FILE=FILE(IFIL)%NAME,EXIST=TCHK)
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       RECURSIVE SUBROUTINE FILEHANDLER$UNIT(ID_,UNIT_)
 !     **************************************************************************
 !     **  RETURN FILE UNIT FOR A GIVEN FILE (OPEN IF NECCESARY)               **

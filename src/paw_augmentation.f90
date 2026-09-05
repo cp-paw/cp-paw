@@ -17,7 +17,7 @@
 !***********************************************************************
 !***********************************************************************
 MODULE AUGMENTATION_MODULE
-INTEGER(4)  ,PARAMETER :: NE=10
+INTEGER(4)  ,PARAMETER :: NE=11
 CHARACTER(32)          :: ID(NE)
 REAL(8)                :: VAL(NE)
 LOGICAL(4)             :: TINI=.FALSE.
@@ -47,6 +47,7 @@ END MODULE AUGMENTATION_MODULE
       ID(8)='LDA+U EXCHANGE'          
       ID(9)='CORE RELAXATION'          
       ID(10)='EXTERNAL 1CENTER POTENTIAL'          
+      ID(11)='CORE ENERGY'          
       DO I=1,NE
         VAL(NE)=0.D0
       ENDDO
@@ -113,7 +114,8 @@ END MODULE AUGMENTATION_MODULE
 !     ==  ID(7)='AE1-PS1 KINETIC' ======================================
 !     ==  ID(8)='LDA+U EXCHANGE' =======================================
 !     ==  ID(9)='CORE RELAXATION' ======================================
-!     ==  ID(10)='EXTERNAL 1CENTER POTENTIAL' ===========================
+!     ==  ID(10)='EXTERNAL 1CENTER POTENTIAL' ==========================
+!     ==  ID(11)='CORE ENERGY' =========================================
       SVAR=VAL(7)+VAL(1)-VAL(2)+VAL(3)-VAL(4)+VAL(5)-VAL(6)+VAL(8)+VAL(9) &
      &    +VAL(10)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
@@ -261,9 +263,6 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: DOVER(:,:)
       REAL(8)   ,ALLOCATABLE  :: DTKIN(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DTKIN1(:,:)
-      REAL(8)                 :: DELTAH(LMNX,LMNX,NDIMD)  ! SOFTCORE CORRECTION TO DTKIN
-      REAL(8)                 :: DELTAO(LMNX,LMNX,NDIMD)  ! SOFTCORE CORRECTION TO DO
-      REAL(8)   ,ALLOCATABLE  :: DELTARHO(:,:,:)    ! SOFCORE CORRECTION TO DAERHO
       REAL(8)                 :: DECORE
       REAL(8)   ,ALLOCATABLE  :: AERHO(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: PSRHO(:,:,:)
@@ -384,25 +383,6 @@ END MODULE AUGMENTATION_MODULE
       CALL AUGMENTATION_ADJUSTVQLM(GID,NR,LMRX,RHO,RCSM,QLM,VQLM1)
       VQLM1(:)=VQLM1(:)+VQLM(:)
       DEALLOCATE(RHO)
-!     
-!     ================================================================
-!     ==  NEW SOFT CORE                                             ==
-!     ================================================================
-      CALL SETUP$ISELECT(ISP)
-      CALL SETUP$GETCH('SOFTCORETYPE',SOFTCORETYPE)
-      CALL SETUP$UNSELECT()
-      IF(SOFTCORETYPE.EQ.'NONE') THEN
-        DECORE=0.D0
-      ELSE 
-        ALLOCATE(DELTARHO(NR,LMRX,NDIMD))
-        DELTAH=0.D0
-        DELTAO=0.D0
-!        CALL AUGMENTATION_NEWSOFTCORE(SOFTCORETYPE,GID,NR,LMRX,NDIMD,AEZ,LMNX &
-!     &          ,DENMAT,EDENMAT,VQLM1,RHOB,DELTAH,DELTAO,DELTARHO,DECORE)
-        DTKIN=DTKIN+DELTAH
-        DO=DO+DELTAO
-        DEALLOCATE(DELTARHO)
-      END IF
 !
 !     =================================================================
 !     == HARTREE ENERGY AND POTENTIAL                                ==
@@ -415,7 +395,7 @@ END MODULE AUGMENTATION_MODULE
      &                               ,VQLM1,RHOB,AEHPOT,AEEHARTREE)
 !
 !     ================================================================
-!     ==   ADD EXCHANGE AND CORRELATION POTENTIAL                   ==
+!     ==  EXCHANGE AND CORRELATION POTENTIAL                        ==
 !     ================================================================
       ALLOCATE(AEXCPOT(NR,LMRX,NDIMD))
       ALLOCATE(PSXCPOT(NR,LMRX,NDIMD))
@@ -433,6 +413,9 @@ END MODULE AUGMENTATION_MODULE
       RHO(:,1,1)=RHO(:,1,1)+PSCORE(:)
       CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,PSEXC,PSXCPOT)
       DEALLOCATE(RHO)
+
+
+  
 !
 !     ================================================================
 !     ==   ADD UP POTENTIALS                                        ==
@@ -453,7 +436,9 @@ END MODULE AUGMENTATION_MODULE
       CALL AUGMENTATION_ADD('PS1 EXCHANGE-CORRELATION',PSEXC)
       CALL AUGMENTATION_ADD('AE1 ELECTROSTATIC',AEEHARTREE)
       CALL AUGMENTATION_ADD('PS1 ELECTROSTATIC',PSEHARTREE)
-      CALL AUGMENTATION_ADD('CORE RELAXATION',DECORE)
+!
+      CALL AUGMENTATION_FROZENCORENERGY(ISP,DECORE)
+      CALL AUGMENTATION_ADD('CORE ENERGY',DECORE)
 !
 !     =================================================================
 !     == AVERAGE ELECTROSTATIC ONE-CENTER POTENTIAL                  ==
@@ -477,11 +462,6 @@ END MODULE AUGMENTATION_MODULE
       CALL GRAPHICS$SET1CPOT('HARTREE','PS',IAT,GID,NR,NR,LMRX,PSHPOT)
       CALL GRAPHICS$SET1CPOT('TOT','AE',IAT,GID,NR,NR,LMRX,AETOTPOT(:,:,1))
       CALL GRAPHICS$SET1CPOT('TOT','PS',IAT,GID,NR,NR,LMRX,PSTOTPOT(:,:,1))
-!     
-!     ==========================================================================
-!     ==  EVALUATE CORE SHIFTS                                                ==
-!     ==========================================================================
-      CALL CORE_CORESHIFTS(IAT,ISP,GID,NR,LMRX,AETOTPOT)
 !
       DEALLOCATE(AEHPOT)
       DEALLOCATE(PSHPOT)
@@ -517,7 +497,8 @@ END MODULE AUGMENTATION_MODULE
 !     ==================================================================
 !     ==  EVALUATE KINETIC HAMILTONIAN AND OVERLAP                    ==
 !     ==================================================================
-      DATH(:,:,:)=CMPLX(DTKIN(:,:,:),0.D0,KIND=8)
+      DATH(:,:,:)=(0.D0,0.D0)
+      DATH(:,:,:)=DATH(:,:,:)+CMPLX(DTKIN(:,:,:),0.D0,KIND=8)
 !
       IF(TTEST) THEN
         IF(ITEST.EQ.2) THEN
@@ -527,7 +508,6 @@ END MODULE AUGMENTATION_MODULE
           CALL ERROR$STOP('SPHERE')
         END IF
       END IF
-!     
 !     
 !     ================================================================
 !     ==   ADD POTENTIAL ENERGY TO THE ONE-CENTER HAMILTONIAN       ==
@@ -540,7 +520,24 @@ END MODULE AUGMENTATION_MODULE
       DEALLOCATE(DATP)
 !     WRITE(TESTSTRING,FMT='("R8DATH",I2,12(" "))')IAT
 !     CALL STOREIT(TESTSTRING,8*LMNX*LMNX*NSPIN,DATH)
-!
+!     
+!     ==========================================================================
+!     ==  EVALUATE CORE SHIFTS AND SPIN ORBIT COUPLING                        ==
+!     ==========================================================================
+!      CALL CORE_CORESHIFTS(IAT,ISP,GID,NR,LMRX,NDIMD,AETOTPOT)
+      CALL SETUP$ISELECT(ISP)
+      CALL SETUP$GETCH('SOFTCORETYPE',SOFTCORETYPE)
+      CALL SETUP$UNSELECT()
+      DECORE=0.D0  ! ENERGY NOT YET CALCULATED
+!      IF(SOFTCORETYPE.NE.'NONE') THEN
+        ALLOCATE(DATP(LMNX,LMNX,NDIMD))
+        CALL CORE_BEYONDFROZENCORE(IAT,ISP,GID,NR,LMRX,NDIMD,AETOTPOT,aerho &
+     &                                        ,LMNX,denmat,DATP)
+        DATH=DATH+DATP
+        DEALLOCATE(DATP)
+!      END IF
+!     __THE AUGMENTATION_ADD BLOCK IS EARLIER. BETTER RESTRUCTURE THE CODE
+      CALL AUGMENTATION_ADD('CORE RELAXATION',DECORE)
 !
 !     ================================================================
 !     ==  CI                                                        ==
@@ -3098,5 +3095,89 @@ END IF
       RETURN
       END
 
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE AUGMENTATION_FROZENCORENERGY(ISP,ETOT)
+!     **************************************************************************
+!     ** CALCULATES THE ENERGY OF THE FROZEN CORE TO OBTAIN THE TOTAL ENERGY  **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP  ! INDEX OF ATOM TYPE 
+      REAL(8)   ,INTENT(OUT):: ETOT ! ENERGY OF THE FROZEN CORE FOR THIS ATOM
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      INTEGER(4)            :: GID  ! GRID ID
+      INTEGER(4)            :: NR   ! #(GRID RADIAL POINTS)
+      INTEGER(4)            :: NB   ! #(ANGULAR MOMENTUM SHELLS)
+      INTEGER(4)            :: NC   ! #(CORE ANGULAR MOMENTUM SHELLS)
+      REAL(8)               :: AEZ  ! ATOMIC NUMBER
+      REAL(8)               :: VAL  
+      REAL(8)   ,ALLOCATABLE:: R(:) !(NR) RADIAL GRID
+      REAL(8)   ,ALLOCATABLE:: AECORE(:) !(NR) AE CORE DENSITY
+      REAL(8)   ,ALLOCATABLE:: EB(:)  !(NB) ENERGY LEVELS
+      REAL(8)   ,ALLOCATABLE:: FB(:)  !(NB) ENERGY LEVELS
+      REAL(8)   ,ALLOCATABLE:: ATPOT(:)  !(NR) ATOM POTENTIAL
+      REAL(8)   ,ALLOCATABLE:: POT(:)  !(NR) POTENTIAL
+      REAL(8)   ,ALLOCATABLE:: AUX(:)  !(NR) AUXILIARY ARRAY
+      REAL(8)               :: EKIN
+      REAL(8)               :: EHARTREE
+      REAL(8)               :: EXC
+!     **************************************************************************
+      CALL SETUP$ISELECT(ISP)
+      CALL SETUP$GETI4('GID',GID)
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      CALL SETUP$GETR8('AEZ',AEZ)
+      ALLOCATE(AECORE(NR))
+      CALL SETUP$GETR8A('AECORE',NR,AECORE)
 
-
+      CALL SETUP$GETI4('NB',NB)
+      CALL SETUP$GETI4('NC',NC)
+      IF (NC.EQ.0) THEN
+        ETOT=0.D0
+        CALL SETUP$UNSELECT()
+        RETURN
+      END IF
+      ALLOCATE(EB(NB))
+      ALLOCATE(FB(NB))
+      ALLOCATE(ATPOT(NR))
+      CALL SETUP$GETR8A('AEPOT',NR,ATPOT)    !POTENTIAL OF THE ATOM
+      CALL SETUP$GETR8A('FB',NB,FB)          !OCCUPATION OF ATOMIC ENERGY LEVEL
+      CALL SETUP$GETR8A('EB',NB,EB)          !ATOMIC ENERGY LEVEL
+      CALL SETUP$UNSELECT()
+!
+!     ==========================================================================
+!     == SUM OF ENERGY LEVELS                                                 ==
+!     ==========================================================================
+      ALLOCATE(POT(NR))
+      ALLOCATE(AUX(NR))
+      AUX(:)  = AECORE*ATPOT(:)*R**2
+      CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+      EKIN=SUM(FB(:NC)*EB(:NC))-VAL
+      ETOT=EKIN
+!
+!     ==========================================================================
+!     == ELECTROSTATICS OF THE CORE
+!     ==========================================================================
+      CALL RADIAL$POISSON(GID,NR,0,AECORE,POT)
+      CALL RADIAL$NUCPOT(GID,NR,AEZ,AUX)
+      AUX(:)  = AECORE(:)*(AUX+0.5D0*POT(:))*R**2
+      CALL RADIAL$INTEGRAL(GID,NR,AUX,EHARTREE)
+      ETOT=ETOT+EHARTREE
+!
+!     ==========================================================================
+!     == EXCHANGE CORRELATION ENERGY OF THE CORE DENSITY
+!     ==========================================================================
+      CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,EXC,AUX)
+      ETOT=ETOT+EXC
+      
+      IF(TPR) THEN
+        WRITE(*,FMT='(40("="),T20," FROZEN-CORE ENERGY FOR ATOM TYPE ",I3," ")')
+        WRITE(*,FMT='(40("."),":",F20.5,T1,A)')AEZ,'ATOMIC NUMBER'
+        WRITE(*,FMT='(40("."),":",F20.5,T1,A)')ETOT,'TOTAL CORE ENERGY'
+        WRITE(*,FMT='(40("."),":",F20.5,T1,A)')EKIN,'KINETIC CORE ENERGY'
+        WRITE(*,FMT='(40("."),":",F20.5,T1,A)')EHARTREE,'HARTREE CORE ENERGY'
+        WRITE(*,FMT='(40("."),":",F20.5,T1,A)')EXC,'XC CORE ENERGY'
+      END IF
+      RETURN
+      END
