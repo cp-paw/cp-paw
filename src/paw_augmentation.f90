@@ -2357,8 +2357,11 @@ TYPE EXTPOT
   CHARACTER(LEN=32):: ATOM
   REAL(8)          :: RC  
   REAL(8)          :: PWR
-  CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D','F','ALL'
+  CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D','F','ALL','SPECIAL'
   INTEGER(4)       :: IDIMD  ! IDIMD=0 REFERES TO ALL SPIN DIRECTIONS
+  INTEGER(4)       :: NSPECIAL  ! NUMBER OF ORBITALS FOR SPECIAL ORBITAL
+  CHARACTER(LEN=32), ALLOCATABLE :: STYPE(:) ! CAN BE 'S','PX','PY','PZ', ...
+  REAL(8), ALLOCATABLE :: FAC(:) ! FACTORS FOR SPECIAL ORBITAL
 END TYPE EXTPOT
 INTEGER(4)             :: NPOT=0
 INTEGER(4)             :: NPOTX=0
@@ -2387,7 +2390,7 @@ CONTAINS
 END MODULE EXPERTNAL1CPOT_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE EXTERNAL1CPOT$SETPOT(ATOM,TYPE,IDIMD,VALUE,RC,PWR)
+      SUBROUTINE EXTERNAL1CPOT$SETPOT(ATOM,TYPE,IDIMD,VALUE,RC,PWR,NSPECIAL,STYPE,FAC)
       USE EXPERTNAL1CPOT_MODULE
       IMPLICIT NONE
       REAL(8)          ,INTENT(IN) :: VALUE
@@ -2396,6 +2399,10 @@ END MODULE EXPERTNAL1CPOT_MODULE
       INTEGER(4)       ,INTENT(IN) :: IDIMD !SPIN DIRECTION OR 0
       REAL(8)          ,INTENT(IN) :: RC
       REAL(8)          ,INTENT(IN) :: PWR
+      INTEGER(4)       ,INTENT(IN) :: NSPECIAL
+      CHARACTER(LEN=32),INTENT(IN) :: STYPE(NSPECIAL)
+      REAL(8)          ,INTENT(IN) :: FAC(NSPECIAL)
+      REAL(8)                      :: SVAR
 !     **************************************************************************
       CALL CREATE
       NPOT=NPOT+1
@@ -2405,6 +2412,19 @@ END MODULE EXPERTNAL1CPOT_MODULE
       POT(NPOT)%PWR=PWR
       POT(NPOT)%IDIMD=IDIMD+1
       POT(NPOT)%TYPE =TYPE
+      POT(NPOT)%NSPECIAL=NSPECIAL
+      IF(NSPECIAL.GT.0) THEN
+        ALLOCATE(POT(NPOT)%STYPE(NSPECIAL))
+        ALLOCATE(POT(NPOT)%FAC(NSPECIAL))
+        POT(NPOT)%STYPE=STYPE
+!       NORMALIZE THE FACTORS
+!       SUM_I |FAC(I)|^2 = 1
+        SVAR=SQRT(ABS(DOT_PRODUCT(FAC,FAC)))
+        POT(NPOT)%FAC=FAC/SVAR
+      ELSE
+        ALLOCATE(POT(NPOT)%FAC(1))
+        POT(NPOT)%FAC(1)=1.D0
+      END IF
       RETURN
       END
 !
@@ -2414,6 +2434,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: IPOT
+      INTEGER(4)            :: I
 !     **************************************************************************
       IF(NPOT.EQ.0) RETURN
 !     CALL REPORT$TITLE(NFIL,"EXTERNAL POTENTIALS ON ORBITALS")
@@ -2433,6 +2454,13 @@ END MODULE EXPERTNAL1CPOT_MODULE
         CALL WRITER8(NFIL,'RC',POT(IPOT)%RC,'ABOHR')
         CALL WRITEI4(NFIL,'IDIMD ([0=NT],[0=NT,1=NS],[0=NT,1=NX,2=NY,3=NZ])' &
      &                   ,POT(IPOT)%IDIMD-1,' ')
+        IF(POT(IPOT)%NSPECIAL.GT.0) THEN
+          WRITE(NFIL,FMT='("SPECIAL ORBITALS")')
+          DO I=1,POT(IPOT)%NSPECIAL
+            CALL WRITECH(NFIL,'STYPE',POT(IPOT)%STYPE(I))
+            CALL WRITER8(NFIL,'FAC',POT(IPOT)%FAC(I),' ')
+          ENDDO
+        END IF
       ENDDO
       RETURN
       CONTAINS
@@ -2484,8 +2512,9 @@ END MODULE EXPERTNAL1CPOT_MODULE
       REAL(8)     ,INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)     ,INTENT(OUT)  :: ETOT
       TYPE(EXTPOT)              :: POT1
-      INTEGER(4)                :: LANG
-      INTEGER(4)                :: MANG
+      INTEGER(4)                :: NORB
+      INTEGER(4), ALLOCATABLE   :: LANG(:)
+      INTEGER(4), ALLOCATABLE   :: MANG(:)
       INTEGER(4)                :: IAT    ! ATOM INDEX
       INTEGER(4)                :: ISP    ! ATOM TYPE INDEX
       INTEGER(4)                :: NR     ! #(GRID RADIAL POINTS)
@@ -2493,15 +2522,17 @@ END MODULE EXPERTNAL1CPOT_MODULE
       INTEGER(4)   ,ALLOCATABLE :: LOX(:) !(LNX) #(GRID RADIAL POINTS)
       REAL(8)      ,ALLOCATABLE :: AEPHI(:,:) !(NR,LNX) AE PARTIAL WAVES
       REAL(8)      ,ALLOCATABLE :: UONE(:,:)  !(LNX,LNX)
+      REAL(8)                   :: SVAR
       REAL(8)      ,ALLOCATABLE :: RDEP(:)    !(NR)
       REAL(8)      ,ALLOCATABLE :: AUX(:)    !(NR)
       CHARACTER(32)             :: SPECIES
       LOGICAL(4)                :: TCHK
-      INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IPOT,IDIMD,L1,L2,I,LM
+      INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IPOT,IDIMD,L1,L2,I,LM,M1,M2
       INTEGER(4)                :: GID     ! GRID ID
       REAL(8)      ,ALLOCATABLE :: R(:)    ! RADIAL GRID
       LOGICAL(4)                :: TACTIVE
       INTEGER(4)                :: NFILTRACE
+      INTEGER(4)                :: IORB,IORB2
 !     **************************************************************************
       DATH(:,:,:)=0.D0
       ETOT=0.D0
@@ -2527,28 +2558,55 @@ END MODULE EXPERTNAL1CPOT_MODULE
 !       == MANG="MAGNETIC" QUANTUM NUMBER  MANG=-1 ALL "MAGNETIC" QUANTUM NUMBRS
 !       == CAUTION: MANG REFERS TO REAL SPHERICAL HARMONICS
 !
+        IF(POT1%NSPECIAL.EQ.0) NORB=1
+        IF(POT1%NSPECIAL.GT.0) NORB=POT1%NSPECIAL
+        ALLOCATE(LANG(NORB))
+        ALLOCATE(MANG(NORB))
         IF(TRIM(POT1%TYPE).EQ.'ALL') THEN
-          LANG=-1
+          LANG(1)=-1
 !
 !       == SELECT COMPLETE ANGULAR MOMENTUM SHELLS =============================
         ELSE IF(TRIM(POT1%TYPE).EQ.'S') THEN
-          LANG=0
-          MANG=-1
+          LANG(1)=0
+          MANG(1)=-1
         ELSE IF(TRIM(POT1%TYPE).EQ.'P') THEN
-          LANG=1
-          MANG=-1
+          LANG(1)=1
+          MANG(1)=-1
         ELSE IF(TRIM(POT1%TYPE).EQ.'D') THEN
-          LANG=2
-          MANG=-1
+          LANG(1)=2
+          MANG(1)=-1
         ELSE IF(TRIM(POT1%TYPE).EQ.'F') THEN
-          LANG=3
-          MANG=-1
+          LANG(1)=3
+          MANG(1)=-1
+        ELSE IF(TRIM(POT1%TYPE).EQ.'SPECIAL') THEN
+          DO IORB=1,NORB
+            CALL SPHERICAL$LMBYNAME(TRIM(POT1%STYPE(IORB)),LM)
+            LANG(IORB)=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+            MANG(IORB)=LM-LANG(IORB)**2
+          ENDDO
+!         REQUIRE ALL SPECIAL ORBITALS TO HAVE THE SAME L
+!         REQUIRE ALL SPECIAL ORBITALS TO HAVE DIFFERENT M
+!         (IN PRINCIPLE THIS IS NOT NECESSARY)
+          L1=LANG(1)
+          DO IORB=1,NORB
+            IF(LANG(IORB).NE.L1) THEN
+              CALL ERROR$MSG('ALL SPECIAL ORBITALS MUST HAVE THE SAME L')
+              CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
+            END IF
+            M1=MANG(IORB)
+            DO I=IORB+1,NORB
+              IF(MANG(I).EQ.M1) THEN
+                CALL ERROR$MSG('ALL SPECIAL ORBITALS MUST HAVE DIFFERENT M')
+                CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
+              END IF
+            ENDDO
+          ENDDO
         ELSE   
 !         == SELECT INDIVIDUAL REAL SPHERICAL HARMONICS ========================
 !         == SPHERICAL$LMBYNAME THROWS AN ERROR IF TYPE IS NOT RECOGNIZED ======
           CALL SPHERICAL$LMBYNAME(TRIM(POT1%TYPE),LM)
-          LANG=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
-          MANG=LM-LANG**2        
+          LANG(1)=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+          MANG(1)=LM-LANG(1)**2        
         END IF
 !
 !       ========================================================================
@@ -2583,17 +2641,22 @@ END MODULE EXPERTNAL1CPOT_MODULE
         ALLOCATE(UONE(LNX,LNX))
         UONE(:,:)=0.D0
         LMN1=0
-        DO LN1=1,LNX
-          IF(.NOT.(LANG.EQ.LOX(LN1).OR.LANG.EQ.-1)) CYCLE
-          DO LN2=1,LNX
-            IF(.NOT.(LANG.EQ.LOX(LN2).OR.LANG.EQ.-1)) CYCLE
-            IF(LOX(LN2).NE.LOX(LN1)) CYCLE
-            IF(LN2.LT.LN1) THEN
-              UONE(LN1,LN2)=UONE(LN2,LN1)
-              CYCLE
-            END IF
-            AUX(:)=RDEP(:)*AEPHI(:,LN1)*AEPHI(:,LN2)*R(:)**2
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,UONE(LN1,LN2))
+!       LOOP THROUGH ALL ORBITALS SO EVERY NECESSARY UONE IS CALCULATED
+!       MIGHT CALCULATE SOME UONE TWICE 
+!       (AS ALL L ARE THE SAME, ONLY M DIFFERS, KEPT FOR POTENTIAL FUTURE USE)
+        DO IORB=1,NORB
+          DO LN1=1,LNX
+            IF(.NOT.(LANG(IORB).EQ.LOX(LN1).OR.LANG(IORB).EQ.-1)) CYCLE
+            DO LN2=1,LNX
+              IF(.NOT.(LANG(IORB).EQ.LOX(LN2).OR.LANG(IORB).EQ.-1)) CYCLE
+              IF(LOX(LN2).NE.LOX(LN1)) CYCLE
+              IF(LN2.LT.LN1) THEN
+                UONE(LN1,LN2)=UONE(LN2,LN1)
+                CYCLE
+              END IF
+              AUX(:)=RDEP(:)*AEPHI(:,LN1)*AEPHI(:,LN2)*R(:)**2
+              CALL RADIAL$INTEGRAL(GID,NR,AUX,UONE(LN1,LN2))
+            ENDDO
           ENDDO
         ENDDO
         DEALLOCATE(R)
@@ -2619,11 +2682,26 @@ END MODULE EXPERTNAL1CPOT_MODULE
               DO LN2=1,LNX
                 L2=LOX(LN2)
                 IF(L1.EQ.L2) THEN
-                  DO I=1,2*L1+1
-                    IF(.NOT.(MANG.EQ.I.OR.MANG.EQ.-1)) CYCLE
-                    DATH(LMN1+I,LMN2+I,IDIMD)=DATH(LMN1+I,LMN2+I,IDIMD) &
-       &                                     +UONE(LN1,LN2)
-                  ENDDO
+!                 SPECIAL ORBITAL
+                  IF(TRIM(POT1%TYPE).EQ.'SPECIAL') THEN
+                    DO IORB=1,NORB
+                      M1=MANG(IORB)
+                      DO IORB2=1,NORB
+                        M2=MANG(IORB2)
+  !                     IF SWITCH TO COMPLEX COEFFICIENTS ONE NEEDS CONJUGATE
+                        SVAR=POT1%FAC(IORB)*POT1%FAC(IORB2)*UONE(LN1,LN2)
+                        DATH(LMN1+M1,LMN2+M2,IDIMD)=DATH(LMN1+M1,LMN2+M2,IDIMD) &
+        &                                       +SVAR
+                      ENDDO
+                    ENDDO
+!                 CALCULATION FOR DEFAULT ORBITALS
+                  ELSE
+                    DO I=1,2*L1+1
+                      IF(.NOT.(MANG(1).EQ.I.OR.MANG(1).EQ.-1)) CYCLE
+                      DATH(LMN1+I,LMN2+I,IDIMD)=DATH(LMN1+I,LMN2+I,IDIMD) &
+        &                                      +UONE(LN1,LN2)
+                    ENDDO
+                  END IF
                 END IF
                 LMN2=LMN2+2*L2+1
               ENDDO
@@ -2633,6 +2711,8 @@ END MODULE EXPERTNAL1CPOT_MODULE
         ENDDO
         DEALLOCATE(UONE)
         DEALLOCATE(LOX)
+        DEALLOCATE(LANG)
+        DEALLOCATE(MANG)
       ENDDO
 !
 !     ==========================================================================
