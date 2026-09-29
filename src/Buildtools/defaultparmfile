@@ -832,6 +832,10 @@ function enable_skala_ftorch {
   local LIBDIR=""
   local MODFILE=""
   local FTORCH_MODFILE=""
+  local OPENBLAS_ARCHIVE=""
+  local OPENBLAS_PRIVATE=""
+  local SKALA_LIBS=""
+  local X
   local D
 
   if [[ -z ${ROOT} ]] ; then
@@ -881,6 +885,33 @@ function enable_skala_ftorch {
     LDFLAGS="${LDFLAGS} -Wl,--disable-new-dtags"
   fi
   LIBS="${LIBS} -L${LIBDIR} -lcppaw_skala_bridge -lftorch"
+  if [[ $(uname -s) = Linux && " ${LIBS} " = *" -lopenblas "* ]] ; then
+    for X in ${LIBS} ; do
+      if [[ ${X} = -L* && -f ${X#-L}/libopenblas.a ]] ; then
+        OPENBLAS_ARCHIVE=${X#-L}/libopenblas.a
+        break
+      fi
+    done
+    if [[ -z ${OPENBLAS_ARCHIVE} ]] ; then
+      echo "error in $0: Linux Skala/OpenBLAS builds require libopenblas.a"
+      echo "install the static OpenBLAS development library (including LAPACK)"
+      echo "and provide its library directory through pkg-config"
+      exit 1
+    fi
+    OPENBLAS_PRIVATE=$(pkg-config --libs-only-l --static openblas) || exit 1
+    # Private static BLAS prevents both directions of ELF symbol preemption:
+    # OpenBLAS batch BLAS is incompatible with Torch's MKL batch calls, and
+    # Torch's complex-dot return ABI is incompatible with GNU OpenBLAS LAPACK.
+    for X in ${LIBS} ; do
+      if [[ ${X} = -lopenblas ]] ; then X=-l:libopenblas.a ; fi
+      SKALA_LIBS="${SKALA_LIBS} ${X}"
+    done
+    LIBS=${SKALA_LIBS}
+    for X in ${OPENBLAS_PRIVATE} ; do
+      if [[ ${X} != -lopenblas ]] ; then LIBS="${LIBS} ${X}" ; fi
+    done
+    LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,libopenblas.a"
+  fi
   INCLUDES="${INCLUDES} ${MODFILE}"
   if [[ -f ${FTORCH_MODFILE} ]] ; then
     INCLUDES="${INCLUDES} ${FTORCH_MODFILE}"

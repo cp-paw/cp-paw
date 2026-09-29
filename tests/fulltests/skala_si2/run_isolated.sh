@@ -6,11 +6,14 @@ output=${1:?Usage: run_isolated.sh new-output-directory}
 device=${SKALA_DEVICE:-AUTO}
 radial=${SKALA_RADIAL_POINTS:-200}
 angular=${SKALA_LEBEDEV_EXACTNESS:-53}
+orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
+shells=${SKALA_IMAGE_SHELLS:-1}
 case "$device" in CPU|CUDA|AUTO) ;; *) echo 'Invalid SKALA_DEVICE' >&2; exit 2 ;; esac
-for value in "$radial" "$angular"; do
+for value in "$radial" "$angular" "$orientations" "$shells"; do
   case "$value" in *[!0-9]*|'') echo 'Invalid quadrature size' >&2; exit 2 ;; esac
   test "$value" -gt 0 || exit 2
 done
+test "$angular" -le 53 || { echo 'Maximum supported Lebedev exactness is 53' >&2; exit 2; }
 PAWX=$(realpath "$PAWX")
 SKALA_MODEL=$(realpath "$SKALA_MODEL")
 here=$(cd "$(dirname "$0")" && pwd)
@@ -22,6 +25,7 @@ cp "$here/skala_si2.strc" "$here/analyse.sh" "$here/Makefile" "$output/skala_si2
 sed -e "s/DEVICE='AUTO'/DEVICE='$device'/" \
     -e "s/RADIALPOINTS=200/RADIALPOINTS=$radial/" \
     -e "s/LEBEDEVEXACTNESS=53/LEBEDEVEXACTNESS=$angular/" \
+    -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$orientations IMAGESHELLS=$shells/" \
     "$here/skala_si2.cntl" > "$output/skala_si2/skala_si2.cntl"
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
 export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-1}

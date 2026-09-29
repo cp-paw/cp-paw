@@ -7,6 +7,25 @@ The setup path builds the pinned FTorch source even if another installation is
 visible. CMake users can opt into an external package with
 `-DCPPAW_SKALA_USE_SYSTEM_FTORCH=ON`.
 
+### Linux BLAS compatibility
+
+Skala-enabled Linux builds selected with `-lopenblas` link the static OpenBLAS
+archive, including LAPACK, with `--exclude-libs,libopenblas.a`. The OpenBLAS
+development package must supply this archive and its static dependencies via
+`pkg-config`. This keeps CP-PAW's BLAS symbols local to its executable while
+LibTorch uses its own BLAS. The ordinary non-Skala build is unchanged.
+
+This is needed because LibTorch's exported BLAS symbols can collide with a
+second implementation in the process; see
+[PyTorch issue 182263](https://github.com/pytorch/pytorch/issues/182263).
+Do not work around this by globally preloading `libtorch_cpu.so`: on the tested
+x86 GNU/OpenBLAS build, that moved the failure from Torch's batch GEMM to
+OpenBLAS LAPACK calling Torch's incompatible complex-dot return interface.
+The private archive avoids both directions of symbol preemption without
+replacing CP-PAW's selected BLAS with Torch's embedded implementation.
+
+### Functional contract
+
 The scientific input contract is deliberately PAW-specific. Host arrays use
 `density(npoint,2)`, `grad(npoint,3,2)`, and `kin(npoint,2)`. The bridge converts
 them to Skala protocol-v2 tensors and returns derivatives in the host layout.
@@ -48,6 +67,7 @@ Historical numerical results below refer to the former implementation.
  RADIALPOINTS=200
  LEBEDEVEXACTNESS=53
  LEBEDEVORIENTATIONS=1
+ IMAGESHELLS=1
  APPLY=F
  APPLYSMOOTH=T
  APPLYTAU=T
@@ -332,6 +352,35 @@ interpolated onto these rows. There is no owner-sphere cutoff on foreign source
 fields, radial blend or direct native-cell energy quadrature. Both quadrature
 and native-grid interpolation must be converged, especially around foreign
 nuclei. A finite electron-count error is reported rather than normalized away.
+
+`IMAGESHELLS` independently controls the fixed atom-image layouts for the
+energy partition and self-image descriptor window. Its default of one shell
+is a starting point, not a converged periodic quadrature. The reconstructed
+source fields instead include every image within their radial support.
+Increasing radial/angular resolution does not repair a truncated image layout.
+The protocol reports the constant-field integral (`PARTITION VOLUME`), the
+exact cell volume, and their relative difference, with a warning above `1e-4`.
+A smaller volume error alone does not certify energy/force convergence. No
+density or weight normalization is applied to hide an integration error.
+
+For example, the Si2 primitive cell at 200/53/1 integrates to 276.114991 bohr^3
+with one shell instead of the exact 270.011394 bohr^3 (2.26% error). Two shells
+reduce this error to 0.320%, still insufficient. This failure is independent
+of Skala inference or PAW density reconstruction and must be resolved before
+using the current path for an equation of state.
+
+The model-free periodic probe makes that convergence failure reproducible:
+
+```sh
+make -C bin/Build_fast -f Makefile \
+  -f "$PWD/tests/unittests/skala_reconstruction/driver.mk" skala-partition-probe
+# Arguments: image shells, radial points, angular exactness, orientations,
+# optional relative tolerance (nonzero exit if volume or first mode fails).
+bin/Build_fast/unit-tests/partition_measure.x 1 200 53 1 1e-4
+```
+
+The last command is deliberately a failing accuracy check for the current
+one-shell layout, not a passing regression reference.
 
 Run the reconstruction kernels after a normal build (no model is required):
 

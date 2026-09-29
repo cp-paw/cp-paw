@@ -468,6 +468,17 @@ CONTAINS
       R(I)=SQRT(SUM(PAIR**2))
       U(:,I)=PAIR/MAX(R(I),1.D-30)
     END DO
+    ! An exact zero pair factor makes the target product zero, independently
+    ! of the normalization. Avoid the full pair loop on distant radial rows.
+    DO I=1,N
+      IF(I.EQ.T) CYCLE
+      MU=MAX(-1.D0,MIN(1.D0,(R(T)-R(I))*LAYOUT%INVPAIR(T,I)))
+      IF(PAW_SKALA_BECKE_SHAPE(MU).EQ.1.D0) THEN
+        WEIGHT=0.D0
+        IF(PRESENT(DCENTER)) DCENTER=0.D0
+        RETURN
+      END IF
+    END DO
     Q=1.D0
     DO J=1,N
       DO I=1,J-1
@@ -499,6 +510,7 @@ CONTAINS
     IF(WEIGHT.EQ.0.D0) RETURN
     DO J=1,N
       DO I=1,J-1
+        IF(I.NE.T.AND.J.NE.T.AND.Q(I).EQ.0.D0.AND.Q(J).EQ.0.D0) CYCLE
         MU=(R(I)-R(J))*LAYOUT%INVPAIR(I,J)
         IF(ABS(MU).GE.1.D0) CYCLE
         S=0.5D0*(1.D0-PAW_SKALA_BECKE_SHAPE(MU))
