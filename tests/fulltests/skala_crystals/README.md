@@ -28,6 +28,18 @@ convergence criterion. `--skala-steps` can request subsequent relaxation.
 directories are never overwritten. Per-case settings and geometry hashes are
 recorded. A nonzero exit or missing completion/adjoint diagnostic is a failure.
 
+For CPU-distributed atom blocks, use an MPI-enabled executable with
+`--mpi-ranks 8`; `--mpiexec /path/to/mpirun` selects the launcher. The default
+remains a direct single-process launch. All ranks and launcher settings are
+recorded in the provenance. This does not enable distributed CUDA inference:
+the current CUDA correctness default still evaluates the model on MPI root.
+
+The generated structures select the built-in `<ELEMENT>_.75_6.0` PAW setups.
+The resolved parameters are written to each `*.strc_out`; no external
+`stp.cntl` is read. Historical runs copied that file and included the obsolete
+`PARMS_STP` file ID, which did not override the built-in setups. That misleading
+input has been removed without changing the selected setups.
+
 This is an integration test, **not** a reference cohesive-energy calculation.
 The initial Gamma-only k mesh, 40 Ry cutoff and quadrature must be converged
 independently. Reduced `--radial`/`--angular` settings are useful for execution

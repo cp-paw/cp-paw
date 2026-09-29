@@ -31,6 +31,8 @@ class CrystalDriverTest(unittest.TestCase):
                                dt=5.0, cutoff=40.0)
         for skala in [False, True]:
             text = run.control(args, skala)
+            self.assertNotIn("PARMS_STP", text)
+            self.assertNotIn("stp.cntl", text)
             dt = re.search(r"\bDT=(\S+)", text).group(1)
             self.assertIn(".", dt.split("e")[0])
             if skala:
@@ -53,6 +55,15 @@ class CrystalDriverTest(unittest.TestCase):
                                dt=5.0, cutoff=40.0)
         # The Fortran grid library, not the input writer, rounds 64 up to 65.
         self.assertIn("LEBEDEVEXACTNESS=64", run.control(args, True))
+
+    def test_mpi_launch_is_explicit_and_preserves_arguments(self):
+        executable = "/path with spaces/ppaw.x"
+        self.assertEqual(run.launch_command(executable, "pbe"), [executable, "pbe.cntl"])
+        self.assertEqual(run.launch_command(executable, "skala", 8, "/opt/mpi/bin/mpirun"),
+                         ["/opt/mpi/bin/mpirun", "-np", "8", executable, "skala.cntl"])
+        for ranks in (0, -1):
+            with self.assertRaises(ValueError):
+                run.launch_command(executable, "skala", ranks)
 
 
 if __name__ == "__main__":

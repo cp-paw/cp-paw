@@ -328,6 +328,9 @@ NVHPC bridge therefore defaults Torch host work to one thread; override this
 only with `CPPAW_SKALA_TORCH_THREADS`. Do not add `-mp` to a binary-PyTorch
 build. A genuinely threaded NVHPC host configuration requires a LibTorch build
 without GNU OpenMP rather than suppressing the mixed-runtime warning.
+One host thread does not itself resolve the runtime conflict or certify its
+safety. The mixed-runtime NVHPC runs remain an explicit acceptance limitation;
+see [NVIDIA's OpenMP compatibility warning](https://docs.nvidia.com/nvpl/latest/).
 
 Set `CPPAW_SKALA_DETERMINISTIC=1` to request PyTorch's deterministic algorithm
 mode, disable TF32, and install the deterministic cuBLAS workspace setting.

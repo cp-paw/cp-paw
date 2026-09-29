@@ -60,7 +60,7 @@ def control(args, skala):
     functional += " !END\n"
     # A single-step probe preserves the PBE starting orbitals; longer runs relax them.
     dt = 0.000001 if skala and steps == 1 else args.dt
-    return ("!CONTROL\n !FILES\n  !FILE ID='PARMS_STP' NAME='stp.cntl' !END\n !END\n"
+    return ("!CONTROL\n"
             f" !GENERIC TRACE=F DT={dt:.12e} NSTEP={steps} NWRITE={steps} "
             f"START={'F' if skala else 'T'} RSTRTTYPE='STATIC' AUTOCONV=1000 !END\n"
             + functional + f" !FOURIER EPWPSI={args.cutoff} CDUAL=2 !END\n"
@@ -79,12 +79,21 @@ def last_value(text, label):
     return value
 
 
-def execute(executable, work, name):
+def launch_command(executable, name, ranks=1, mpiexec="mpirun"):
+    if ranks < 1:
+        raise ValueError("MPI rank count must be positive")
+    command = [str(executable), f"{name}.cntl"]
+    if ranks > 1:
+        command = [mpiexec, "-np", str(ranks)] + command
+    return command
+
+
+def execute(executable, work, name, ranks=1, mpiexec="mpirun"):
     env = dict(os.environ)
     env.setdefault("OMP_NUM_THREADS", "1")
     env.setdefault("OPENBLAS_NUM_THREADS", "1")
     with (work / f"{name}.out").open("w") as out, (work / f"{name}.err").open("w") as err:
-        subprocess.run([str(executable), f"{name}.cntl"], cwd=work, env=env,
+        subprocess.run(launch_command(executable, name, ranks, mpiexec), cwd=work, env=env,
                        stdout=out, stderr=err, check=True)
     text = (work / f"{name}.prot").read_text()
     if "PROGRAM FINISHED" not in text:
@@ -119,16 +128,20 @@ def main():
     parser.add_argument("--orientations", type=int, default=1)
     parser.add_argument("--image-shells", type=int, default=1)
     parser.add_argument("--device", choices=["AUTO", "CPU", "CUDA"], default="AUTO")
+    parser.add_argument("--mpi-ranks", type=int, default=1)
+    parser.add_argument("--mpiexec", default="mpirun")
     parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args()
     if min(args.pbe_steps, args.skala_steps, args.radial, args.angular,
-           args.kmesh, args.image_shells, args.orientations) < 1:
+           args.kmesh, args.image_shells, args.orientations, args.mpi_ranks) < 1:
         parser.error("Step counts and grid settings must be positive")
     if args.angular > 65:
         parser.error("Maximum supported Lebedev exactness is 65")
     if not (math.isfinite(args.dt) and args.dt > 0 and math.isfinite(args.cutoff) and args.cutoff > 0):
         parser.error("Time step and cutoff must be positive and finite")
     executable, model = args.executable.resolve(strict=True), args.model.resolve(strict=True)
+    if args.mpi_ranks > 1 and not shutil.which(args.mpiexec):
+        parser.error(f"MPI launcher not found: {args.mpiexec}")
     args.output.mkdir(parents=True, exist_ok=False)
     results = []
     for case in args.cases:
@@ -137,7 +150,6 @@ def main():
         work = args.output / case
         work.mkdir()
         shutil.copy2(source, work / source.name)
-        shutil.copy2(HERE.parent / "si2/stp.cntl", work / "stp.cntl")
         (work / "model.fun").symlink_to(model)
         for name, skala in [("pbe", False), ("skala", True)]:
             (work / f"{name}.strc").write_text(structure_text(lattice, atoms, args.kmesh))
@@ -152,10 +164,10 @@ def main():
         if args.prepare_only:
             continue
         print(f"{case}: PBE warm start ({args.pbe_steps} steps)", flush=True)
-        execute(executable, work, "pbe")
+        execute(executable, work, "pbe", args.mpi_ranks, args.mpiexec)
         shutil.copy2(work / "pbe.rstrt", work / "skala.rstrt")
         print(f"{case}: Skala ({args.skala_steps} steps)", flush=True)
-        text = execute(executable, work, "skala")
+        text = execute(executable, work, "skala", args.mpi_ranks, args.mpiexec)
         record = {"case": case}
         for label in ["MODEL XC ENERGY", "COMPOSITE ELECTRONS", "COMPOSITE POSITIVE TAU",
                       "PARTITION VOLUME", "EXACT CELL VOLUME", "PARTITION VOLUME RELATIVE ERROR",

@@ -258,6 +258,67 @@ CPU MPI executable:
 `7425a9eb6c22fd35d335ef6599f46047752dc7c434e8bc8f00870fc51d820cd0`.
 The CPU model hash is unchanged from the earlier checkpoint.
 
+### Spark CPU parallel check and relaxation probes
+
+Spark is used for CPU as well as GPU tests. Its updated
+`nvhpc_gpu_fast_parallel` executable passes the same warm-start check with
+one and eight MPI ranks, using `CPPAW_GPU_MODE=off`, `DEVICE='CPU'`, an empty
+`CUDA_VISIBLE_DEVICES`, and one OpenMP/OpenBLAS thread per rank. The CPU
+TorchScript model is the same export used on Terok. This is CPU execution of
+a CUDA-capable NVHPC/NVPL binary, not a GPU-library-free executable; the latter
+is tested separately by the GNU CPU-only build on Terok.
+
+| Spark CPU 1/8-rank difference | Maximum absolute difference |
+| --- | ---: |
+| Total energy | 0 at the printed precision |
+| Forces | 7.634e-10 H/bohr |
+| Strain derivatives | 1.228e-9 H |
+| Smooth-operator norms | 4.862e-8 |
+| Electronic stationarity diagnostics | 2.290e-10 H |
+
+Both runs have eight k points, 96 radial points, angular order 17, one
+orientation and one shell. The eight-rank occupied maximum residual is
+0.1405628149 H, so this is parallel consistency, not Skala convergence.
+The mixed GNU/NVIDIA OpenMP warning remains visible and unresolved; a passing
+numerical probe does not certify that runtime combination as safe. These
+runs are not a CPU/GPU performance benchmark.
+
+Evidence: Spark `validation/si2-current-spark-cpu-mpi8.log` and retained
+protocols `/tmp/cppaw-skala-mpi.fH6p5H`. MPI executable SHA-256:
+`9239704d5ddd10b718324476fea7fad50c10b49933bed2d0153f22869087fdb0`.
+The PBE restart hash is the same as above; CPU model SHA-256:
+`7f3e8622e1eb520ccd88a55464c3e359ac4d7e5ccbd1fb77a26afa1e1c20a5cd`.
+
+Two bounded electronic-relaxation probes were also completed from that PBE
+restart, with `DT=5`, `MPSI=100`, fixed nuclei/cell and applied Skala:
+
+| Probe | Radial/angular grid | Steps | Final occupied RMS (H) | Final occupied maximum (H) | Final commutator (H) |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Spark, CUDA model | 200 / 65 | 6 | 2.163144434e-2 | 4.118231448e-2 | 8.122257522e-3 |
+| Terok, GNU CPU-only | 96 / 17 | 50 | 5.066137055e-3 | 2.203613351e-2 | 7.220628409e-3 |
+
+The Spark residual was evaluated by a subsequent `CHECK=T`, `DT=1e-6` probe
+of the final restart. It has overlap error 3.775e-15, Hamiltonian Hermiticity
+error 4.164e-16 H, and integrated electrons 28.0000295156772 versus trace 28.
+Its model XC energy is -42.1187507978530 H and total energy
+-46.9375341367190 H. The maximum reported model-adjoint contraction error
+is below 1e-14. No cell-stress finite difference was requested in this probe.
+
+The CPU run records diagnostics throughout steps 300--349. Its RMS decreases
+from 0.09426973264 to 0.005066137055 H; the final total energy is
+-46.9384280625642 H. All 50 steps pass diagnostic-consistency checks, but the
+final maximum residual and commutator remain far above 1e-6 H. Both probes
+are **not converged**. Different grids and iteration counts prohibit treating
+their energies as CPU/GPU parity data or quadrature-convergence evidence.
+
+Evidence: Spark `validation/si2-relax-pilot-k8` and
+`validation/si2-stationarity-gpu`; Terok `validation/si2-relax-coarse`.
+The Spark diagnostic executable SHA-256 is
+`787dae5e53cbfe0ba7a56070d8f19155d703767e47d3236d9921a79c652a653c`.
+The pilot used the preceding Lebedev-order implementation; the subsequent
+probe adds the read-only electronic diagnostics. The CPU executable/model
+hashes are the same as in the preceding CPU MPI check.
+
 ### Positive-tau and setup-operator audit
 
 The angular one-center **valence** tau now has an independent angularly exact
