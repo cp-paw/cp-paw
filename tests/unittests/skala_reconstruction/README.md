@@ -25,6 +25,15 @@ deallocation and exact/insufficient/zero storage budgets. Invalid cache-limit
 environment values must fail explicitly. The cache stores only geometry; it
 does not validate the neural model or electronic convergence.
 
+The source-geometry cache has independent tests for AE/pseudo partial-wave
+values, gradients, Hessians and frozen-core fields at periodic source images.
+These compare cached and direct fields, density-matrix adjoints, forces and
+strain moments in both collinear spin modes. Changed density matrices and model
+adjoints must not invalidate geometry or reuse electronic outputs. Changes in
+geometry, row count, setup arrays and derivative mode must invalidate it.
+Tests include empty source support, full and partial row coverage, exact and
+insufficient budgets, disabled caching and invalid environment settings.
+
 ## Periodized Becke weights
 
 The previous common finite cluster gave its edge images inequivalent

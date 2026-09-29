@@ -152,6 +152,17 @@ same fallback. Atom/cell, point-grid, image-shell and force/stress-mode changes
 invalidate the cache. Densities, model adjoints and forces are never cached.
 `CHECK=T` reports hits, misses and the summed cache payload across ranks.
 
+A separate source-geometry cache retains AE/pseudo partial-wave values,
+Cartesian gradients and, when forces or stress are requested, Hessians at
+the relevant periodic source images. Frozen-core fields and their spatial
+derivatives are retained too. `CPPAW_SKALA_SOURCE_CACHE_MB` sets its independent
+per-rank array budget (default 256 MiB, `0` disables it). Geometry, grid,
+setup and derivative-mode changes invalidate these entries. Density-matrix
+contractions and all reverse contributions are recomputed with current inputs.
+This is a host-memory cache, not additional GPU residency. It stores complete
+rows up to the available budget. Uncached rows or allocation failure select
+direct evaluation without changing the model.
+
 `LEBEDEVEXACTNESS` requests a minimum algebraic exactness, not a point count.
 The supported rules now extend through 65: 53 uses 974 angular points, 59 uses
 1202, and 65 uses 1454 per radial shell and orientation. A request of 64 selects

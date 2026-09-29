@@ -109,7 +109,7 @@ scalar adjoint. The forward density is band-limited before Skala evaluation,
 so its reverse scalar potential must use the same projector. Positive tau
 is formed directly on the native grid and must not inherit that filter.
 
-## Partition Derivative Cache
+## Geometry Caches
 
 `cache_parity.py` runs two applied-functional steps from the same restart with
 the geometry cache off and on. It requires exact row reuse on the second
@@ -119,6 +119,16 @@ The optional `--stress` probe also evaluates stress using a very heavy moving
 cell. Even tiny cell changes correctly invalidate the cache, so this variant
 checks parity and hit/miss accounting without requiring second-step hits.
 The default 96/17 grid is only an integration test, not converged quadrature.
+`--cache source` instead checks the source partial-wave/core geometry cache.
+The other cache is disabled in both legs to isolate the selected cache.
+Source entries are prepared before the forward pass, so hits are expected
+already on the first step, including forward and reverse evaluations of both
+Si source atoms. The budget can cover only part of a block. This probe requires
+the same nonzero coverage on both fixed-geometry steps and checks all remaining
+rows are counted as misses. The model-free reconstruction test separately verifies exact
+geometry reuse, changed density matrices, setup/geometry/mode invalidation
+and memory-budget fallback. Cached source geometry currently stays on the host.
+`--cache-mib` changes the enabled-leg budget from its 256 MiB default.
 
 ```sh
 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 CPPAW_GPU_MODE=resident \

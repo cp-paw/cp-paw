@@ -3,6 +3,12 @@ skala-reconstruction-test: libpaw.a
 	mkdir -p unit-tests
 	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/skala_reconstruction.x $(BASEDIR)/tests/unittests/skala_reconstruction/skala_reconstruction.f90 libpaw.a $(LIBS)
 	./unit-tests/skala_reconstruction.x
+	CPPAW_SKALA_SOURCE_CACHE_MB=0 ./unit-tests/skala_reconstruction.x limit > unit-tests/source_cache_off.log
+	grep -qx '0' unit-tests/source_cache_off.log
+	CPPAW_SKALA_SOURCE_CACHE_MB=256 ./unit-tests/skala_reconstruction.x limit > unit-tests/source_cache_limit.log
+	grep -qx '268435456' unit-tests/source_cache_limit.log
+	@if GFORTRAN_UNBUFFERED_ALL=1 CPPAW_SKALA_SOURCE_CACHE_MB=invalid ./unit-tests/skala_reconstruction.x limit > unit-tests/source_cache_invalid.log 2>&1; then exit 1; fi
+	grep -q 'CPPAW_SKALA_SOURCE_CACHE_MB MUST BE A NONNEGATIVE INTEGER' unit-tests/source_cache_invalid.log
 
 skala-primitives-test: libpaw.a
 	mkdir -p unit-tests
