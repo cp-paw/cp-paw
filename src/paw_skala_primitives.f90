@@ -118,9 +118,11 @@ CONTAINS
   SUBROUTINE PAW_SKALA_RADIAL_SAMPLE(R,F,X,V,DV,DDV)
     ! One polynomial defines values and both derivatives of the discrete map.
     REAL(8),INTENT(IN) :: R(:),F(:),X
-    REAL(8),INTENT(OUT) :: V,DV,DDV
+    REAL(8),INTENT(OUT) :: V
+    REAL(8),INTENT(OUT),OPTIONAL :: DV,DDV
     INTEGER :: LO,HI,MID,FIRST,I,J,N
     REAL(8) :: SCALE,T,Z(6),L,DL,DDL,DEN
+    LOGICAL :: DERIV
     N=SIZE(R)
     IF(N.LT.6.OR.SIZE(F).NE.N) THEN
       CALL ERROR$MSG('SKALA RADIAL INTERPOLATION NEEDS SIX MATCHING NODES')
@@ -140,9 +142,10 @@ CONTAINS
     SCALE=R(FIRST+5)-R(FIRST)
     Z=(R(FIRST:FIRST+5)-R(FIRST))/SCALE
     T=(X-R(FIRST))/SCALE
+    DERIV=PRESENT(DV).OR.PRESENT(DDV)
     V=0.D0
-    DV=0.D0
-    DDV=0.D0
+    IF(PRESENT(DV)) DV=0.D0
+    IF(PRESENT(DDV)) DDV=0.D0
     DO I=1,6
       L=1.D0
       DL=0.D0
@@ -150,14 +153,14 @@ CONTAINS
       DEN=1.D0
       DO J=1,6
         IF(I.EQ.J) CYCLE
-        DDL=DDL*(T-Z(J))+2.D0*DL
-        DL=DL*(T-Z(J))+L
+        IF(PRESENT(DDV)) DDL=DDL*(T-Z(J))+2.D0*DL
+        IF(DERIV) DL=DL*(T-Z(J))+L
         L=L*(T-Z(J))
         DEN=DEN*(Z(I)-Z(J))
       END DO
       V=V+F(FIRST+I-1)*L/DEN
-      DV=DV+F(FIRST+I-1)*DL/DEN/SCALE
-      DDV=DDV+F(FIRST+I-1)*DDL/DEN/SCALE**2
+      IF(PRESENT(DV)) DV=DV+F(FIRST+I-1)*DL/DEN/SCALE
+      IF(PRESENT(DDV)) DDV=DDV+F(FIRST+I-1)*DDL/DEN/SCALE**2
     END DO
   END SUBROUTINE PAW_SKALA_RADIAL_SAMPLE
 
@@ -176,7 +179,7 @@ CONTAINS
     REAL(8) :: H(3,3,S%LMNX),FIELD(5,S%NDIMD),KB(5,S%NDIMD)
     REAL(8) :: KERNEL(5),JAC(5,3),COREJAC(5,3),EYE(3,3)
     INTEGER :: Q,LN,L,IM,LM,LMN,I,J,D,K,ID,JD
-    LOGICAL :: BACK
+    LOGICAL :: BACK,GEOMETRY
     VALUE=0.D0
     IF(PRESENT(DMCONTRACTION)) DMCONTRACTION=0.D0
     IF(PRESENT(DX)) DX=0.D0
@@ -192,27 +195,36 @@ CONTAINS
       EYE(K,K)=1.D0
     END DO
     BACK=PRESENT(BAR)
+    GEOMETRY=BACK.AND.PRESENT(DX)
     KB=0.D0
     IF(BACK) THEN
       KB(:,1)=0.5D0*(BAR(:,1)+BAR(:,2))
       IF(S%NDIMD.EQ.2) KB(:,2)=0.5D0*(BAR(:,1)-BAR(:,2))
     END IF
-    CALL PAW_SKALA_SOLID_BASIS_EVALUATE(S%BASIS,U,Y,GY,HY)
+    IF(GEOMETRY) THEN
+      CALL PAW_SKALA_SOLID_BASIS_EVALUATE(S%BASIS,U,Y,GY,HY)
+    ELSE
+      CALL PAW_SKALA_SOLID_BASIS_EVALUATE(S%BASIS,U,Y,GY)
+    END IF
     FIELD=0.D0
     DO Q=1,2
       SGN=MERGE(1.D0,-1.D0,Q.EQ.1)
       LMN=0
       DO LN=1,S%LNX
         L=S%LOX(LN)
-        CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%PHI(:,LN,Q),R,F,DF,DDF)
+        IF(GEOMETRY) THEN
+          CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%PHI(:,LN,Q),R,F,DF,DDF)
+          B=DDF-(2*L+1)*DF/R+L*(L+2)*F/R**2
+        ELSE
+          CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%PHI(:,LN,Q),R,F,DF)
+        END IF
         A=(DF-L*F/R)/R
-        B=DDF-(2*L+1)*DF/R+L*(L+2)*F/R**2
         DO IM=1,2*L+1
           LMN=LMN+1
           LM=L*L+IM
           C(LMN)=F*Y(LM)
           G(:,LMN)=A*R*Y(LM)*U+F/R*GY(:,LM)
-          IF(PRESENT(DX)) THEN
+          IF(GEOMETRY) THEN
             DO JD=1,3
               DO ID=1,3
                 H(ID,JD,LMN)=B*Y(LM)*U(ID)*U(JD) &
@@ -232,7 +244,7 @@ CONTAINS
             DM=SGN*REAL(S%DM(I,J,D),KIND=8)
             FIELD(:,D)=FIELD(:,D)+DM*KERNEL
             IF(BACK) S%DH(I,J,D)=S%DH(I,J,D)+SGN*SUM(KB(:,D)*KERNEL)
-            IF(PRESENT(DX).AND.BACK) THEN
+            IF(GEOMETRY) THEN
               JAC(1,:)=KERNEL(2:4)
               DO K=1,3
                 JAC(2:4,K)=H(:,K,I)*C(J)+G(:,I)*G(K,J) &
@@ -248,18 +260,25 @@ CONTAINS
     IF(PRESENT(DMCONTRACTION)) DMCONTRACTION=SUM(KB*FIELD)
     ! CORE(:,1) is AE minus pseudo core density, CORE(:,2) the complete
     ! frozen-core positive tau. The smooth tau contains valence only.
-    COREJAC=0.D0
-    CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%CORE(:,1),R,F,DF,DDF)
+    IF(GEOMETRY) THEN
+      CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%CORE(:,1),R,F,DF,DDF)
+    ELSE
+      CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%CORE(:,1),R,F,DF)
+    END IF
     FIELD(1,1)=FIELD(1,1)+Y00*F
     FIELD(2:4,1)=FIELD(2:4,1)+Y00*DF*U
-    COREJAC(1,:)=Y00*DF*U
-    DO K=1,3
-      COREJAC(2:4,K)=Y00*((DDF-DF/R)*U*U(K)+DF/R*EYE(:,K))
-    END DO
-    CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%CORE(:,2),R,F,DF,DDF)
+    IF(GEOMETRY) THEN
+      COREJAC(1,:)=Y00*DF*U
+      DO K=1,3
+        COREJAC(2:4,K)=Y00*((DDF-DF/R)*U*U(K)+DF/R*EYE(:,K))
+      END DO
+      CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%CORE(:,2),R,F,DF)
+      COREJAC(5,:)=Y00*DF*U
+    ELSE
+      CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%CORE(:,2),R,F)
+    END IF
     FIELD(5,1)=FIELD(5,1)+Y00*F
-    COREJAC(5,:)=Y00*DF*U
-    IF(PRESENT(DX).AND.BACK) THEN
+    IF(GEOMETRY) THEN
       DO K=1,3
         DX(K)=DX(K)+SUM(KB(:,1)*COREJAC(:,K))
       END DO
