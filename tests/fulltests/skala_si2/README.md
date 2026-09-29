@@ -40,6 +40,20 @@ Fourier basis as the Skala probe. A small time step preserves that starting
 state but cannot make it stationary for a different functional. A one-k-point
 restart cannot be used for this eight-k-point test.
 
+For fixed-occupation relaxation, test `!PSIDYN SAFEORTHO=T` explicitly as
+well as the current applied-Skala default `F`. The former uses the
+occupation-weighted constraint update and does not require diagonalizing
+the Hamiltonian within an equally occupied subspace. This distinction does
+not remove the occupied--empty commutator requirement. Dynamical occupations
+through `!MERMIN` still require `SAFEORTHO=F`.
+
+When comparing fictitious masses, hold `MPSICG2` fixed to isolate the overall
+mass from the reciprocal-space preconditioner. For example, at `DT=5`,
+the automatic coefficient for `MPSI=100` is `0.3166286988823056`. Specify that
+coefficient explicitly when testing `MPSI=25`. Use the same restart, geometry,
+grid, friction and stationary window, and retain failed checks. These are
+controlled relaxation settings, not universal cold-start recommendations.
+
 ## PAW setup grid
 
 The partial-wave setup grid is independent of the Skala atom-grid quadrature.
