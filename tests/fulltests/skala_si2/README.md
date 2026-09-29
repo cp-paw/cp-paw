@@ -46,6 +46,40 @@ override the built-in setup. Changing that `stp.cntl` alone therefore does not
 constitute a radial convergence test. Change the resolved `AUGMENT!GRID`
 parameters for a setup-grid convergence test.
 
+## Orbital Energy Derivative
+
+`orbital_fd.py` checks a fixed-geometry, fixed-occupation direction in orbital
+space. Every single-step calculation starts from the same restart, applies
+the initial PAW orthonormalization, and then rotates two bands before rebuilding
+projections and densities. A nonzero center angle provides a measurable signal
+even when the original restart is nearly stationary. The weighted occupations
+already include the k-point weight and spin multiplicity.
+
+```sh
+python3 tests/fulltests/skala_si2/orbital_fd.py \
+  --executable /path/to/paw.x --model /path/to/model.fun \
+  --restart /path/to/si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-orbital-test-directory \
+  --kpoint 1 --bands 4 5 --center-angle 0.02 --steps 0.01 0.003 0.001
+```
+
+The driver repeats the center calculation and records central energy
+differences and the Hamiltonian derivative separately for each step size.
+Without `--absolute-tolerance`, it reports measurements, not a passed test.
+With that option every step must meet the specified absolute bound plus
+`--relative-tolerance` times the analytic derivative magnitude. Establish
+truncation and model-precision errors before interpreting those bounds.
+The default 96/17 quadrature is not a physical convergence claim.
+
+Use `--reference-pbe` to retain the conventional PBE Hamiltonian (`APPLY=F`).
+For GPU checks select `--device CUDA --gpu-mode resident` with a compatible
+model. Complex, unpacked orbitals also allow `--mode IMAG`. Imaginary rotations
+are rejected for the packed real representation. The underlying diagnostic
+is opt-in through `CPPAW_SKALA_ORBITAL_ROTATION='K SPIN I J ANGLE REAL|IMAG'`
+and requires Skala `CHECK=T`. It is intended for a single energy evaluation,
+not production propagation. This test neither converges the electrons nor
+validates stationary-state ionic forces or stress.
+
 ## Partition Derivative Cache
 
 `cache_parity.py` runs two applied-functional steps from the same restart with
