@@ -99,6 +99,29 @@ summary. Stress diagnostics report each Skala contribution and the complete
 `D E / D STRAIN` tensor before CP-PAW converts it to its internal stress sign
 convention.
 
+Check mode also reports the PAW-metric electronic residual
+`R_j = H psi_j - S sum_i psi_i <psi_i|H|psi_j>`, its occupied RMS and maximum,
+the occupation commutator `|H_ij| |f_i-f_j| / max(f)`, `max|Psi^dagger S Psi-I|`,
+and Hamiltonian Hermiticity. These are diagnostics of the current Hamiltonian:
+with `APPLY=F` they refer to conventional XC, not Skala. The residual assumes
+an orthonormal PAW basis; its separate overlap check must pass. Small energy
+changes or a stationary subspace alone are not a sufficient convergence test.
+Even passing all these checks does not prove the global ground-state minimum.
+The [stationarity checker](../../tests/fulltests/skala_si2/stationarity.py)
+checks every step for finite values and metric/operator consistency; optional
+explicit residual and occupation-commutator tolerances test the final window.
+
+The one-center tau audit separately compares the angular positive-tau integral
+with an angularly exact radial contraction of the same partial waves, density
+matrix and radial domain. This is valence tau; production reconstruction adds
+the frozen-core contribution separately. Further diagnostics expose the outer
+radial domain, surface term, nominal ZORA contribution and a numerical radial
+kinetic operator. The legacy HBS setup matrix is constructed using its stored
+equation-based kinetic action and replaced pseudo-wave tails, so the raw
+`TAU-KINETIC DIFFERENCE` is not an identity test. No correction or rescaling of
+the Skala tau input is made to force it to match that matrix. The remaining
+setup/operator difference is documented in the validation checkpoint.
+
 `APPLY=F` leaves CP-PAW's conventional XC functional active. Consequently,
 subtracting forces from otherwise identical `APPLY=T` and `APPLY=F` runs gives
 the Skala-minus-conventional-XC force, not the derivative of the Skala model

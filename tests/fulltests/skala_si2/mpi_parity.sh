@@ -22,6 +22,7 @@ energy_tolerance=${SKALA_MPI_ENERGY_TOLERANCE:-0.0000001}
 force_tolerance=${SKALA_MPI_FORCE_TOLERANCE:-0.000002}
 stress_tolerance=${SKALA_MPI_STRESS_TOLERANCE:-0.000002}
 norm_tolerance=${SKALA_MPI_NORM_TOLERANCE:-0.00002}
+scf_tolerance=${SKALA_MPI_SCF_TOLERANCE:-0.0000001}
 radial_points=${SKALA_RADIAL_POINTS:-200}
 lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-53}
 lebedev_orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
@@ -90,13 +91,24 @@ extract() {
     }
     /^SMOOTH SCALAR OPERATOR L2/ { scalar_norm = $NF }
     /^SMOOTH TAU OPERATOR L2/ { tau_norm = $NF }
+    /^SKALA OCCUPIED RESIDUAL RMS/ { scf_rms = $NF }
+    /^SKALA OCCUPIED RESIDUAL MAX/ { scf_max = $NF }
+    /^SKALA OCCUPATION COMMUTATOR MAX/ { scf_commutator = $NF }
+    /^SKALA SCF OVERLAP ERROR/ { scf_overlap = $NF }
+    /^SKALA HAMILTONIAN HERMITICITY/ { scf_hermiticity = $NF }
     END {
       if (kpoints == "" || energy == "" || force_count == 0 || stress_count != 3 ||
-          scalar_norm == "" || tau_norm == "") exit 1
+          scalar_norm == "" || tau_norm == "" || scf_rms == "" || scf_max == "" ||
+          scf_commutator == "" || scf_overlap == "" || scf_hermiticity == "") exit 1
       print "KPOINTS", kpoints
       print "ENERGY", energy
       print "SCALAR_NORM", scalar_norm
       print "TAU_NORM", tau_norm
+      print "SCF_RMS", scf_rms
+      print "SCF_MAX", scf_max
+      print "SCF_COMMUTATOR", scf_commutator
+      print "SCF_OVERLAP", scf_overlap
+      print "SCF_HERMITICITY", scf_hermiticity
       for (row = 1; row <= force_count; row++)
         print force_label[row], force[row, 1], force[row, 2], force[row, 3]
       for (row = 1; row <= stress_count; row++)
@@ -113,7 +125,8 @@ awk -v expected_kpoints="$expected_kpoints" \
     -v energy_tolerance="$energy_tolerance" \
     -v force_tolerance="$force_tolerance" \
     -v stress_tolerance="$stress_tolerance" \
-    -v norm_tolerance="$norm_tolerance" '
+    -v norm_tolerance="$norm_tolerance" \
+    -v scf_tolerance="$scf_tolerance" '
   FNR == NR {
     reference[FNR] = $0
     reference_count = FNR
@@ -139,7 +152,14 @@ awk -v expected_kpoints="$expected_kpoints" \
     if (left[1] ~ /^FORCE/) tolerance = force_tolerance
     if (left[1] ~ /^STRESS/) tolerance = stress_tolerance
     if (left[1] ~ /_NORM$/) tolerance = norm_tolerance
+    if (left[1] ~ /^SCF_/) tolerance = scf_tolerance
     for (column = 2; column <= left_count; column++) {
+      if (left[column] !~ /^[-+]?[0-9.]+[EeDd][-+]?[0-9]+$/ ||
+          right[column] !~ /^[-+]?[0-9.]+[EeDd][-+]?[0-9]+$/) {
+        print "TEST FAILED: non-finite MPI diagnostic " left[1] > "/dev/stderr"
+        failed = 1
+        continue
+      }
       difference = right[column] - left[column]
       absolute = difference < 0.0 ? -difference : difference
       if (absolute > maximum[left[1]]) maximum[left[1]] = absolute
@@ -159,13 +179,15 @@ awk -v expected_kpoints="$expected_kpoints" \
     force_max = 0.0
     stress_max = 0.0
     norm_max = 0.0
+    scf_max = 0.0
     for (label in maximum) {
       if (label ~ /^FORCE/ && maximum[label] > force_max) force_max = maximum[label]
       if (label ~ /^STRESS/ && maximum[label] > stress_max) stress_max = maximum[label]
       if (label ~ /_NORM$/ && maximum[label] > norm_max) norm_max = maximum[label]
+      if (label ~ /^SCF_/ && maximum[label] > scf_max) scf_max = maximum[label]
     }
-    printf "SKALA MPI PARITY ranks=1/%d energy=% .6e force=% .6e stress=% .6e norm=% .6e\n", \
-           ranks, energy_max, force_max, stress_max, norm_max
+    printf "SKALA MPI PARITY ranks=1/%d energy=% .6e force=% .6e stress=% .6e norm=% .6e scf=% .6e\n", \
+           ranks, energy_max, force_max, stress_max, norm_max, scf_max
     exit failed
   }
 ' "$work/rank1.data" "$work/rankn.data"

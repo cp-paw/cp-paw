@@ -215,6 +215,88 @@ Evidence: Spark `validation/si2-periodic-lebedev64`, with executable SHA-256
 same CUDA model as above. The default remains 53 pending a broader convergence
 study; the new orders are selectable on both CPU and GPU.
 
+### Electronic stationarity and CPU MPI
+
+The new `CHECK=T` diagnostic evaluates `H Psi - S Psi (Psi^dagger H Psi)`,
+the occupied RMS and maximum norm, the occupation commutator, overlap error,
+and Hamiltonian Hermiticity. It is read-only and follows the Hamiltonian
+selected by `APPLY`. Passing the residual alone does not establish correct
+occupations, orthonormality, a global minimum, or quadrature convergence.
+
+A new eight-k-point PBE warm start (300 steps, 20 Ry, `CDUAL=2`) matches this
+Si2 structure. The subsequent diagnostic runs use `DT=1e-6`, 96 radial points,
+order 17, one orientation and one shell on Terok GNU/CPU-only. These deliberately
+coarse quadratures test instrumentation, not physical convergence:
+
+| State / Hamiltonian | Occupied RMS (H) | Occupied maximum (H) | Occupation commutator (H) | Overlap error |
+| --- | ---: | ---: | ---: | ---: |
+| Cold / Skala | 1.729613374 | 1.889739732 | 0.3129584933 | 2.001e-9 |
+| PBE warm restart / PBE (`APPLY=F`) | 2.123543829e-8 | 6.449052927e-8 | 1.448571787e-7 | 2.442e-15 |
+| Same PBE restart / Skala (`APPLY=T`) | 9.426973264e-2 | 1.405628165e-1 | 1.139137897e-2 | 2.442e-15 |
+
+Hamiltonian Hermiticity errors are below 6e-16 H. The independent PBE probe
+passes explicit 1e-6 H maximum-residual and commutator limits. The switched
+Skala probe fails those limits, as it should. No energy-change or step-count
+criterion was substituted for electronic stationarity. The parser has nine
+tests, including missing/nonfinite diagnostics, earlier-step failures, a
+stationary subspace with wrong occupations, and final-window handling.
+
+The updated CPU-only MPI executable also passes 1/2-rank parity from the same
+restart: energy difference 2.295e-12 H, force difference 3.665e-10 H/bohr,
+strain-derivative difference 9.001e-10 H, smooth-operator norm difference
+1.135e-8, and maximum difference among the electronic diagnostics 1.740e-10.
+This supersedes the earlier pending CPU MPI integration gate, but not the GPU
+MPI or stationary-state force/stress finite-difference gates.
+
+Evidence: Terok `validation/si2-stationarity-{cold,pbe,skala}`,
+`validation/si2-current-cpu-mpi-r2.log`, retained parity protocols in
+`/tmp/cppaw-skala-mpi.Z4U801`. Restart SHA-256:
+`22c48ba177e58ec0589cd7187e9c40540057c039075d4bd30c49467ee06baa7c`.
+CPU serial executable for the applied warm probe:
+`9e46ebcbb2d33eb2db04044a6e7dc851f867c7e215f04d463552841f23142ffd`.
+CPU MPI executable:
+`7425a9eb6c22fd35d335ef6599f46047752dc7c434e8bc8f00870fc51d820cd0`.
+The CPU model hash is unchanged from the earlier checkpoint.
+
+### Positive-tau and setup-operator audit
+
+The angular one-center **valence** tau now has an independent angularly exact
+radial reference on the same domain. Their differences are of order 1e-14 H
+for both Si atoms. Frozen-core tau is added separately in the production
+reconstruction; it is not part of this diagnostic comparison.
+
+On the warm PBE restart, atom 1 has a raw tau-minus-setup-kinetic difference
+of 0.05111377703 H. Matching the outer radial domain contributes -0.03483613338 H
+and the nominal AE ZORA factor contributes -0.006761831279 H, with a zero outer
+surface term. The remaining gradient-form estimate minus the stored setup
+matrix is 0.009515812379 H. No physical tau was changed to fit this number.
+
+An explicit `!SPECIES!AUGMENT!GRID` sweep further separates the numerical
+gradient and differential-operator discretizations from the stored HBS matrix:
+
+| DMIN / DMAX (bohr) | Gradient minus numerical operator, atom 1 (H) | Numerical operator minus setup matrix (H) |
+| --- | ---: | ---: |
+| 1e-6 / 0.1 | 2.094133912e-5 | 9.494871040e-3 |
+| 5e-7 / 0.05 | 5.219971007e-6 | 9.536840995e-3 |
+| 2.5e-7 / 0.025 | 1.303286775e-6 | 9.465963259e-3 |
+
+The first difference falls approximately quadratically with spacing. The second
+does not disappear. These rebuilt setups also shift `R(NR-3)` and regenerate
+partial waves; they are not a fixed-function quadrature test. HBS constructs
+the pseudo waves inside a matching radius, retains its input tails outside,
+and assigns `TPSPHI=(E-POT)*PSPHI`. Its stored kinetic action must therefore be
+audited against that construction, not assumed equal to applying the nominal
+nonrelativistic operator globally. This observation narrows the remaining
+audit but does **not** certify the residual as harmless or as the cause of the
+AlN EOS issue. Existing setup matrices and PBE reference energies are unchanged.
+
+Evidence: Terok `validation/si2-tau-radial-half-r2` and
+`validation/si2-tau-radial-quarter`. The first `si2-tau-radial-half` trial did
+**not** refine the grid: historical `PARMS_STP` is not the current `AUGPARMS`
+input, so the built-in setup was used. This trial is retained but excluded from
+the sweep. The successful trials use explicit structure blocks and verify
+the resolved grid in `si2.strc_out`.
+
 ### Remaining acceptance gates
 
 1. Resolve/converge the periodic energy partition and descriptor image window,

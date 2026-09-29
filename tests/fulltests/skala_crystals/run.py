@@ -162,6 +162,9 @@ def main():
                       "PS RECIPROCAL NORM TRACE", "PS NATIVE GRID ELECTRONS", "PS GRID MINUS TRACE",
                       "PAW VALENCE TRACE", "PAW ALL ELECTRON TRACE", "TRACE MINUS OCCUPATIONS",
                       "OCCUPATION ELECTRONS", "COMPOSITE MINUS TRACE",
+                      "SKALA OCCUPIED RESIDUAL RMS", "SKALA OCCUPIED RESIDUAL MAX",
+                      "SKALA OCCUPATION COMMUTATOR MAX", "SKALA SCF OVERLAP ERROR",
+                      "SKALA HAMILTONIAN HERMITICITY",
                       "GRAD ADJOINT DIFFERENCE", "TAU OPERATOR DIFFERENCE", "ONE-CENTER MATRIX DIFFERENCE"]:
             record[label] = last_value(text, label)
             if "DIFFERENCE" in label and abs(record[label]) > 1.e-8:

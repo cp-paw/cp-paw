@@ -11,16 +11,24 @@ check_abs() {
   label=$1
   tolerance=$2
   scale=${3:-1}
-  value=$(value_for "$label")
-  awk -v label="$label" -v value="$value" -v tolerance="$tolerance" -v scale="$scale" '
-    BEGIN {
+  awk -v label="$label" -v tolerance="$tolerance" -v scale="$scale" '
+    index($0, label) == 1 && substr($0, length(label) + 1, 1) ~ /[[:space:]]/ {
+      value = $NF
+      gsub(/[Dd]/, "E", value)
+      count++
       magnitude = value + 0.0
       if (magnitude < 0.0) magnitude = -magnitude
       if (value !~ /^[-+]?[0-9.]+[EeDd][-+]?[0-9]+$/ || scale + 0 <= 0 || magnitude >= tolerance * scale) {
         printf "TEST FAILED: %s = %s (tolerance %s x scale %s)\n", label, value, tolerance, scale
         exit 1
       }
-    }'
+    }
+    END {
+      if (!count) {
+        printf "TEST FAILED: missing %s\n", label
+        exit 1
+      }
+    }' "$PROT"
 }
 
 check_tensor() {
@@ -57,6 +65,14 @@ check_abs "TRACE MINUS OCCUPATIONS" 1.0e-8 "$(value_for 'OCCUPATION ELECTRONS')"
 check_abs "GRAD ADJOINT DIFFERENCE" 1.0e-10
 check_abs "TAU OPERATOR DIFFERENCE" 1.0e-10
 check_abs "ONE-CENTER MATRIX DIFFERENCE" 1.0e-10
+check_abs "TAU ANGULAR-RADIAL ERROR" 1.0e-10
+# A cold one-step integration test is not an SCF convergence test. Require
+# finite residuals and the PAW metric identities, not a small cold residual.
+check_abs "SKALA OCCUPIED RESIDUAL RMS" 1.0e99
+check_abs "SKALA OCCUPIED RESIDUAL MAX" 1.0e99
+check_abs "SKALA OCCUPATION COMMUTATOR MAX" 1.0e99
+check_abs "SKALA SCF OVERLAP ERROR" 1.0e-8
+check_abs "SKALA HAMILTONIAN HERMITICITY" 1.0e-10
 check_tensor "SKALA MODEL D E / D STRAIN"
 check_tensor "SKALA CORE D E / D STRAIN"
 check_tensor "SKALA TAU D E / D STRAIN"
