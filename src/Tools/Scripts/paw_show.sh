@@ -16,6 +16,7 @@
 ##     -f       fictitios kinetic energy of the wave functions   ##
 ##     -s       time steps rather than time in ps                ##
 ##     -u unit  select unit (h, ry, ev, kj/mol, kcal/mol)        ##
+##              (-u must preceed -e,-c,-f)                       ##
 ##     -a type: friction                                         ##
 ##         type=r   friction acting on nuclei                    ##
 ##         type=p   friction acting on wave functions            ##
@@ -37,6 +38,7 @@ Usage: paw_show options --- rootname\n
 \t -h: give info about use and exit 
 \t -s: use time steps rather than time in picoseconds
 \t -u unit: select energy unit (h, ry, ev, kj/mol, kcal/mol)      
+\t\t        (-u must preceed -e,-c,-f)
 \t -e: plot static total energy E_tot in Hartree (or unit)
 \t -c: plot conserved energy E_c in Hartree (or unit)
 \t -f: plot fictitious kinetic wave function energy in Hartree (or unit)
