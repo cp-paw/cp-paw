@@ -54,6 +54,46 @@ coefficient explicitly when testing `MPSI=25`. Use the same restart, geometry,
 grid, friction and stationary window, and retain failed checks. These are
 controlled relaxation settings, not universal cold-start recommendations.
 
+## Stationary Ionic Force Differences
+
+`force_stationary_fd.py` independently relaxes the electrons at the center
+and each displaced geometry before comparing the total analytic force with
+`-(E(+h)-E(-h))/(2h)`. It repeats the center and checks both displacement
+time levels, fixed cell/positions, occupations, band diagnostics, and normal
+termination. All runs are serial processes. `--jobs` runs independent
+geometries concurrently, not MPI ranks, and multiplies memory/cache use.
+
+```sh
+CPPAW_SKALA_SOURCE_CACHE_MB=4096 \
+python3 tests/fulltests/skala_si2/force_stationary_fd.py \
+  --executable /path/to/paw.x --model /path/to/model.fun \
+  --restart /path/to/stationary-si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-force-test-directory \
+  --atom 2 --axis 1 --steps 0.001 0.0003 --jobs 1
+```
+
+The defaults use up to three 40-step blocks with `SAFEORTHO=T`, fixed
+occupations, `DT=5`, `MPSI=25`, `MPSICG2=0.3166286988823056`, and friction
+0.05. Each block is a static restart. Both maximum occupied residual and
+occupation commutator must remain below `1e-6` Ha over its last five
+evaluations. Overlap and Hermiticity bounds apply to every evaluation.
+Failed blocks, logs, input hashes, and residual/force traces are retained.
+An unconverged geometry prevents a successful force comparison. No input,
+model, or executable is modified, and existing output directories are refused.
+
+Without `--absolute-tolerance` the result is a measurement, not a passed
+force test. An explicit bound also checks repeated-center consistency.
+Tighten residuals, vary displacement widths, and refine the grid before
+inferring physical accuracy. `--center-displacement` shifts the reference
+geometry in bohr to break crystal symmetry. The default 96/17 quadrature is
+diagnostic only. The example 4096 MiB source-cache budget is **per process**
+and optional. CUDA models and host electronic offloading are selected
+independently with `--device` and `--gpu-mode`.
+
+The older `force_fd.sh` and `stress_fd.sh` are single-step restart probes.
+They do not reconverge displaced orbitals and do not certify stationary
+forces or stress, even if their loose diagnostic tolerances are met.
+
 ## PAW setup grid
 
 The partial-wave setup grid is independent of the Skala atom-grid quadrature.
