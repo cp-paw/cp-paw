@@ -397,9 +397,7 @@ END MODULE AUGMENTATION_MODULE
      &                                ,RCUT,EKINNL)
         END IF
         ALLOCATE(SKALADH(LMNX,LMNX,NDIMD))
-        CALL SKALA$ATOMFORWARD(IAT,GID,NR,LNX,LOX,LMNX,NDIMD &
-     &                        ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE,RCUT &
-     &                        ,SKALADH)
+        CALL SKALA$SOURCEDH(IAT,LMNX,NDIMD,SKALADH)
       END IF
 !     
 !     ================================================================

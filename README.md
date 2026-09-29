@@ -134,9 +134,18 @@ and the 1024/2048/4096-band validation driver are documented in
 
 The optional Skala path uses FTorch and LibTorch to evaluate a TorchScript
 Skala 1.1 model on CP-PAW's native smooth grid and atom-centered PAW grids. It
-assembles each atom block as smooth plus all-electron one-center minus pseudo
-one-center fields before model inference. This is a PAW-specific integration;
-it is not a literal copy of CP2K's GAPW implementation.
+assembles each atom block as smooth plus the sum of all relevant all-electron
+minus pseudo source contributions, including periodic images, before model
+inference. Frozen-core positive tau is included as well. Energy partition
+weights and the independently constructed self-image descriptor window are
+distinct. This is a PAW-specific integration, not a literal copy of CP2K's GAPW
+implementation.
+
+The joint-source reconstruction supersedes the original owner-only hybrid-grid
+prototype. Its scientific validation is in progress: the old Si2 force/stress
+and timing results do not validate this new discretization or resolve the
+reported AlN equation-of-state problem. The CO2, NH3 and urea integration
+probes are described in [`tests/fulltests/skala_crystals/README.md`](tests/fulltests/skala_crystals/README.md).
 
 Skala consumes the density, its gradient, and the positive kinetic-energy
 density. CP-PAW constructs the corresponding generalized Kohn-Sham scalar and

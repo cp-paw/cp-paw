@@ -14,8 +14,8 @@ them to Skala protocol-v2 tensors and returns derivatives in the host layout.
 `0.5*sum_i |grad psi_i|^2`; CP-PAW's existing Laplacian-gauge `RHOKIN` is not a
 drop-in replacement.
 
-The native PAW call path is being integrated in stages. At this point the
-`!CONTROL!DFT!SKALA` block assembles complete hybrid PAW atom blocks, evaluates
+The native PAW call path is being integrated in stages. The
+`!CONTROL!DFT!SKALA` block now assembles joint-source PAW atom blocks, evaluates
 the model, and maps its density, density-gradient, and positive-tau adjoints
 back to the one-center density matrices and smooth wave-function grid. The
 smooth scalar operator includes the Fourier-space divergence of the gradient
@@ -25,13 +25,21 @@ the experimental electronic operator, including the generalized Kohn-Sham
 positive-tau term. The smooth scalar, positive-tau, and one-center parts can be
 isolated with their component switches. Its safe default is `F`. Experimental
 analytic atomic forces include the explicit model-coordinate, moving local
-grid, interpolated-primitive, and smooth/local partition terms in addition to
+grid, interpolated-primitive, and atom-image partition terms in addition to
 the PAW projector response. The smooth scalar adjoint is also contracted with
 the translated pseudo-core densities after Skala inference; this contribution
 cannot be taken from the earlier conventional-XC potential. Analytic stress is
 available when CP-PAW requests cell stress. It includes the model-coordinate,
-quadrature-volume, hybrid-partition, radial-blend, interpolated smooth-field,
-pseudo-core, positive-tau, and existing PAW projector responses.
+energy partition, independent descriptor-window, interpolated smooth-field,
+all-source, pseudo-core, positive-tau, and existing PAW projector responses.
+The new mapped radial grid has fixed Cartesian offsets and base weights, so
+there is no affine local-quadrature volume factor or radial-blend derivative.
+
+**Validation status:** this reconstruction replaces the owner-only hybrid-grid
+prototype. Kernel adjoint tests are necessary but insufficient to validate
+the functional. Re-converged wave functions, quadrature, end-to-end forces and
+stress, and the reported AlN equation of state remain acceptance gates.
+Historical numerical results below refer to the former implementation.
 
 ```text
 !SKALA
@@ -58,8 +66,9 @@ Skala 1.1 float32 network produced rank-dependent adjoints when several MPI
 processes evaluated different atoms, so it is not the correctness default.
 CPU model inference remains distributed across MPI ranks.
 
-`CHECK=T` performs a one-time central finite-difference check of the model
-adjoint and its PAW one-center density-matrix contraction. It also verifies
+`CHECK=T` reports the one-center density-matrix/primitive contraction identity.
+The source and image-kernel unit tests separately check their finite-difference
+derivatives. The applied-functional check also verifies
 the discrete integration-by-parts identity for the density-gradient adjoint
 and compares the occupied-state expectation of the positive-tau Hamiltonian
 with the primitive `integral v_tau*tau`. `CHECK=F` omits the diagnostic field
@@ -84,8 +93,9 @@ retaining the old reciprocal basis stored with the wave functions, then compare
 radial/Lebedev offsets remain fixed in Cartesian space under this deformation;
 only their atom centers follow the affine cell motion. The interpolated smooth
 fields therefore contribute through the negative local-offset response rather
-than an affine deformation of the radial grid. The Si2 validation covers
-isotropic, uniaxial, and symmetric-shear strains and 1/4-rank MPI parity.
+than an affine deformation of the radial grid. The Si2 test drivers cover
+isotropic, uniaxial, and symmetric-shear strains and 1/4-rank MPI parity; they
+must be rerun on a state converged with the corrected reconstruction.
 
 Given an electronically converged restart and its matching structure, the
 force and stress checks can be repeated with:
@@ -127,7 +137,9 @@ lists can be changed with `SKALA_RADIAL_POINT_LIST` and
 convergence sweep over deterministic, equally weighted rotations of each
 Lebedev grid.
 
-The 2026-08-15 end-to-end validation used a stationary Si2 restart. At
+The historical 2026-08-15 validation of the old hybrid-grid prototype used a
+stationary Si2 restart. These numbers are not acceptance results for the
+joint-source reconstruction. At
 `200/53/1`, the selected force component differed from its central finite
 difference by `8.55e-4 H/bohr`. Isotropic, uniaxial, and symmetric-shear
 stress checks differed by `7.39e-4`, `8.78e-5`, and `4.95e-4 H`, respectively;
@@ -168,17 +180,36 @@ explicit `SAFEORTHO` value is respected. Start electronic dynamics with a
 conservative `DT**2/MPSI`; the conventional CP-PAW default is too aggressive
 for the current experimental operator.
 
-For PAW, the eventual caller must construct each atom block from primary fields
+For PAW, the caller constructs each target atom block from primary fields
 before inference:
 
 ```
-smooth atom-partitioned field - pseudo one-center field + AE one-center field
+smooth field + sum_(source atoms and images) (AE source - pseudo source)
 ```
 
-"Atom-partitioned" means that each complete atom block receives its share of
-the common quadrature rows and weights. The physical `rho`, `grad(rho)`, and
-`tau` values on a retained row are not multiplied by the partition weight.
-The local rows are assembled as `smooth + AE - pseudo` before the model call.
+The atom label identifies the target descriptor block, not the only source of
+its reconstructed fields. Every source within its radial support contributes
+to every target row, including periodic images. The smooth density contains
+pseudo core; the source density adds AE minus pseudo core. Smooth positive tau
+contains valence only, so the complete frozen-core positive tau is added once.
+It is derived from the occupied setup core orbitals, not the Laplacian-gauge
+kinetic-energy density. Collinear total/spin fields are converted to up/down
+channels after reconstruction; the core is unpolarized.
+
+Energy weights are `w*p_A0`, where `p_A0` uses the target-specific fixed image
+layout of all atoms. Descriptor weights are `w*T(d_A)`, with `d_A` recomputed
+from the target's self images only and a quintic taper from `1e-12` to `1e-11`.
+The descriptor window must not be obtained by tapering the all-atom energy
+partition. Rows with zero energy weight can still contribute to descriptors.
+Neither weight multiplies the physical rho, gradient or tau. The partition
+uses shifts +/-1 around each source image nearest the target; field images
+are enumerated separately from the actual source support, not that fixed shell.
+
+All source density-matrix adjoints are accumulated across target blocks and
+MPI ranks before building any one-center Hamiltonian. The reconstruction,
+matrix adjoint and spatial derivatives use the same radial interpolation
+polynomial. Forces include target and source motion; strain also includes
+source-image translations and the independent self-image window derivative.
 
 This differs from both separate conventional one-center XC corrections and a
 literal copy of CP2K's GAPW implementation. Nonlinear Skala features are formed
@@ -274,16 +305,15 @@ TEST=si64_skala SKALA_MODEL=/absolute/path/to/skala-1.1-rev1-cuda.fun \
 Set `SKALA_CHECK=T` for variational diagnostics. The check mode is intended for
 correctness runs; benchmark timings should use `SKALA_CHECK=F`.
 
-`INTERPOLATEPARTITION=T` is an experimental performance mode. It interpolates
-the local atom-grid weights from the cached exact smooth-grid partition. The
-default remains `F` while energy and grid-convergence effects are evaluated.
-The exact default path automatically reuses local partition weights for atoms
-whose current periodic environments are related by a pure lattice translation
-and whose augmentation cutoffs match.
+`INTERPOLATEPARTITION=T` is rejected by the joint-source implementation. The
+old smooth-grid partition cache cannot represent its two independent weight
+families. `F` is accepted for input compatibility. Exact weights are cached for
+an unchanged geometry and cell, with no source-field caching.
 
 `RADIALPOINTS`, `LEBEDEVEXACTNESS`, and `LEBEDEVORIENTATIONS` control the
-moving local quadrature. Their portable production defaults are 200, 53, and
-1, respectively. A Si2 sweep found the former 100/17/1 grid too coarse. At
+moving local quadrature. Their starting defaults are 200, 53, and
+1, respectively, not a convergence guarantee. A historical Si2 sweep of the
+old hybrid-grid prototype found 100/17/1 too coarse. At
 eight orientations, 300, 360, and 400 radial points agreed within about
 `5e-6` Hartree in model XC energy. Additional orientations average
 deterministic rotations of the same Lebedev rule and preserve the normalized
@@ -296,13 +326,23 @@ with the number of orientations. It required about 74 GB on the tested CUDA
 build. Use 200/53/1 as the portable starting point and converge energy,
 particle number, forces, and stress explicitly for demanding calculations.
 
-The hybrid quadrature joins the moving radial/Lebedev PAW grid to the fixed
-native cell grid with a quintic radial blend over the outer 20 percent of the
-augmentation radius. Both the value and first derivative vanish at the
-endpoints. Native-grid coordinates passed to Skala remain in the fixed cell
-frame; minimum-image vectors are used only for the radial blend and PAW-local
-quantities. This avoids a finite model-energy jump when a periodic atom crosses
-an image-selection boundary.
+The corrected quadrature uses Gauss-Legendre nodes mapped to `[0,infinity)`
+with `r=x/(1-x)` in bohr and Lebedev angular rules. Native smooth fields are
+interpolated onto these rows. There is no owner-sphere cutoff on foreign source
+fields, radial blend or direct native-cell energy quadrature. Both quadrature
+and native-grid interpolation must be converged, especially around foreign
+nuclei. A finite electron-count error is reported rather than normalized away.
+
+Run the reconstruction kernels after a normal build (no model is required):
+
+```sh
+bash tests/unittests/skala_reconstruction/run.sh bin/Build_fast
+```
+
+The [crystal probes](../../tests/fulltests/skala_crystals/README.md) use the
+CO2, NH3 and urea structures from the CP2K manuscript benchmark repository.
+They test CP-PAW execution and adjoints; they are not a comparison of PAW
+and GAPW total-energy zeros or a substitute for Mani's original AlN inputs.
 
 Density, density-gradient, and kinetic-energy-density interpolation on each
 local atom-grid point shares one native-grid stencil. The reverse mapping uses

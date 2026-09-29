@@ -671,6 +671,31 @@ END MODULE SETUP_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_TAUCORE(NR,TAU)
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NR
+      REAL(8),INTENT(OUT) :: TAU(NR)
+      REAL(8) :: R(NR),DR(NR),DRSM(NR),ANG,ANGSM
+      INTEGER :: I,L,LS
+      CALL RADIAL$R(THIS%GID,NR,R)
+      TAU=0.D0
+      DO I=1,THIS%ATOM%NC
+        L=THIS%ATOM%LOFI(I)
+        ANG=REAL(L*(L+1),KIND=8)
+        LS=L+THIS%ATOM%SOFI(I)
+        ANGSM=REAL(LS*(LS+1),KIND=8)
+        IF(THIS%ATOM%SOFI(I).EQ.0) ANGSM=ANG+2.D0
+        CALL RADIAL$DERIVE(THIS%GID,NR,THIS%ATOM%AEPSI(:,I),DR)
+        CALL RADIAL$DERIVE(THIS%GID,NR,THIS%ATOM%AEPSISM(:,I),DRSM)
+        TAU=TAU+0.5D0*THIS%ATOM%FOFI(I) &
+     &      *(DR**2+ANG*THIS%ATOM%AEPSI(:,I)**2/MAX(R,1.D-30)**2 &
+     &        +DRSM**2+ANGSM*THIS%ATOM%AEPSISM(:,I)**2/MAX(R,1.D-30)**2)
+      END DO
+!     Same Y00 coefficient convention as AECORE, not a pseudo-core tau.
+      TAU=TAU/SQRT(16.D0*ATAN(1.D0))
+      END SUBROUTINE SETUP_TAUCORE
+!
       SUBROUTINE SETUP$GETR8A(ID,LEN,VAL)
 !     **************************************************************************
 !     **                                                                      **
@@ -823,6 +848,12 @@ END MODULE SETUP_MODULE
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
+      ELSE IF(ID.EQ.'TAUCORE') THEN
+        IF(LEN.NE.NR) THEN
+          CALL ERROR$MSG('INCONSISTENT CORE TAU ARRAY SIZE')
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        CALL SETUP_TAUCORE(NR,VAL)
       ELSE IF(ID.EQ.'PSCORE') THEN
         IF(LEN.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
