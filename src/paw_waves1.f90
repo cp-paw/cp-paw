@@ -3186,6 +3186,11 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
         CALL SKALA$SMOOTHOPERATORCHECK(LEFT,RIGHT,TAUCONTR)
         DEALLOCATE(RHO_V,GRHO_V,TAU_V)
       END IF
+      ! POTENTIAL_VOFRHO filters the smooth density through the DENSITY
+      ! reciprocal set. Apply the same self-adjoint projector on the return
+      ! path; the native-grid tau field has no such forward projection.
+      CALL PLANEWAVE$SUPFFT('RTOG',NDIMD,NGL,VGRADG,NRLV,VRHO_V)
+      CALL PLANEWAVE$SUPFFT('GTOR',NDIMD,NGL,VGRADG,NRLV,VRHO_V)
       VRHO_V=VRHO_V+VDIV_V
       FCOREFORCE=0.D0
       SCORESTRESS=0.D0

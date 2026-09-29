@@ -2,6 +2,7 @@ import copy
 import unittest
 
 import orbital_fd
+import orbital_seed
 from test_stationarity import protocol
 
 
@@ -21,6 +22,12 @@ TOTAL ENERGY : -100.0000
 
 
 class OrbitalDerivativeTest(unittest.TestCase):
+    def test_complex_seed_mesh(self):
+        self.assertIn("DIV=3 1 1", orbital_seed.structure((3, 1, 1)))
+        for mesh in ((0, 1, 1), (-1, 1, 1), (1, 1), (3.0, 1, 1)):
+            with self.subTest(mesh=mesh), self.assertRaises(ValueError):
+                orbital_seed.structure(mesh)
+
     def test_weighted_occupations_and_high_precision_energy(self):
         result = orbital_fd.diagnostics(sample())
         self.assertEqual(result["DERIVATIVE"], [0.2])

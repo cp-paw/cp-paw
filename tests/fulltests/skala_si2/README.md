@@ -87,6 +87,28 @@ and requires Skala `CHECK=T`. It is intended for a single energy evaluation,
 not production propagation. This test neither converges the electrons nor
 validates stationary-state ionic forces or stress.
 
+To exercise complex Bloch orbitals, create a cold PBE seed with the reduced
+`3 1 1` mesh. Its second irreducible k point is `(1/3,0,0)` and is unpacked.
+It deliberately contains high-energy components and is not an SCF reference.
+
+```sh
+python3 tests/fulltests/skala_si2/orbital_seed.py \
+  --executable /path/to/paw.x --output /path/to/new-seed
+python3 tests/fulltests/skala_si2/orbital_fd.py \
+  --executable /path/to/paw.x --model /path/to/model.fun \
+  --restart /path/to/new-seed/si2.rstrt --structure /path/to/new-seed/si2.strc \
+  --output /path/to/new-complex-real-test --kpoint 2 --mode REAL \
+  --steps 0.01 0.003 --absolute-tolerance 1e-5 --relative-tolerance 1e-3
+```
+
+Repeat with `--mode IMAG` and a fresh output directory, and use
+`--reference-pbe` for the host control. The coarse-grid tolerances above
+test integrated energy/operator consistency, not physical accuracy. This
+probe is sensitive to a missing density-space Fourier projector in the
+scalar adjoint. The forward density is band-limited before Skala evaluation,
+so its reverse scalar potential must use the same projector. Positive tau
+is formed directly on the native grid and must not inherit that filter.
+
 ## Partition Derivative Cache
 
 `cache_parity.py` runs two applied-functional steps from the same restart with
