@@ -18,6 +18,14 @@ Cartesian moments and rounding a requested exactness of 64 to the 1454-point
 rule. See [LEBEDEV.md](LEBEDEV.md) for provenance and angular-convergence
 results from the model-free integration probe.
 
+The partition-cache tests compare stored derivatives bit for bit with fresh
+kernel evaluations, including skew cells and self-image strain derivatives.
+They cover changes to atom positions, cell, grid coordinates and size, source
+atom count, target atom, image shell and force/stress mode, and verify parent
+deallocation and exact/insufficient/zero storage budgets. Invalid cache-limit
+environment values must fail explicitly. The cache stores only geometry; it
+does not validate the neural model or electronic convergence.
+
 ## Periodized Becke weights
 
 The previous common finite cluster gave its edge images inequivalent

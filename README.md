@@ -150,6 +150,14 @@ the native density grid additionally depends on `EPWPSI` and `CDUAL`. With
 normalization errors from atom-grid quadrature errors. Details and model-free
 tests are in [`tests/unittests/skala_reconstruction/README.md`](tests/unittests/skala_reconstruction/README.md).
 
+Geometry-only partition derivatives are reused between electronic steps at
+fixed geometry. `CPPAW_SKALA_PARTITION_CACHE_MB` limits cached array storage
+per MPI rank (default 256 MiB); `0` selects the original recomputation path.
+Blocks that exceed the remaining budget, or cannot be allocated, use that
+same fallback. Atom/cell, point-grid, image-shell and force/stress-mode changes
+invalidate the cache. Densities, model adjoints and forces are never cached.
+`CHECK=T` reports hits, misses and the summed cache payload across ranks.
+
 `LEBEDEVEXACTNESS` requests a minimum algebraic exactness, not a point count.
 The supported rules now extend through 65: 53 uses 974 angular points, 59 uses
 1202, and 65 uses 1454 per radial shell and orientation. A request of 64 selects

@@ -432,6 +432,133 @@ input, so the built-in setup was used. This trial is retained but excluded from
 the sweep. The successful trials use explicit structure blocks and verify
 the resolved grid in `si2.strc_out`.
 
+### Geometry-cache checkpoint (2026-09-29)
+
+The new bounded, per-rank partition cache stores only geometry derivatives.
+It does not cache densities, neural-model adjoints, Hamiltonians or forces.
+Exact atom/cell/grid, image-shell and force/stress-mode keys invalidate it;
+insufficient budget or allocation failure selects the uncached computation.
+The default is 256 MiB per MPI rank, with
+`CPPAW_SKALA_PARTITION_CACHE_MB=0` retaining the uncached path. Array payloads,
+not allocator overhead, count against the budget.
+
+Model-free cache tests pass with local GNU, Spark NVHPC and Terok GNU builds.
+They require bit-exact kernel reuse and test geometry/mode changes, parent
+deallocation and exact, insufficient and zero budgets. The full local GNU
+build/install also succeeds without Torch or NVIDIA linkage. The installer
+now excludes standalone test executables and dangling optional module links.
+The 19 Si2 and eight crystal Python tests pass.
+
+Two-step applied-Skala comparisons start from identical PBE restarts, using
+96 radial points, angular order 17, eight k points and a 20 Ry cutoff. They
+compare both steps, not just the initial snapshot. Fixed-cell probes use
+`DT=0.001`; stress probes use `DT=1e-6` and a very heavy moving cell.
+
+| Cache-off/on comparison | Total energy (H) | Skala force (H/bohr) | Total force (H/bohr) | Largest smooth-operator norm difference |
+| --- | ---: | ---: | ---: | ---: |
+| Terok GNU CPU, fixed cell | 5.045e-13 | 3.660e-16 | 4.725e-9 | 1.400e-12 |
+| Spark NVHPC resident GPU, fixed cell | 0 printed | 1.688e-9 | 1.489e-9 | 6.235e-8 |
+| Terok GNU CPU, stress probe | 0 printed | 0 printed | 0 printed | 0 printed |
+| Spark NVHPC resident GPU, stress probe | 0 printed | 7.351e-10 | 7.561e-10 | 2.406e-8 |
+| Terok GNU CPU, eight MPI ranks, fixed cell | 2.203e-12 | 2.708e-15 | 2.699e-9 | 2.710e-11 |
+
+The GPU stress probe differs by at most 1.677e-9 H in total strain derivatives
+and 6.100e-13 H in the partition contribution. Both fixed-cell probes have
+17,710 rows, zero first-step hits and 17,710 second-step hits, using 1,346,056
+bytes. Stress probes allocate 4,463,016 bytes but correctly invalidate all
+rows after tiny cell changes. They validate stress-path parity/invalidation,
+not stress-path cache speedup.
+
+The comparison uses a common CPU bound of 1e-10, an explicit GPU bound of
+1e-7, and a separate total-force bound of 1e-8 H/bohr. An independent GNU
+uncached repeat reproduces the same 4.725e-9 H/bohr total-force variation
+after propagation, with Skala forces agreeing within 4e-16 H/bohr. Independent
+GPU uncached repeats differ by up to 1.250e-8 in operator norms and 1.540e-9 H
+in strain derivatives. Thus the end-to-end comparisons are not bit-exact
+model evaluation, despite bit-exact reuse of the cached kernel values.
+The original stricter failures remain in the evidence, not replaced by
+fabricated passing results. The final comparator reanalysis passes the four
+single-rank cases, and the eight-rank driver passes directly. Trials with
+`DT=0.01` failed the overlap criterion and are excluded.
+
+The two-step Spark fixed-cell wall times were 27.783 s uncached and 22.395 s
+cached, including startup and the first cache fill. This is a single
+integration-test pair, not a repeated steady-state performance benchmark.
+Geometry caching primarily benefits fixed-geometry electronic iterations;
+moving atoms/cells invalidate it.
+
+The two-step test also exposed an unnecessary host update of `PROJ` in the
+electronic stationarity diagnostic. Its device mapping could already have
+been released, causing the second GPU step to abort. The diagnostic now uses
+the host projection already produced by projection and its MPI reduction.
+The wavefunction and Hamiltonian host updates remain unchanged.
+
+Evidence in each host's `validation/`: Spark
+`si2-cache-parity-fixed-gpu-dt0001`, `si2-cache-parity-gpu-stress-repeat`;
+Terok `si2-cache-parity-fixed-cpu-dt0001` (including `off-repeat`) and
+`si2-cache-parity-cpu-r2`, plus `si2-cache-parity-cpu-mpi8-r2` for eight ranks.
+Their `provenance.json` files record inputs and
+executables. The PBE restart, structure and CPU/CUDA models are unchanged.
+Spark serial executable SHA-256:
+`843efd00b00f3e88023445e1258e405e371272084f50fd4e13b0cf39f0408988`.
+Terok GNU MPI executable SHA-256:
+`7cb88d748357ad8f1d315b836b76c1a29f3cdc0537824cc6bf5b7edf433db43f`.
+The eight-rank cache-off/on probe also has zero first-step hits, 17,710
+second-step hits and 1,346,056 bytes summed over ranks, exercising distributed
+atom ownership and the diagnostic reduction. This is not a CPU scaling
+benchmark. The new cache has not yet been tested with multi-rank GPU execution;
+the preceding GPU MPI parity evidence predates it.
+
+### Cached relaxation and next performance targets
+
+Spark completed another 100 applied-Skala steps, 349--448, from the preceding
+50-step CPU coarse-grid restart, with the same 96/17 quadrature and `DT=5`.
+Restart SHA-256: `c12b8273ab90b7dfccd764c9988db8dfee62e14778566f311417f883ce07a29f`.
+Evidence: `validation/si2-relax-cached`, including initial-input hashes,
+protocol and final restart. It used the Spark executable above, resident GPU
+mode and one OpenMP/OpenBLAS thread. The first step filled 17,710 rows; the
+remaining 99 steps each reused every row (1,753,290 hits, no further misses).
+
+| Electronic diagnostic | Initial | Final |
+| --- | ---: | ---: |
+| Occupied RMS residual (H) | 5.066137077e-3 | 2.183459106e-5 |
+| Occupied maximum residual (H) | 2.203613406e-2 | 3.445278785e-5 |
+| Occupation commutator (H) | 7.220628871e-3 | 3.399011398e-5 |
+
+All 100 steps pass diagnostic consistency, with maximum overlap error
+1.228e-9 and Hamiltonian Hermiticity error 1.640e-15 H. Final total energy is
+-46.9388733875965 H. The final five-step window **fails** the 1e-6 H residual
+and commutator acceptance target; no stationary-state acceptance is claimed.
+The mixed-OpenMP-runtime warning remains unsuppressed. NVHPC also reports
+IEEE invalid/divide-by-zero/underflow/inexact flags at exit despite finite
+reported diagnostics; their origin has not been isolated or certified harmless.
+
+The run-time report gives 555.6 s elapsed and the following accumulated
+**CPU-time** breakdown: reconstruction 187.2 s (34%), adjoints 351.6 s (63%),
+model call 3.8 s (1%). These are not CUDA-event model timings. The separate
+accelerator wall-clock profile also puts the atom-block phase first:
+`PAW_ETOT_SPHERE` 557.357 s versus `PHASE_ETOT_WAVES` 566.946 s. Nested timers
+must not be added. This identifies reconstruction/adjoint work as the current
+priority, not another FFT/library substitution for this small Si2 case.
+
+Source inspection identifies the next opportunities, not yet implemented:
+
+1. With CUDA and default `DISTRIBUTEGPU=F`, `WAVES$DENMAT` assigns all atom
+   blocks, including CPU reconstruction and adjoints, to MPI rank 1. CPU mode
+   distributes whole atoms, so Si2 exposes at most two atom-block workers.
+   Point-level parallelism can use more cores without duplicating the GPU model.
+2. Hoist cell inversion and image-bound calculations; cache interpolation and
+   orbital basis/gradient data by geometry with an explicit memory budget.
+   Dense orbital-pair kernel caches would scale poorly and are not the target.
+3. Batch reconstruction and adjoint contractions on the GPU, retaining basis
+   data and iteration-local density matrices and accumulators there. Shared
+   Hamiltonian, force and stress writes need explicit, tested reductions.
+4. Avoid unused Hessians/Jacobians in forward-only paths. Do not remove needed
+   force/stress terms, change quadrature to improve timings, or split a complete
+   coupled atom-block model into independent pointwise model evaluations.
+
+These optimizations do not close the physical acceptance gates below.
+
 ### Remaining acceptance gates
 
 1. Resolve/converge the periodic energy partition and descriptor image window,

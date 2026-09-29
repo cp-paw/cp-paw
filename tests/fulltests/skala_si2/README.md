@@ -47,3 +47,43 @@ constitute a radial convergence test. The explicit Si audit used identical HBS
 parameters with `DMIN/DMAX` halved and quartered in the structure's `AUGMENT`
 block. See [the validation checkpoint](../skala_crystals/VALIDATION.md) for
 results and unresolved physical acceptance gates.
+
+## Partition Derivative Cache
+
+`cache_parity.py` runs two applied-functional steps from the same restart with
+the geometry cache off and on. It requires exact row reuse on the second
+cached step and compares both steps' total/XC energies, total and partition
+forces, operator norms and electronic residuals at fixed nuclei and cell.
+The optional `--stress` probe also evaluates stress using a very heavy moving
+cell. Even tiny cell changes correctly invalidate the cache, so this variant
+checks parity and hit/miss accounting without requiring second-step hits.
+The default 96/17 grid is only an integration test, not converged quadrature.
+
+```sh
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 CPPAW_GPU_MODE=resident \
+python3 tests/fulltests/skala_si2/cache_parity.py \
+  --executable bin/nvhpc_gpu_profile/paw_nvhpc_gpu_profile.x \
+  --model /path/to/skala-1.1-rev1-cuda.fun --device CUDA --tolerance 1e-7 \
+  --restart /path/to/si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-validation-directory
+```
+
+For CPU-only validation, use a GNU Skala executable, CPU model and
+`--device CPU`; `--mpi-ranks N --mpiexec /path/to/mpirun` is optional.
+The output directory must not exist. Inputs and executable hashes, environment,
+protocols, comparison results and wall times are retained. The timings include
+startup and the first uncached step and are not steady-state benchmark results.
+`CHECK=T` now reports atom-block and operator diagnostics on every step.
+The default timestep is 0.001: unlike a one-step snapshot, a two-step test also
+exercises propagation and the subsequent constraint forces, for which an
+extremely small timestep can amplify roundoff. `--timestep` overrides it.
+The default comparison tolerance is 1e-10. The CUDA example allows 1e-7 for
+float32 model-adjoint variability: repeated uncached Spark runs already differ
+by about 1e-8 in operator norms. This is distinct from the bit-exact cache
+kernel test and does not establish physical force or stress accuracy.
+Total forces have a separate default bound of 1e-8 H/bohr, adjustable with
+`--total-force-tolerance`. Two independent uncached GNU runs at timestep
+0.001 differ by 4.72e-9 H/bohr after propagation, while their Skala force
+contributions agree within 4e-16 H/bohr. The cache comparison exhibits the
+same total-force variation. The stricter common bound still applies to the
+Skala and partition force contributions and all other diagnostics.
