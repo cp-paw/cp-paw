@@ -49,8 +49,7 @@ independently. Reduced `--radial`/`--angular` settings are useful for execution
 checks only. The electron-count error is explicitly recorded, not renormalized.
 The default does not assert stationary forces, stress or agreement with CP2K.
 PAW frozen-core and CP2K GAPW/all-electron energies are not interchangeable.
-No D3 correction is included. AlN is not Mani's original case and is not
-substituted silently for one of these three crystals.
+No D3 correction is included.
 
 `--image-shells` controls the compact periodic partition/descriptor support
 independently of the quadrature resolution. Results include the constant-field
@@ -62,5 +61,4 @@ correction, the native pseudo-density grid, and the reconstructed Skala grid.
 The first two must agree independently of the atom-grid quadrature. A correct
 overlap trace does not certify convergence of the latter; converge cutoff,
 radial and angular resolution separately.
-See [VALIDATION.md](VALIDATION.md) for the passing execution checks and the
-remaining accuracy failures. A successful smoke test is not an EOS validation.
+A successful smoke test is not an EOS validation.

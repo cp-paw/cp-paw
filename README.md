@@ -75,22 +75,16 @@ supported problems of size 256 or larger, and Gram-Cholesky at size 4096 or
 larger. CUDA 13 FP64 Ozaki emulation remains disabled until
 `CPPAW_CUBLAS_FP64_EMULATION=1` is set.
 
-The profile names deliberately describe user intent rather than every linked
-library combination. On the Spark GB10 reference system, the periodic Si64
-case with 1024 empty bands and one step took a median 8.79 s with the default
-resident GPU profile, compared with 44.21 s in `transfer` mode, 68.40 s for the
-one-rank GNU CPU build, and 72.10 s for the one-rank NVHPC/NVPL CPU build.
-This is a 7.79x and 8.21x speedup for that profiling case; it is not a general
-application-wide performance guarantee. The full library matrix, repeat
-policy, correctness checks, and larger-band results are recorded in
-`tests/profile/si64/nvhpc_spark_benchmark_summary.md`.
+The profile names describe user intent rather than every linked library
+combination. Use the profiling harness to compare them for the intended
+system and hardware.
 
 Advanced targets include `nvhpc_gpu_acc_*` for the unconfigured combined
 libraries, `nvhpc_gpu_acc_residency_profile*` for the earlier focused-residency
 experiments, and individual cuBLAS, cuSOLVER, cuFFT, cuFFTW, NVLAMATH, and
 NVBLAS targets. `nvhpc_gpu_all_*` is an integration test that additionally
-links cuFFTW and NVLAMATH. It is not the fastest-library preset: on the Spark
-GB10, cuFFTW's many small compatibility calls make it substantially slower.
+links cuFFTW and NVLAMATH. It is an integration configuration, not a
+fastest-library preset.
 NVBLAS remains separate because it interposes the host BLAS interface.
 
 The combined GPU sources also contain the optional OpenACC Skala native-grid
@@ -165,11 +159,10 @@ The supported rules now extend through 65: 53 uses 974 angular points, 59 uses
 for the system of interest. Rule provenance and tests are documented in
 [`LEBEDEV.md`](tests/unittests/skala_reconstruction/LEBEDEV.md).
 
-The joint-source reconstruction supersedes the original owner-only hybrid-grid
-prototype. Its scientific validation is in progress: the old Si2 force/stress
-and timing results do not validate this new discretization or resolve the
-reported AlN equation-of-state problem. The CO2, NH3 and urea integration
-probes are described in [`tests/fulltests/skala_crystals/README.md`](tests/fulltests/skala_crystals/README.md).
+The CO2, NH3 and urea integration probes are described in
+[`tests/fulltests/skala_crystals/README.md`](tests/fulltests/skala_crystals/README.md).
+These probes test execution and diagnostic consistency, not scientific
+validation of the experimental functional.
 
 Skala consumes the density, its gradient, and the positive kinetic-energy
 density. CP-PAW constructs the corresponding generalized Kohn-Sham scalar and
@@ -191,7 +184,7 @@ On Linux, Skala builds using OpenBLAS require its static development archive
 (`libopenblas.a`, including LAPACK). The build keeps these symbols private to
 CP-PAW so they cannot collide with LibTorch's embedded BLAS. Ordinary builds
 without Skala retain their existing BLAS linking. See the
-[bridge notes](src/SkalaBridge/README.md) for the ABI details and validation limits.
+[bridge documentation](src/SkalaBridge/README.md) for the ABI requirements.
 
 The `paw_install` command creates `bin/skala_cpu_fast/paw_skala_cpu_fast.x` and
 `bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x`. It never downloads

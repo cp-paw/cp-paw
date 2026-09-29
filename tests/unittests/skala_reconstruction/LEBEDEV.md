@@ -44,38 +44,7 @@ and odd-parity moments. Analytic moments use double-factorial ratios, without
 reference to the source tables. Tests cover the minimum-order rounding
 (`54 -> 59`, `60..65 -> 65`) and reject an unsupported request of 66.
 
-GNU CPU-only on Terok and NVHPC on Spark pass these tests. Maximum relative
-even-moment errors are `1.61e-14`, `1.25e-14`, and `1.59e-14` for orders 53,
-59, and 65, respectively (tolerance `5e-13`). Normalized odd-moment errors
-are below `2.7e-17`. The existing source, primitive, and periodic-partition
-derivative tests also pass with the extended library.
-
-## Periodic Si2 volume probe
-
-For the compact periodized Becke partition, shell 1, 200 radial points,
-one orientation, and exact primitive-cell volume `270.011394 bohr^3`:
-
-| Actual order | Integrated volume / bohr^3 | Relative volume error | First cosine integral / bohr^3 |
-| ---: | ---: | ---: | ---: |
-| 53 | 270.0265316420 | 5.60630e-5 | -0.00681261 |
-| 59 | 270.0176379699 | 2.31248e-5 | -0.00281980 |
-| 65 (requested 64) | 270.0140090452 | 9.68494e-6 | -0.00118577 |
-
-These model-free integrals were evaluated on Terok. The exact first cosine
-integral is zero. The higher angular rules improve both measures in this
-case, without rescaling weights or density. Polynomial exactness and volume
-accuracy alone do not guarantee converged neural-functional energies or
-forces; radial resolution, periodic layouts and native-grid interpolation
-remain independent convergence parameters.
-
-The two-shell control at 200 radial points and one orientation also improves:
-order 53 gives relative volume error `1.809252458e-4` and cosine integral
-`-0.021658174220 bohr^3`; order 65 (requested 64) gives `4.166476066e-5`
-and `-0.005028693319 bohr^3`, respectively. The latter passes the explicitly
-requested `1e-4` relative tolerance on both integrals. This does not establish
-image-shell convergence of the Skala energy or its descriptor window.
-
-The higher-rule Terok volume probes used executable SHA-256
-`e14a4fd24055361dd483591d2797163b244b3ebada5a289b562fd9249e94b342`.
-The applied Si2 Skala result is recorded in
-[`VALIDATION.md`](../../fulltests/skala_crystals/VALIDATION.md#higher-lebedev-rules).
+Polynomial exactness alone does not guarantee converged functional energies
+or forces. The separate `partition_measure.x` probe tests the periodic
+constant-field volume and first reciprocal cosine integral; its invocation
+is documented in [README.md](README.md#model-free-integration-probe).

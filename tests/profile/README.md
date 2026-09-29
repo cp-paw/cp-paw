@@ -122,8 +122,7 @@ combining it with HPSI/VPSI residency.
 `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` is a narrower follow-up diagnostic for
 that ACCMAP path: when HPSI residency is already active, it lets the
 `WAVES_VPSI` RTOG step leave the produced `HPSI` device copy present for the
-following HPSI consumers. It removes one HPSI host-to-device update, but current
-Spark/Terok timings are mixed, so use the
+following HPSI consumers. It removes one HPSI host-to-device update; use the
 `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog` case explicitly.
 `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1` extends that diagnostic by keeping the
 single-component `WAVES_VPSI` real-space scratch resident between GTOR, the
@@ -273,8 +272,7 @@ safe-orthogonalization loop also has an opt-in diagnostic
 that keeps the constant `CHICHI` and `U` matrices resident across repeated
 `LIB$MATMULR8` calls while leaving the host-updated temporary outputs on the
 previous copy-back path; set `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1` to test it. It
-is disabled by default because Spark Si64 smokes reduced copy volume but did not
-improve wall time. A broader default path keeps the real `WAVES_ORTHO_X`
+is disabled by default. A broader default path keeps the real `WAVES_ORTHO_X`
 iteration workspace (`LAMBDA`, `GAMN`, `HAUX`, and scalar loop inputs) resident
 and routes the large transform pairs through present-input cuBLAS calls; set
 `CPPAW_GPU_ORTHO_X_RESIDENCY=0` or use `gpu_resident_orthox_off` to compare
@@ -288,9 +286,8 @@ phase on non-stress paths where all atom blocks pass the addproduct threshold;
 set `CPPAW_GPU_OPSI_RESIDENCY=1` or use `gpu_resident_opsi` to test it. For
 non-superwave paths, OPSI can be resident from its build and mass scaling. For
 inversion-symmetric superwave paths, OPSI is deliberately staged only after the
-host build and host mass scaling because the fully resident build/scale variant
-was energy-invalid in Si64. It is disabled by default until broader benchmarks
-show that the reduced copy volume also improves wall time. Another opt-in
+host build and host mass scaling; the fully resident build/scale variant is
+not supported. OPSI residency is opt-in. Another opt-in
 diagnostic keeps `HPSI` resident after the Hamiltonian-side `WAVES_ADDPRO`
 update and reuses it for the immediate expectation and full-Hamiltonian overlap
 calls. Eligible paths also keep `PSI0` present across the same local
@@ -338,9 +335,9 @@ cuBLAS kernels are timed separately as `CUBLAS_ZHERK_OVL_RES`,
 inversion contribution. This is the recommended NVHPC GPU performance path for
 the larger Si64 band benchmarks. Keep
 `gpu_resident_nosync` and `gpu_resident_orthox_nosync` as diagnostic candidates
-only; Spark Nsight traces show that removing the explicit post-cuBLAS
-synchronization mostly shifts waiting time into later stream synchronizations or
-copy calls for this workload. The residency mode keeps the orthogonalization
+only; measure subsequent stream synchronizations and copies as well as the
+cuBLAS call when evaluating synchronization overhead. The residency mode keeps
+the orthogonalization
 `PSIM`/`OPSI` wavefunction pair resident from the projection/overlap phase
 through `WAVES_ADDOPSI`. The `PSIM` region is recorded as split
 `ACC_COPY_ORTHO_PSIM_IN` / `ACC_COPY_ORTHO_PSIM_OUT` rows when it is not
@@ -437,10 +434,9 @@ buffers resident on the GPU would be worthwhile.
 `CPPAW_GPU_OFFDEN_CUBLAS=1` or `CPPAW_CUBLAS_ACC_OFFDEN=1` additionally
 tries cuBLAS for that packed `ZGEMM(N,T)` through
 `CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP`; the forced harness cases set this threshold
-to 1. Spark Si64 shows that the per-neighbor cuBLAS prototype is slower inside
-`PAW_OFFDEN_SUM_LOCAL` than host BLAS because the matrices are tiny and copied
-for every neighbor. Keep it as a diagnostic only; a useful GPU version should
-batch neighbors and/or keep packed projector buffers resident.
+to 1. This prototype copies matrices for every neighbor and remains a
+diagnostic. The batch and device-pack variants below reduce call and copy
+overhead.
 `CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1` or `CPPAW_CUBLAS_ACC_OFFDEN_BATCH=1`
 switches the cuBLAS diagnostic from one tiny GEMM per neighbor to a stacked
 formulation: neighbors with the same first atom and second-projector size are
@@ -456,9 +452,8 @@ OpenACC region: `PROJ` and `OCC` are copied once for the off-site pass, A/B are
 packed on the GPU, cuBLAS uses present data, and only the stacked `WORK` block
 is copied back. It records `PAW_OFFDEN_DEVICE_PACK`,
 `CUBLAS_ZGEMM_OFFDEN_TINV_DPACK`, `ACC_COPY_OFFDEN_DPACK_PROJ_IN`,
-`ACC_COPY_OFFDEN_DPACK_META_IN`, and `ACC_COPY_OFFDEN_DPACK_WORK_OUT`. Spark
-Si64 shows this is useful for the 1 MPI rank / 1 GPU comparison, but can be a
-negative diagnostic when several MPI ranks share one GPU.
+`ACC_COPY_OFFDEN_DPACK_META_IN`, and `ACC_COPY_OFFDEN_DPACK_WORK_OUT`.
+Compare one rank per GPU separately from ranks sharing a GPU.
 `CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1` or
 `CPPAW_CUBLAS_ACC_OFFDEN_DEVICE_ACCUM=1` keeps the device-pack path active and
 accumulates the complex `WORK` blocks into a flat real off-site matrix buffer
@@ -474,8 +469,7 @@ copying them again. The profile rows are `ACC_COPY_THIS_PROJ_IN`,
 `ACC_PRESENT_THIS_PROJ`, and, for off-site device packing,
 `ACC_PRESENT_OFFDEN_DPACK_PROJ`.
 Inversion-symmetric Hermitian/symmetric scalarproducts no longer include the unused second
-wavefunction array in the OpenACC data region. These rows are meant to guide the
-next change: extend resident regions only where the profile shows repeated
+wavefunction array in the OpenACC data region. These rows identify repeated
 copies of the same wavefunction data.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
@@ -537,7 +531,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_1coverlap` / `gpu_resident_1coverlap_host` | Residency diagnostics that force or disable the one-center overlap cuBLAS path via `CPPAW_GPU_1COVERLAP`. |
 | `gpu_resident_1coverlap_batch` | Opt-in diagnostic that sets `CPPAW_GPU_1COVERLAP_BATCH=1` and computes the three orthogonalization one-center overlap matrices through one batched cuBLAS packing path. |
 | `gpu_resident_addoproj` | Opt-in diagnostic that sets `CPPAW_GPU_ORTHO_ADDOPROJ=1` and offloads large orthogonalization `WAVES_ADDOPROJ` projector updates through cuBLAS slice GEMMs; the default `CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO=64` avoids small per-atom calls. |
-| `gpu_resident_stack_density_1cov_batch` | Current density-resident stack case plus `CPPAW_GPU_1COVERLAP_BATCH=1`, used to compare the batch path against the best current Spark/Terok stack. |
+| `gpu_resident_stack_density_1cov_batch` | Density-resident stack case plus `CPPAW_GPU_1COVERLAP_BATCH=1`, used to isolate the batched overlap path. |
 | `gpu_resident_stack_density_1cov_addoproj` | Current density-resident stack plus batched one-center overlap and opt-in `WAVES_ADDOPROJ` cuBLAS slice GEMMs. |
 | `gpu_resident_stack_density_1cov_addoproj_cusolver_gram` | Current density-resident stack plus ADDOPROJ slice GEMMs and opt-in large-matrix Gram-Cholesky through cuSOLVER `ZPOTRF` plus cuBLAS `ZTRSM`. |
 | `gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj` | Same combined case plus force-side resident `WAVES_ADDOPROJ` cuBLAS for `WAVES_DEDPROJ`, enabled through `CPPAW_GPU_FORCE_ADDOPROJ=1`. |
@@ -660,9 +654,8 @@ from the measured remaining data-motion and reuse sites. Set `PROFILE_ROW_TOP`
 or `PRESENT_ROW_TOP` to widen those reports.
 
 Set `RUN_GPU_ALL=yes` to include the all-library cases `gpu_all` and
-`gpu_all_off`. The default is `RUN_GPU_ALL=no` because the Spark Si64 matrix
-showed the all-library path is useful as a diagnostic, not as a recommended
-default.
+`gpu_all_off`. The default is `RUN_GPU_ALL=no`; the all-library path is a
+separate diagnostic configuration.
 Set `AUTO_BUILD_TARGETS=yes` (with `AUTO_BUILD_JOBS`) to automatically build all
 required profile binaries before benchmarking.
 
@@ -698,9 +691,6 @@ library-disabled, NVLAMATH/NVBLAS, and memory-mode diagnostics. It delegates to
 `run_nvhpc_standard.sh`, so it writes the same benchmark, comparison,
 transfer-row, and present-row reports. Set `AUTO_BUILD_TARGETS=yes` when the
 optional profile binaries should be built before the sweep.
-
-The Spark C86C Si64 decision table is kept in
-`tests/profile/si64/nvhpc_spark_benchmark_summary.md`.
 
 For the focused off-site DENMAT residency comparison, run:
 
@@ -864,8 +854,7 @@ NSTEPS=1 CASES="gpu gpu_managed gpu_unified gpu_off" ./run_benchmark.sh
 
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
 kernels, build an `nvhpc_cublas_acc_*` target. The default offload threshold is
-`CPPAW_CUBLAS_ACC_MINFLOP=1e7`, which includes the projection GEMMs and was the
-best Si64 threshold in the Spark C86C night run. Set `CPPAW_CUBLAS_ACC=0` to run
+`CPPAW_CUBLAS_ACC_MINFLOP=1e7`. Set `CPPAW_CUBLAS_ACC=0` to run
 the same binary with the CPU fallback. Set `CPPAW_CUBLAS_ACC_SYNC=0` only
 for diagnostic runs that compare the cost of the explicit device synchronization:
 
@@ -920,7 +909,7 @@ be overridden by kernel category:
   inversion-symmetry scalarproducts from many per-column cuBLAS calls into one
   batched scalarproduct; set to `0` for the previous path.
 - `CPPAW_GPU_RESIDENCY_STACK`: disabled by default. Set to `1` to enable the
-  focused Spark-validated residency stack in one switch: base residency,
+  focused residency stack in one switch: base residency,
   projector expansion/cache, HPSI and OPSI residency, persistent `THIS%PROJ`,
   one-center overlap, DENMAT energy offload, and off-site DENMAT cuBLAS
   device-pack accumulation. It also lowers the projection, overlap, addproduct,

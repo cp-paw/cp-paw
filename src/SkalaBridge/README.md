@@ -18,9 +18,8 @@ LibTorch uses its own BLAS. The ordinary non-Skala build is unchanged.
 This is needed because LibTorch's exported BLAS symbols can collide with a
 second implementation in the process; see
 [PyTorch issue 182263](https://github.com/pytorch/pytorch/issues/182263).
-Do not work around this by globally preloading `libtorch_cpu.so`: on the tested
-x86 GNU/OpenBLAS build, that moved the failure from Torch's batch GEMM to
-OpenBLAS LAPACK calling Torch's incompatible complex-dot return interface.
+Do not work around this by globally preloading `libtorch_cpu.so`: OpenBLAS
+LAPACK and Torch's embedded complex-dot interface are not interchangeable.
 The private archive avoids both directions of symbol preemption without
 replacing CP-PAW's selected BLAS with Torch's embedded implementation.
 
@@ -54,11 +53,8 @@ all-source, pseudo-core, positive-tau, and existing PAW projector responses.
 The new mapped radial grid has fixed Cartesian offsets and base weights, so
 there is no affine local-quadrature volume factor or radial-blend derivative.
 
-**Validation status:** this reconstruction replaces the owner-only hybrid-grid
-prototype. Kernel adjoint tests are necessary but insufficient to validate
-the functional. Re-converged wave functions, quadrature, end-to-end forces and
-stress, and the reported AlN equation of state remain acceptance gates.
-Historical numerical results below refer to the former implementation.
+The functional is experimental. Kernel adjoint tests do not establish
+electronic or quadrature convergence, nor end-to-end force/stress accuracy.
 
 ```text
 !SKALA
@@ -119,8 +115,7 @@ radial domain, surface term, nominal ZORA contribution and a numerical radial
 kinetic operator. The legacy HBS setup matrix is constructed using its stored
 equation-based kinetic action and replaced pseudo-wave tails, so the raw
 `TAU-KINETIC DIFFERENCE` is not an identity test. No correction or rescaling of
-the Skala tau input is made to force it to match that matrix. The remaining
-setup/operator difference is documented in the validation checkpoint.
+the Skala tau input is made to force it to match that matrix.
 
 `APPLY=F` leaves CP-PAW's conventional XC functional active. Consequently,
 subtracting forces from otherwise identical `APPLY=T` and `APPLY=F` runs gives
@@ -137,8 +132,8 @@ radial/Lebedev offsets remain fixed in Cartesian space under this deformation;
 only their atom centers follow the affine cell motion. The interpolated smooth
 fields therefore contribute through the negative local-offset response rather
 than an affine deformation of the radial grid. The Si2 test drivers cover
-isotropic, uniaxial, and symmetric-shear strains and 1/4-rank MPI parity; they
-must be rerun on a state converged with the corrected reconstruction.
+isotropic, uniaxial, and symmetric-shear strains and MPI parity. Use a state
+converged with the same functional and reconstruction as the test executable.
 
 Given an electronically converged restart and its matching structure, the
 force and stress checks can be repeated with:
@@ -185,18 +180,6 @@ lists can be changed with `SKALA_RADIAL_POINT_LIST` and
 `SKALA_LEBEDEV_EXACTNESS_LIST`. `SKALA_LEBEDEV_ORIENTATION_LIST` adds a
 convergence sweep over deterministic, equally weighted rotations of each
 Lebedev grid.
-
-The historical 2026-08-15 validation of the old hybrid-grid prototype used a
-stationary Si2 restart. These numbers are not acceptance results for the
-joint-source reconstruction. At
-`200/53/1`, the selected force component differed from its central finite
-difference by `8.55e-4 H/bohr`. Isotropic, uniaxial, and symmetric-shear
-stress checks differed by `7.39e-4`, `8.78e-5`, and `4.95e-4 H`, respectively;
-all were below the `2e-3` absolute tolerance. One- and four-rank Gamma runs
-agreed within `4.1e-13 H` in energy, `3.8e-8 H/bohr` in forces, and
-`1.7e-7 H` in stress on the tested CPU/GPU paths. The periodic eight-k-point
-integration test also passed. These checks exercise total energies and
-stationary-state derivatives, not just the isolated Torch protocol.
 
 Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
 density Hessian as an input tensor. Higher spatial derivatives nevertheless
@@ -335,14 +318,12 @@ only with `CPPAW_SKALA_TORCH_THREADS`. Do not add `-mp` to a binary-PyTorch
 build. A genuinely threaded NVHPC host configuration requires a LibTorch build
 without GNU OpenMP rather than suppressing the mixed-runtime warning.
 One host thread does not itself resolve the runtime conflict or certify its
-safety. The mixed-runtime NVHPC runs remain an explicit acceptance limitation;
-see [NVIDIA's OpenMP compatibility warning](https://docs.nvidia.com/nvpl/latest/).
+safety; see [NVIDIA's OpenMP compatibility warning](https://docs.nvidia.com/nvpl/latest/).
 
 Set `CPPAW_SKALA_DETERMINISTIC=1` to request PyTorch's deterministic algorithm
 mode, disable TF32, and install the deterministic cuBLAS workspace setting.
-This is opt-in because it did not remove cross-process model-adjoint variation
-for Skala 1.1 and slowed the tested CUDA path. MPI-root inference is the
-reproducible default instead.
+This is opt-in and does not guarantee identical model adjoints across processes
+or hardware. MPI-root inference remains the default.
 
 The optional periodic Si64 regression uses the conservative electronic
 dynamics settings above and the standard Si64 structure:
@@ -364,10 +345,7 @@ an unchanged geometry and cell, with no source-field caching.
 
 `RADIALPOINTS`, `LEBEDEVEXACTNESS`, and `LEBEDEVORIENTATIONS` control the
 moving local quadrature. Their starting defaults are 200, 53, and
-1, respectively, not a convergence guarantee. A historical Si2 sweep of the
-old hybrid-grid prototype found 100/17/1 too coarse. At
-eight orientations, 300, 360, and 400 radial points agreed within about
-`5e-6` Hartree in model XC energy. Additional orientations average
+1, respectively, not a convergence guarantee. Additional orientations average
 deterministic rotations of the same Lebedev rule and preserve the normalized
 quadrature weights. They expose and reduce rotational integration error from
 nonlinear meta-GGA features.
@@ -381,13 +359,12 @@ candidate rows per atom, versus 194800 for order 53, before zero-weight
 filtering. The roughly 49% increase in quadrature rows also increases model
 work and memory demand. It does not replace native-grid cutoff convergence.
 See [`LEBEDEV.md`](../../tests/unittests/skala_reconstruction/LEBEDEV.md) for
-the coefficient provenance, polynomial tests, and periodic-volume results.
+the coefficient provenance and polynomial tests.
 
-The 300/53/8 setting is a memory-intensive reference grid: Skala's nonlocal
-atom layers require complete atom blocks, so peak accelerator memory grows
-with the number of orientations. It required about 74 GB on the tested CUDA
-build. Use 200/53/1 as the portable starting point and converge energy,
-particle number, forces, and stress explicitly for demanding calculations.
+Skala's nonlocal atom layers require complete atom blocks, so peak accelerator
+memory grows with the number of orientations. Use 200/53/1 as a starting point
+and converge energy, particle number, forces, and stress explicitly for
+demanding calculations.
 
 The corrected quadrature uses Gauss-Legendre nodes mapped to `[0,infinity)`
 with `r=x/(1-x)` in bohr and Lebedev angular rules. Native smooth fields are
@@ -396,23 +373,18 @@ fields, radial blend or direct native-cell energy quadrature. Both quadrature
 and native-grid interpolation must be converged, especially around foreign
 nuclei. A finite electron-count error is reported rather than normalized away.
 
-`IMAGESHELLS` independently controls the fixed atom-image layouts for the
+`IMAGESHELLS` independently controls the compact periodic support for the
 energy partition and self-image descriptor window. Its default of one shell
 is a starting point, not a converged periodic quadrature. The reconstructed
 source fields instead include every image within their radial support.
-Increasing radial/angular resolution does not repair a truncated image layout.
+Converge the image support independently of radial/angular resolution.
 The protocol reports the constant-field integral (`PARTITION VOLUME`), the
 exact cell volume, and their relative difference, with a warning above `1e-4`.
 A smaller volume error alone does not certify energy/force convergence. No
 density or weight normalization is applied to hide an integration error.
 
-For example, the Si2 primitive cell at 200/53/1 integrates to 276.114991 bohr^3
-with one shell instead of the exact 270.011394 bohr^3 (2.26% error). Two shells
-reduce this error to 0.320%, still insufficient. This failure is independent
-of Skala inference or PAW density reconstruction and must be resolved before
-using the current path for an equation of state.
-
-The model-free periodic probe makes that convergence failure reproducible:
+Use the model-free periodic probe to check the quadrature independently of
+Skala inference and PAW density reconstruction:
 
 ```sh
 make -C bin/Build_fast -f Makefile \
@@ -422,9 +394,6 @@ make -C bin/Build_fast -f Makefile \
 bin/Build_fast/unit-tests/partition_measure.x 1 200 53 1 1e-4
 ```
 
-The last command is deliberately a failing accuracy check for the current
-one-shell layout, not a passing regression reference.
-
 Run the reconstruction kernels after a normal build (no model is required):
 
 ```sh
@@ -433,8 +402,8 @@ bash tests/unittests/skala_reconstruction/run.sh bin/Build_fast
 
 The [crystal probes](../../tests/fulltests/skala_crystals/README.md) use the
 CO2, NH3 and urea structures from the CP2K manuscript benchmark repository.
-They test CP-PAW execution and adjoints; they are not a comparison of PAW
-and GAPW total-energy zeros or a substitute for Mani's original AlN inputs.
+They test CP-PAW execution and adjoints, not agreement between PAW and GAPW
+total-energy zeros.
 
 Density, density-gradient, and kinetic-energy-density interpolation on each
 local atom-grid point shares one native-grid stencil. The reverse mapping uses

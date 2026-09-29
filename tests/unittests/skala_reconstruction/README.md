@@ -15,8 +15,7 @@ weights must be one. These tests do not evaluate the neural model.
 
 The same suite tests the Lebedev rules through order 65, including analytic
 Cartesian moments and rounding a requested exactness of 64 to the 1454-point
-rule. See [LEBEDEV.md](LEBEDEV.md) for provenance and angular-convergence
-results from the model-free integration probe.
+rule. See [LEBEDEV.md](LEBEDEV.md) for coefficient provenance and test coverage.
 
 The partition-cache tests compare stored derivatives bit for bit with fresh
 kernel evaluations, including skew cells and self-image strain derivatives.
@@ -72,13 +71,6 @@ bohr^3. The probe integrates a constant and the first reciprocal cosine mode;
 the latter must vanish. An explicit tolerance tests both errors relative to
 the cell volume. Without a tolerance, successful execution is not a
 convergence certificate.
-
-GNU/Terok checks on 2026-09-29: the new kernel's maximum derivative error is
-2.36e-10; periodic unity error is 2.22e-16. NVHPC/Spark gives 2.20e-10 and
-2.22e-16 respectively. At shells/radial/exactness/orientations = 1/200/53/1,
-the volume is 270.0265316420474 bohr^3 (relative error 5.6063e-5), and the
-first cosine integral is -0.00681260746 bohr^3. The previous common-cluster
-volume at identical settings was 276.114991162 bohr^3 (relative error 0.022605).
 
 Constant integration, electron-number convergence and model-energy
 convergence are distinct tests. In particular, plane-wave cutoff and native

@@ -43,10 +43,8 @@ the current external `AUGPARMS` format (`!ACNTL!AUGMENT`). Check the resolved
 
 The historical `PARMS_STP` file attachment in older test controls does **not**
 override the built-in setup. Changing that `stp.cntl` alone therefore does not
-constitute a radial convergence test. The explicit Si audit used identical HBS
-parameters with `DMIN/DMAX` halved and quartered in the structure's `AUGMENT`
-block. See [the validation checkpoint](../skala_crystals/VALIDATION.md) for
-results and unresolved physical acceptance gates.
+constitute a radial convergence test. Change the resolved `AUGMENT!GRID`
+parameters for a setup-grid convergence test.
 
 ## Partition Derivative Cache
 
@@ -78,12 +76,9 @@ The default timestep is 0.001: unlike a one-step snapshot, a two-step test also
 exercises propagation and the subsequent constraint forces, for which an
 extremely small timestep can amplify roundoff. `--timestep` overrides it.
 The default comparison tolerance is 1e-10. The CUDA example allows 1e-7 for
-float32 model-adjoint variability: repeated uncached Spark runs already differ
-by about 1e-8 in operator norms. This is distinct from the bit-exact cache
+float32 model-adjoint variability. This is distinct from the bit-exact cache
 kernel test and does not establish physical force or stress accuracy.
 Total forces have a separate default bound of 1e-8 H/bohr, adjustable with
-`--total-force-tolerance`. Two independent uncached GNU runs at timestep
-0.001 differ by 4.72e-9 H/bohr after propagation, while their Skala force
-contributions agree within 4e-16 H/bohr. The cache comparison exhibits the
-same total-force variation. The stricter common bound still applies to the
-Skala and partition force contributions and all other diagnostics.
+`--total-force-tolerance`. The stricter common bound still applies to the
+Skala and partition force contributions and all other diagnostics. Independent
+uncached repeats can distinguish propagation roundoff from cache effects.
