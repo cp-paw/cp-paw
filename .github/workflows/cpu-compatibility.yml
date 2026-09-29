@@ -72,6 +72,12 @@ jobs:
           FC: gfortran
           CPPAW_SKALA_PYTHON: python
         run: src/Buildtools/paw_skala_setup.sh --device cpu --download-model --jobs 2
+      - name: Check Skala validation helpers and diagnostic model precision
+        run: |
+          python -m unittest discover -s tests/fulltests/skala_si2 -p 'test_*.py'
+          python tests/fulltests/skala_si2/model_precision.py \
+            bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
+            "$RUNNER_TEMP/skala-precision-check.fun" --device cpu
       - name: Build dedicated serial and MPI Skala binaries
         run: |
           src/Buildtools/paw_build.sh -c skala_cpu_fast -j2 -z

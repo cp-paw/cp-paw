@@ -129,6 +129,37 @@ Use a PBE reference and more than one finite-difference step before interpreting
 the Skala result. Passing one external direction does not establish the
 entire gradient, electronic stationarity, or a stationary force derivative.
 
+## Model Precision Diagnosis
+
+`model_precision.py` creates an isolated Float64 **diagnostic copy** of the
+hash-pinned Skala-1.1-rev1 CPU or CUDA TorchScript export. It does not replace
+the production model, change CP-PAW defaults, retrain weights, or supply an
+official higher-precision model. The published Float32 weights are promoted
+exactly. Explicit Float32 casts and factories in the scripted methods are
+rewritten only at their dtype operands, preserving shared shape/index values.
+Protocol metadata is preserved and an additional diagnostic marker is added.
+
+```sh
+python3 tests/fulltests/skala_si2/model_precision.py \
+  /path/to/skala-1.1-rev1.fun /path/to/new-precision-check.fun --device cpu
+python3 -m unittest discover -s tests/fulltests/skala_si2 -p test_model_precision.py
+```
+
+For CUDA, use the pinned CUDA export and `--device cuda`. PyTorch with the
+selected backend is required. The graph inspection uses private TorchScript
+APIs and is deliberately limited to these exports, not arbitrary future
+models. It checks parameter/buffer values, dtype inventories, serialization,
+metadata and synthetic energy derivatives for seven feature groups. Both
+fine finite-difference steps (1e-5 and 1e-6) must have absolute errors at most
+1e-8. A coarse 1e-4 step above that bound must improve at least twentyfold
+at 1e-5. This allows truncation error without accepting nonfinite results.
+
+Only a validated model and its hash-bearing JSON report are published, and
+existing output files are never overwritten. Use that `.fun` file explicitly
+with `orbital_fd.py --model` to separate arithmetic error from the integrated
+PAW derivative. Sampled derivative agreement does not establish electronic
+stationarity, force/stress accuracy, or an appropriate production precision.
+
 ## Geometry Caches
 
 `cache_parity.py` runs two applied-functional steps from the same restart with
