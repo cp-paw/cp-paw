@@ -15,6 +15,27 @@ PROGRAM FINISHED
 
 
 class StationarityTest(unittest.TestCase):
+    def test_band_details_reconstruct_weighted_summary(self):
+        text = protocol(rms="0.2", maximum="0.2", commutator="0.03")
+        text += "SKALA BAND RESIDUAL 1 1 1 0.25 0.2 -1.0 0.03\n"
+        text += "SKALA BAND RESIDUAL 1 1 2 0.00 0.4  0.5 0.03\n"
+        data = stationarity.band_records(text)
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["bands"][0]["occupation"], 0.25)
+        self.assertEqual(data[0]["bands"][1]["residual"], 0.4)
+
+    def test_invalid_and_inconsistent_band_details(self):
+        base = protocol(rms="0.2", maximum="0.2", commutator="0.03")
+        row = "SKALA BAND RESIDUAL 1 1 1 0.25 0.2 -1.0 0.03\n"
+        for text in (base, base + row + row, base + row.replace("0.2 ", "NaN "),
+                     base + row.replace("0.2 ", "0.3 "),
+                     base + row.replace("0.25", "-0.25"),
+                     base + row.replace("1 1 1", "1 1 2"),
+                     base + row.replace("0.03", "0.01"),
+                     row + base):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                stationarity.band_records(text)
+
     def test_warm_reference_meets_explicit_limits(self):
         result = stationarity.validate(stationarity.records(protocol()),
                                        residual=1e-6, commutator=1e-6)

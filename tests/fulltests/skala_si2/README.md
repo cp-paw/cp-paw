@@ -28,6 +28,13 @@ The example tolerances are not universal force/stress accuracy guarantees.
 Neither mode certifies the global electronic minimum or grid convergence.
 `APPLY=F` measures the conventional-XC Hamiltonian; `APPLY=T` measures Skala.
 
+`CPPAW_SKALA_SCF_DETAIL=1` additionally reports each global k-point, spin and
+band, its weighted occupation, residual norm, Hamiltonian expectation and
+maximum occupation-commutator element. Use `stationarity.py --bands` to read
+these records and verify their weighted RMS and maxima against the aggregate
+diagnostics. Empty-state residuals are reported but do not enter the occupied
+RMS or maximum. This opt-in diagnostic does not change propagation.
+
 A PBE restart must have the same cell, positions, k mesh, band layout and
 Fourier basis as the Skala probe. A small time step preserves that starting
 state but cannot make it stationary for a different functional. A one-k-point
