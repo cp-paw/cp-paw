@@ -69,14 +69,27 @@ def control(args, skala):
             " !END\n!END\n!EOB\n")
 
 
-def last_value(text, label):
-    matches = re.findall(r"^" + re.escape(label) + r"\s+([-+0-9.eEdD]+)\s*$", text, re.M)
+def diagnostic_values(text, label):
+    matches = re.findall(r"^" + re.escape(label) + r"(?:[ \t]+([^\r\n]*))?$", text, re.M)
     if not matches:
         raise ValueError(f"Missing diagnostic: {label}")
-    value = float(matches[-1].replace("D", "E").replace("d", "e"))
-    if not math.isfinite(value):
-        raise ValueError(f"Nonfinite diagnostic: {label}")
-    return value
+    values = []
+    for raw in matches:
+        try:
+            value = float(raw.replace("D", "E").replace("d", "e"))
+        except ValueError as error:
+            raise ValueError(f"Invalid diagnostic: {label}: {raw!r}") from error
+        if not math.isfinite(value):
+            raise ValueError(f"Nonfinite diagnostic: {label}")
+        values.append(value)
+    return values
+
+
+def last_value(text, label, *, tolerance=None):
+    values = diagnostic_values(text, label)
+    if tolerance is not None and max(abs(value) for value in values) > tolerance:
+        raise ValueError(f"Diagnostic exceeds {tolerance}: {label}")
+    return values[-1]
 
 
 def launch_command(executable, name, ranks=1, mpiexec="mpirun"):
@@ -178,9 +191,8 @@ def main():
                       "SKALA OCCUPATION COMMUTATOR MAX", "SKALA SCF OVERLAP ERROR",
                       "SKALA HAMILTONIAN HERMITICITY",
                       "GRAD ADJOINT DIFFERENCE", "TAU OPERATOR DIFFERENCE", "ONE-CENTER MATRIX DIFFERENCE"]:
-            record[label] = last_value(text, label)
-            if "DIFFERENCE" in label and abs(record[label]) > 1.e-8:
-                raise ValueError(f"{case}: failed {label}: {record[label]}")
+            tolerance = 1.e-8 if "DIFFERENCE" in label else None
+            record[label] = last_value(text, label, tolerance=tolerance)
         check_electron_counts(record)
         record["expected_electrons"] = sum({"H": 1, "C": 6, "N": 7, "O": 8}[el] for el, _ in atoms)
         record["electron_quadrature_error"] = record["COMPOSITE ELECTRONS"] - record["expected_electrons"]

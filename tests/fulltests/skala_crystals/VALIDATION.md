@@ -5,7 +5,8 @@ the AlN equation-of-state issue is fixed. No reference energies were changed.
 
 ## Machines and scope
 
-- Spark: GB10, NVHPC 26.5, combined cuBLAS/cuSOLVER/cuFFT build and CUDA Skala.
+- Spark: 20 CPU cores and GB10, NVHPC 26.5, combined cuBLAS/cuSOLVER/cuFFT
+  build with CUDA Skala, plus CPU-mode validation with one/eight MPI ranks.
 - Terok: GNU Fortran, OpenBLAS 0.3.33 and CPU-only PyTorch 2.6; no CUDA runtime
   dependency in the CPU executable. Its private static BLAS avoids the two
   BLAS symbol collisions described in the bridge README.
@@ -245,8 +246,8 @@ The updated CPU-only MPI executable also passes 1/2-rank parity from the same
 restart: energy difference 2.295e-12 H, force difference 3.665e-10 H/bohr,
 strain-derivative difference 9.001e-10 H, smooth-operator norm difference
 1.135e-8, and maximum difference among the electronic diagnostics 1.740e-10.
-This supersedes the earlier pending CPU MPI integration gate, but not the GPU
-MPI or stationary-state force/stress finite-difference gates.
+This closes the CPU MPI consistency check. The GPU MPI check is reported
+separately below; stationary-state force/stress finite differences remain open.
 
 Evidence: Terok `validation/si2-stationarity-{cold,pbe,skala}`,
 `validation/si2-current-cpu-mpi-r2.log`, retained parity protocols in
@@ -288,6 +289,25 @@ protocols `/tmp/cppaw-skala-mpi.fH6p5H`. MPI executable SHA-256:
 `9239704d5ddd10b718324476fea7fad50c10b49933bed2d0153f22869087fdb0`.
 The PBE restart hash is the same as above; CPU model SHA-256:
 `7f3e8622e1eb520ccd88a55464c3e359ac4d7e5ccbd1fb77a26afa1e1c20a5cd`.
+
+The same current executable also passes one/two-rank MPI parity with
+`CPPAW_GPU_MODE=resident`, `DEVICE='CUDA'`, the CUDA model, and default
+root-only Skala inference on Spark's single GPU. Both use the same PBE restart
+and coarse grid as the CPU check:
+
+| Spark GPU 1/2-rank difference | Maximum absolute difference |
+| --- | ---: |
+| Total energy | 0 at the printed precision |
+| Forces | 7.981e-10 H/bohr |
+| Strain derivatives | 1.980e-9 H |
+| Smooth-operator norms | 1.235e-8 |
+| Electronic stationarity diagnostics | 2.392e-10 H |
+
+Evidence: `validation/si2-current-spark-gpu-mpi2.log` and
+`/tmp/cppaw-skala-mpi.m4ECqE`. This closes the current-build GPU MPI parity
+check, not multi-GPU/distributed-model validation, stationary-state finite
+differences, or the mixed-OpenMP-runtime acceptance limitation. It ran alongside
+a separate CPU crystal calculation and must not be used as a timing benchmark.
 
 Two bounded electronic-relaxation probes were also completed from that PBE
 restart, with `DT=5`, `MPSI=100`, fixed nuclei/cell and applied Skala:

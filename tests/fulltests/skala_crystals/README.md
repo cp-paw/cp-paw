@@ -27,6 +27,9 @@ convergence criterion. `--skala-steps` can request subsequent relaxation.
 `--prepare-only` writes inspectable inputs without running them. Existing output
 directories are never overwritten. Per-case settings and geometry hashes are
 recorded. A nonzero exit or missing completion/adjoint diagnostic is a failure.
+All occurrences of scalar diagnostics must be finite, and every reported
+adjoint-contraction error must pass its tolerance. A later valid value cannot
+hide an earlier invalid diagnostic in a multistep run.
 
 For CPU-distributed atom blocks, use an MPI-enabled executable with
 `--mpi-ranks 8`; `--mpiexec /path/to/mpirun` selects the launcher. The default

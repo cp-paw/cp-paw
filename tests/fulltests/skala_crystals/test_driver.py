@@ -21,9 +21,25 @@ class CrystalDriverTest(unittest.TestCase):
 
     def test_diagnostics_reject_missing_or_nonfinite_values(self):
         self.assertEqual(run.last_value("LABEL 1.23D-12\n", "LABEL"), 1.23e-12)
-        for value in ["", "LABEL NaN\n", "LABEL 1e999\n"]:
-            with self.assertRaises(ValueError):
-                run.last_value(value, "LABEL")
+        self.assertEqual(run.last_value("LABEL 1.0\nLABEL 2.0\n", "LABEL"), 2.0)
+        for value in ["", "NaN", "Inf", "1e999", "***", "1.0 unexpected"]:
+            for text in [f"LABEL {value}\n", f"LABEL 1.0\nLABEL {value}\n",
+                         f"LABEL {value}\nLABEL 1.0\n"]:
+                with self.subTest(text=text), self.assertRaises(ValueError):
+                    run.last_value(text, "LABEL")
+        for text in ["", "LABEL\n", "LABEL\nOTHER 1.0\n"]:
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                run.last_value(text, "LABEL")
+
+    def test_adjoint_checks_cover_earlier_steps(self):
+        label = "TAU OPERATOR DIFFERENCE"
+        self.assertEqual(run.last_value(f"{label} 1e-13\n{label} 0.0\n", label,
+                                        tolerance=1.e-8), 0.)
+        with self.assertRaises(ValueError):
+            run.last_value(f"{label} -1e-4\n{label} 0.0\n", label, tolerance=1.e-8)
+        # Electron quadrature error is recorded, not held to an adjoint tolerance.
+        self.assertEqual(run.last_value("COMPOSITE MINUS TRACE 0.1\n",
+                                        "COMPOSITE MINUS TRACE"), .1)
 
     def test_probe_time_step_has_real_mantissa(self):
         args = SimpleNamespace(skala_steps=1, pbe_steps=180, device="CUDA",
