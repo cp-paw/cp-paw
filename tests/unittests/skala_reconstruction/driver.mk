@@ -1,4 +1,4 @@
-.PHONY: skala-reconstruction-test skala-primitives-test skala-partition-probe
+.PHONY: skala-reconstruction-test skala-primitives-test skala-partition-probe skala-periodic-test
 skala-reconstruction-test: libpaw.a
 	mkdir -p unit-tests
 	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/skala_reconstruction.x $(BASEDIR)/tests/unittests/skala_reconstruction/skala_reconstruction.f90 libpaw.a $(LIBS)
@@ -12,3 +12,8 @@ skala-primitives-test: libpaw.a
 skala-partition-probe: libpaw.a
 	mkdir -p unit-tests
 	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/partition_measure.x $(BASEDIR)/tests/unittests/skala_reconstruction/partition_measure.f90 libpaw.a $(LIBS)
+
+skala-periodic-test: libpaw.a
+	mkdir -p unit-tests
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/periodic_partition.x $(BASEDIR)/tests/unittests/skala_reconstruction/periodic_partition.f90 libpaw.a $(LIBS)
+	./unit-tests/periodic_partition.x

@@ -39,6 +39,7 @@ export LIBLIST=" \
         paw_spherical \
         paw_lebedev \
         paw_skala_grid \
+        paw_skala_partition \
         paw_skala_primitives \
         paw_generalpurpose \
         paw_report \
