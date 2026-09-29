@@ -18,7 +18,12 @@ WIDTHS = {"INDICES": 4, "ANGLE": 1, "OCCUPATIONS": 2, "HAMILTONIAN": 2,
           "DERIVATIVE": 1, "PACKED": 1}
 
 
-def diagnostics(text):
+def diagnostics(text, direction="subspace"):
+    if direction not in ("subspace", "kinetic"):
+        raise ValueError("Unknown orbital direction")
+    tangent = direction == "kinetic"
+    prefix = "SKALA ORBITAL TANGENT " if tangent else PREFIX
+    widths = {**WIDTHS, "INDICES": 3, "OCCUPATIONS": 1, "METRIC": 3} if tangent else WIDTHS
     steps = stationarity.records(text)
     stationarity.validate(steps)
     if len(steps) != 1:
@@ -30,8 +35,8 @@ def diagnostics(text):
             force_section = True
         elif line.startswith("NET FORCE"):
             force_section = False
-        if line.startswith(PREFIX):
-            key, _, raw = line[len(PREFIX):].partition(" ")
+        if line.startswith(prefix):
+            key, _, raw = line[len(prefix):].partition(" ")
         elif force_section and line.startswith("TOTAL ENERGY "):
             key, raw = "ENERGY", line[len("TOTAL ENERGY "):]
         else:
@@ -44,7 +49,7 @@ def diagnostics(text):
                 raise ValueError("Invalid rotation mode")
             continue
         fields = raw.split()
-        if key not in (*WIDTHS, "ENERGY") or len(fields) != WIDTHS.get(key, 1):
+        if key not in (*widths, "ENERGY") or len(fields) != widths.get(key, 1):
             raise ValueError(f"Wrong diagnostic layout for {key}")
         if any(not stationarity.NUMBER.fullmatch(x) for x in fields):
             raise ValueError(f"Malformed {key}")
@@ -52,25 +57,33 @@ def diagnostics(text):
         if not all(math.isfinite(x) for x in values):
             raise ValueError(f"Nonfinite {key}")
         result[key] = values
-    if set(result) != {*WIDTHS, "ENERGY", "MODE"}:
+    if set(result) != {*widths, "ENERGY", "MODE"}:
         raise ValueError("Incomplete rotation/energy diagnostics")
     if any(x < 1 or not x.is_integer() for x in result["INDICES"]):
         raise ValueError("Invalid rotation indices")
-    if result["INDICES"][2] == result["INDICES"][3]:
+    if not tangent and result["INDICES"][2] == result["INDICES"][3]:
         raise ValueError("Rotation needs two distinct bands")
     if result["PACKED"] not in ([0.0], [1.0]):
         raise ValueError("Invalid packed-orbital flag")
     if result["PACKED"] == [1.0] and result["MODE"] == "IMAG":
         raise ValueError("Imaginary rotation cannot use packed real orbitals")
     occupations = result["OCCUPATIONS"]
-    if min(occupations) < 0 or occupations[0] == occupations[1]:
-        raise ValueError("Probe needs nonnegative, unequal occupations")
+    if min(occupations) < 0 or (occupations[0] == 0 if tangent else
+                              occupations[0] == occupations[1]):
+        raise ValueError("Probe needs an occupied tangent band or unequal rotation occupations")
     real, imag = result["HAMILTONIAN"]
-    expected = 2 * (occupations[0] - occupations[1])
-    expected *= real if result["MODE"] == "REAL" else -imag
+    if tangent:
+        norm, norm_error, orthogonality = result["METRIC"]
+        if norm <= 1e-10 or min(norm_error, orthogonality) < 0 or max(norm_error, orthogonality) > 1e-10:
+            raise ValueError("Invalid external tangent PAW metric")
+        expected = 2 * occupations[0] * real
+    else:
+        expected = 2 * (occupations[0] - occupations[1])
+        expected *= real if result["MODE"] == "REAL" else -imag
     if not math.isclose(result["DERIVATIVE"][0], expected, rel_tol=1e-12, abs_tol=1e-14):
         raise ValueError("Reported derivative disagrees with weighted Hamiltonian")
     result["stationarity"] = steps[0]
+    result["DIRECTION"] = direction
     return result
 
 
@@ -83,12 +96,15 @@ def compare(center, minus, plus, step, absolute_tolerance=None, relative_toleran
                                           or absolute_tolerance <= 0):
         raise ValueError("Absolute tolerance must be finite and positive")
     for data, offset in ((minus, -step), (plus, step)):
-        for key in ("INDICES", "MODE", "OCCUPATIONS", "PACKED"):
+        for key in ("INDICES", "MODE", "OCCUPATIONS", "PACKED", "DIRECTION"):
             if data[key] != center[key]:
                 raise ValueError(f"Changed {key} across the finite difference")
         if not math.isclose(data["ANGLE"][0], center["ANGLE"][0] + offset,
                             rel_tol=0, abs_tol=1e-13):
             raise ValueError("Wrong rotation angle")
+        if center["DIRECTION"] == "kinetic" and not math.isclose(
+                data["METRIC"][0], center["METRIC"][0], rel_tol=1e-12, abs_tol=1e-14):
+            raise ValueError("Changed external direction norm across the finite difference")
     analytic = center["DERIVATIVE"][0]
     numeric = (plus["ENERGY"][0] - minus["ENERGY"][0]) / (2 * step)
     error = abs(numeric - analytic)
@@ -110,7 +126,10 @@ def main():
     parser.add_argument("--mpiexec", default="mpirun")
     parser.add_argument("--kpoint", type=int, default=1)
     parser.add_argument("--spin", type=int, default=1)
-    parser.add_argument("--bands", type=int, nargs=2, default=(4, 5))
+    parser.add_argument("--direction", choices=("subspace", "kinetic"), default="subspace")
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--bands", type=int, nargs=2)
+    selection.add_argument("--band", type=int, help="Occupied band for the kinetic tangent")
     parser.add_argument("--mode", choices=("REAL", "IMAG"), default="REAL")
     parser.add_argument("--center-angle", type=float, default=0.02)
     parser.add_argument("--steps", type=float, nargs="+", default=(0.01, 0.003, 0.001))
@@ -122,7 +141,12 @@ def main():
     parser.add_argument("--relative-tolerance", type=float, default=0.0)
     parser.add_argument("--timeout", type=float, default=1800)
     args = parser.parse_args()
-    if min(args.mpi_ranks, args.kpoint, args.spin, *args.bands,
+    if ((args.direction == "kinetic" and args.bands is not None)
+            or (args.direction == "subspace" and args.band is not None)):
+        parser.error("Use --bands for subspace rotations and --band for kinetic tangents")
+    args.bands = (4, 5) if args.bands is None else args.bands
+    args.band = 4 if args.band is None else args.band
+    if min(args.mpi_ranks, args.kpoint, args.spin, args.band, *args.bands,
            args.radial_points, args.lebedev_exactness) < 1 or args.bands[0] == args.bands[1]:
         parser.error("Indices/grid sizes/ranks must be positive and bands distinct")
     if (not math.isfinite(args.center_angle) or not math.isfinite(args.timeout)
@@ -137,6 +161,8 @@ def main():
               for key in ("executable", "model", "restart", "structure")}
     args.output.mkdir(parents=True, exist_ok=False)
     env = dict(os.environ, CPPAW_GPU_MODE=args.gpu_mode)
+    for key in ("CPPAW_SKALA_ORBITAL_ROTATION", "CPPAW_SKALA_ORBITAL_TANGENT"):
+        env.pop(key, None)
     env.setdefault("OMP_NUM_THREADS", "1")
     env.setdefault("OPENBLAS_NUM_THREADS", "1")
     provenance = {key: {"path": str(path), "sha256": digest(path)}
@@ -169,8 +195,12 @@ def main():
         shutil.copy2(inputs["restart"], work / "si2.rstrt")
         shutil.copy2(inputs["structure"], work / "si2.strc")
         shutil.copy2(Path(__file__).parent / "../si2/stp.cntl", work / "stp.cntl")
-        env["CPPAW_SKALA_ORBITAL_ROTATION"] = (
-            f"{args.kpoint} {args.spin} {args.bands[0]} {args.bands[1]} {angle:.17g} {args.mode}")
+        indices = [args.kpoint, args.spin, *args.bands]
+        variable = "CPPAW_SKALA_ORBITAL_ROTATION"
+        if args.direction == "kinetic":
+            indices = [args.kpoint, args.spin, args.band]
+            variable = "CPPAW_SKALA_ORBITAL_TANGENT"
+        env[variable] = " ".join(map(str, indices)) + f" {angle:.17g} {args.mode}"
         command = [str(inputs["executable"]), "si2.cntl"]
         if args.mpi_ranks > 1:
             command = [args.mpiexec, "-np", str(args.mpi_ranks), *command]
@@ -178,8 +208,8 @@ def main():
         with (work / "stdout.log").open("w") as out, (work / "stderr.log").open("w") as err:
             subprocess.run(command, cwd=work, env=env, stdout=out, stderr=err,
                            check=True, timeout=args.timeout)
-        data = diagnostics((work / "si2.prot").read_text())
-        if (data["INDICES"] != [args.kpoint, args.spin, *args.bands]
+        data = diagnostics((work / "si2.prot").read_text(), args.direction)
+        if (data["INDICES"] != indices
                 or data["MODE"] != args.mode
                 or not math.isclose(data["ANGLE"][0], angle, rel_tol=0, abs_tol=1e-13)):
             raise ValueError("Executable did not apply the requested rotation")
@@ -197,6 +227,7 @@ def main():
         comparisons.append(compare(center, minus, plus, step, args.absolute_tolerance,
                                    args.relative_tolerance))
     summary = {"scope": "fixed-occupation orbital derivative, not stationary forces",
+               "direction": args.direction,
                "functional": "PBE reference" if args.reference_pbe else "Skala",
                "center_repeat_energy_difference_hartree":
                    abs(center["ENERGY"][0] - repeat["ENERGY"][0]),

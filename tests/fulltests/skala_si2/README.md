@@ -109,6 +109,26 @@ scalar adjoint. The forward density is band-limited before Skala evaluation,
 so its reverse scalar potential must use the same projector. Positive tau
 is formed directly on the native grid and must not inherit that filter.
 
+Use `--direction kinetic --band 4` instead of `--bands 4 5` to test outside
+the current band space. From the common orthonormalized restart the diagnostic
+forms `chi = |G+k|^2 psi_i`, removes its PAW-metric projection onto every
+current band twice, and normalizes it with the full PAW overlap operator.
+It then evaluates `psi_i(theta) = cos(theta) psi_i + sin(theta) chi` and the
+analytic derivative `2 f_i Re <d psi_i/d theta | H psi_i(theta)>`. This is
+not another occupied--empty rotation within the computed band space.
+`--mode IMAG` starts from `i |G+k|^2 psi_i` and requires unpacked orbitals.
+The direction norm, unit-metric error, and orthogonality error are reported
+and checked, including a common direction norm across the finite difference.
+
+The corresponding runtime diagnostic is
+`CPPAW_SKALA_ORBITAL_TANGENT='K SPIN BAND ANGLE REAL|IMAG'`. It requires
+fixed occupations, collinear orbitals, and `CHECK=T`, is mutually exclusive
+with `CPPAW_SKALA_ORBITAL_ROTATION`, and reports only the first energy
+evaluation. The driver still requires exactly one completed step per leg.
+Use a PBE reference and more than one finite-difference step before interpreting
+the Skala result. Passing one external direction does not establish the
+entire gradient, electronic stationarity, or a stationary force derivative.
+
 ## Geometry Caches
 
 `cache_parity.py` runs two applied-functional steps from the same restart with

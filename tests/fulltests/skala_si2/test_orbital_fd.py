@@ -22,6 +22,31 @@ TOTAL ENERGY : -100.0000
 
 
 class OrbitalDerivativeTest(unittest.TestCase):
+    def test_external_tangent_metric_and_derivative(self):
+        text = sample().replace("ORBITAL ROTATION", "ORBITAL TANGENT")
+        text = text.replace("INDICES 1 1 4 5", "INDICES 1 1 4")
+        text = text.replace("OCCUPATIONS 0.25 0", "OCCUPATIONS 0.25")
+        metric = "SKALA ORBITAL TANGENT METRIC 0.9 1e-15 2e-16\n"
+        text += metric
+        center = orbital_fd.diagnostics(text, "kinetic")
+        self.assertEqual(center["DIRECTION"], "kinetic")
+        self.assertEqual(center["DERIVATIVE"], [0.2])
+        imag = text.replace("MODE REAL", "MODE IMAG").replace("PACKED 1", "PACKED 0")
+        self.assertEqual(orbital_fd.diagnostics(imag, "kinetic")["DERIVATIVE"], [0.2])
+        for bad in (text.replace(metric, ""), text.replace("METRIC 0.9", "METRIC 0"),
+                    text.replace("1e-15 2e-16", "-1e-15 2e-16"),
+                    text.replace("1e-15 2e-16", "1e-15 2e-9"),
+                    text.replace("OCCUPATIONS 0.25", "OCCUPATIONS 0")):
+            with self.subTest(text=bad), self.assertRaises(ValueError):
+                orbital_fd.diagnostics(bad, "kinetic")
+        minus, plus = copy.deepcopy(center), copy.deepcopy(center)
+        minus["ANGLE"], plus["ANGLE"] = [0.01], [0.03]
+        minus["ENERGY"], plus["ENERGY"] = [-100.002], [-99.998]
+        self.assertTrue(orbital_fd.compare(center, minus, plus, 0.01, 1e-10)["passed"])
+        plus["METRIC"][0] = 0.8
+        with self.assertRaises(ValueError):
+            orbital_fd.compare(center, minus, plus, 0.01)
+
     def test_complex_seed_mesh(self):
         self.assertIn("DIV=3 1 1", orbital_seed.structure((3, 1, 1)))
         for mesh in ((0, 1, 1), (-1, 1, 1), (1, 1), (3.0, 1, 1)):
