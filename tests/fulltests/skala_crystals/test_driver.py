@@ -27,13 +27,25 @@ class CrystalDriverTest(unittest.TestCase):
 
     def test_probe_time_step_has_real_mantissa(self):
         args = SimpleNamespace(skala_steps=1, pbe_steps=180, device="CUDA",
-                               radial=96, angular=17, image_shells=2, dt=5.0, cutoff=40.0)
+                               radial=96, angular=17, image_shells=2, orientations=3,
+                               dt=5.0, cutoff=40.0)
         for skala in [False, True]:
             text = run.control(args, skala)
             dt = re.search(r"\bDT=(\S+)", text).group(1)
             self.assertIn(".", dt.split("e")[0])
             if skala:
                 self.assertIn("IMAGESHELLS=2", text)
+                self.assertIn("LEBEDEVORIENTATIONS=3", text)
+
+    def test_independent_counts_use_orthogonalizer_tolerance(self):
+        record = {"OCCUPATION ELECTRONS": 8., "TRACE MINUS OCCUPATIONS": -9.4e-9,
+                  "PS GRID MINUS TRACE": 2.e-14, "COMPOSITE MINUS TRACE": 0.1}
+        # Atom-grid convergence is recorded separately and cannot be repaired
+        # by passing the independent overlap/native-grid checks.
+        run.check_electron_counts(record)
+        for label in ["TRACE MINUS OCCUPATIONS", "PS GRID MINUS TRACE"]:
+            with self.subTest(label=label), self.assertRaises(ValueError):
+                run.check_electron_counts(dict(record, **{label: 1.e-4}))
 
 
 if __name__ == "__main__":

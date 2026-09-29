@@ -18,6 +18,7 @@ here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 radial_list=${SKALA_RADIAL_POINT_LIST:-"100 200 400"}
 lebedev_list=${SKALA_LEBEDEV_EXACTNESS_LIST:-"17"}
 orientation_list=${SKALA_LEBEDEV_ORIENTATION_LIST:-"1"}
+image_shells=${SKALA_IMAGE_SHELLS:-1}
 device=${SKALA_DEVICE:-AUTO}
 ranks=${MPI_RANKS:-1}
 mpiexec=${MPIEXEC:-mpirun}
@@ -35,6 +36,8 @@ trap cleanup EXIT HUP INT TERM
 
 case "$ranks" in *[!0-9]*|'') echo "MPI_RANKS must be an integer" >&2; exit 2 ;; esac
 test "$ranks" -gt 0 || { echo "MPI_RANKS must be positive" >&2; exit 2; }
+case "$image_shells" in *[!0-9]*|'') echo "SKALA_IMAGE_SHELLS must be an integer" >&2; exit 2 ;; esac
+test "$image_shells" -gt 0 || { echo "SKALA_IMAGE_SHELLS must be positive" >&2; exit 2; }
 for value in $radial_list; do
   case "$value" in *[!0-9]*|'') echo "SKALA_RADIAL_POINT_LIST must contain integers" >&2; exit 2 ;; esac
   test "$value" -gt 0 || { echo "radial point counts must be positive" >&2; exit 2; }
@@ -50,7 +53,7 @@ done
 
 cp "$here/../si2/stp.cntl" "$work/stp.cntl"
 ln -s "$SKALA_MODEL" "$work/model.fun"
-printf "radial\tlebedev\torientations\trows\telectrons\tmodel_xc\n" >"$work/raw.tsv"
+printf "radial\tlebedev\torientations\trows\telectrons\tmodel_xc\ttrace\tgrid_minus_trace\tvolume_error\n" >"$work/raw.tsv"
 
 run_case() {
   radial=$1
@@ -60,10 +63,9 @@ run_case() {
   sed -e "s|NAME='../si2/stp.cntl'|NAME='stp.cntl'|" \
       -e 's/START=T/START=F/' \
       -e 's/!CELL MOVE=T/!CELL MOVE=F/' \
-      -e 's/CHECK=T/CHECK=F/' \
       -e "s/RADIALPOINTS=200/RADIALPOINTS=$radial/" \
       -e "s/LEBEDEVEXACTNESS=53/LEBEDEVEXACTNESS=$lebedev/" \
-      -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$orientations/" \
+      -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$orientations IMAGESHELLS=$image_shells/" \
       -e "s/DEVICE='AUTO'/DEVICE='$device'/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"
@@ -77,12 +79,15 @@ run_case() {
   grep -q "PROGRAM FINISHED" "$work/$name.prot"
   awk -v radial="$radial" -v lebedev="$lebedev" \
       -v orientations="$orientations" '
-    /^HYBRID-GRID ROWS/ { rows = $NF }
+    /^ATOM-GRID ROWS/ { rows = $NF }
     /^COMPOSITE ELECTRONS/ { electrons = $NF }
     /^MODEL XC ENERGY/ { model_xc = $NF }
+    /^PAW ALL ELECTRON TRACE/ { trace = $NF }
+    /^COMPOSITE MINUS TRACE/ { grid_error = $NF }
+    /^PARTITION VOLUME RELATIVE ERROR/ { volume_error = $NF }
     END {
-      if (rows == "" || electrons == "" || model_xc == "") exit 1
-      printf "%d\t%d\t%d\t%d\t%.14e\t%.14e\n", radial, lebedev, orientations, rows, electrons, model_xc
+      if (rows == "" || electrons == "" || model_xc == "" || trace == "" || grid_error == "" || volume_error == "") exit 1
+      printf "%d\t%d\t%d\t%d\t%.14e\t%.14e\t%.14e\t%.14e\t%.14e\n", radial, lebedev, orientations, rows, electrons, model_xc, trace, grid_error, volume_error
     }
   ' "$work/$name.prot" >>"$work/raw.tsv"
 }
@@ -105,16 +110,19 @@ awk -F '\t' '
     rows[count] = $4
     electrons[count] = $5
     model_xc[count] = $6
+    trace[count] = $7
+    grid_error[count] = $8
+    volume_error[count] = $9
   }
   END {
     if (count == 0) exit 1
-    print "RADIAL LEBEDEV ORIENTATIONS ROWS ELECTRONS DELTA_ELECTRONS MODEL_XC DELTA_MODEL_XC"
+    print "RADIAL LEBEDEV ORIENTATIONS ROWS ELECTRONS DELTA_ELECTRONS MODEL_XC DELTA_MODEL_XC TRACE GRID_MINUS_TRACE VOLUME_ERROR"
     for (i = 1; i <= count; i++)
-      printf "%6d %7d %12d %8d % .12e % .6e % .12e % .6e\n", \
+      printf "%6d %7d %12d %8d % .12e % .6e % .12e % .6e % .12e % .6e % .6e\n", \
              radial[i], lebedev[i], orientations[i], rows[i], electrons[i], \
              electrons[i] - electrons[count], model_xc[i], \
-             model_xc[i] - model_xc[count]
+             model_xc[i] - model_xc[count], trace[i], grid_error[i], volume_error[i]
   }
 ' "$work/raw.tsv"
 
-echo "TEST PASSED"
+echo "QUADRATURE SWEEP COMPLETED (convergence requires inspecting the differences)"

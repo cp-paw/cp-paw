@@ -55,7 +55,7 @@ def control(args, skala):
     if skala:
         functional += (f"  !SKALA MODEL='model.fun' DEVICE='{args.device}'\n"
                        f"   RADIALPOINTS={args.radial} LEBEDEVEXACTNESS={args.angular}\n"
-                       f"   LEBEDEVORIENTATIONS=1 IMAGESHELLS={args.image_shells}\n"
+                       f"   LEBEDEVORIENTATIONS={args.orientations} IMAGESHELLS={args.image_shells}\n"
                        "   APPLY=T CHECK=T !END\n")
     functional += " !END\n"
     # A single-step probe preserves the PBE starting orbitals; longer runs relax them.
@@ -92,6 +92,16 @@ def execute(executable, work, name):
     return text
 
 
+def check_electron_counts(record):
+    # The legacy iterative orthogonalizer uses max|S-I| < 1e-8.
+    # This bound scales with valence occupations, not frozen-core electrons.
+    tolerance = 1.e-8 * max(1., abs(record["OCCUPATION ELECTRONS"]))
+    if abs(record["TRACE MINUS OCCUPATIONS"]) > tolerance:
+        raise ValueError("PAW overlap trace disagrees with occupations")
+    if abs(record["PS GRID MINUS TRACE"]) > 1.e-8:
+        raise ValueError("Native pseudo-density grid disagrees with reciprocal norm")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--executable", required=True, type=Path)
@@ -106,12 +116,13 @@ def main():
     parser.add_argument("--kmesh", type=int, default=1)
     parser.add_argument("--radial", type=int, default=200)
     parser.add_argument("--angular", type=int, default=53)
+    parser.add_argument("--orientations", type=int, default=1)
     parser.add_argument("--image-shells", type=int, default=1)
     parser.add_argument("--device", choices=["AUTO", "CPU", "CUDA"], default="AUTO")
     parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args()
     if min(args.pbe_steps, args.skala_steps, args.radial, args.angular,
-           args.kmesh, args.image_shells) < 1:
+           args.kmesh, args.image_shells, args.orientations) < 1:
         parser.error("Step counts and grid settings must be positive")
     if args.angular > 53:
         parser.error("Maximum supported Lebedev exactness is 53")
@@ -148,10 +159,14 @@ def main():
         record = {"case": case}
         for label in ["MODEL XC ENERGY", "COMPOSITE ELECTRONS", "COMPOSITE POSITIVE TAU",
                       "PARTITION VOLUME", "EXACT CELL VOLUME", "PARTITION VOLUME RELATIVE ERROR",
+                      "PS RECIPROCAL NORM TRACE", "PS NATIVE GRID ELECTRONS", "PS GRID MINUS TRACE",
+                      "PAW VALENCE TRACE", "PAW ALL ELECTRON TRACE", "TRACE MINUS OCCUPATIONS",
+                      "OCCUPATION ELECTRONS", "COMPOSITE MINUS TRACE",
                       "GRAD ADJOINT DIFFERENCE", "TAU OPERATOR DIFFERENCE", "ONE-CENTER MATRIX DIFFERENCE"]:
             record[label] = last_value(text, label)
             if "DIFFERENCE" in label and abs(record[label]) > 1.e-8:
                 raise ValueError(f"{case}: failed {label}: {record[label]}")
+        check_electron_counts(record)
         record["expected_electrons"] = sum({"H": 1, "C": 6, "N": 7, "O": 8}[el] for el, _ in atoms)
         record["electron_quadrature_error"] = record["COMPOSITE ELECTRONS"] - record["expected_electrons"]
         # Record, but do not silently repair, a quadrature or SCF error.

@@ -10,13 +10,14 @@ value_for() {
 check_abs() {
   label=$1
   tolerance=$2
+  scale=${3:-1}
   value=$(value_for "$label")
-  awk -v label="$label" -v value="$value" -v tolerance="$tolerance" '
+  awk -v label="$label" -v value="$value" -v tolerance="$tolerance" -v scale="$scale" '
     BEGIN {
       magnitude = value + 0.0
       if (magnitude < 0.0) magnitude = -magnitude
-      if (value !~ /^[-+]?[0-9.]+[EeDd][-+]?[0-9]+$/ || magnitude >= tolerance) {
-        printf "TEST FAILED: %s = %s (tolerance %s)\n", label, value, tolerance
+      if (value !~ /^[-+]?[0-9.]+[EeDd][-+]?[0-9]+$/ || scale + 0 <= 0 || magnitude >= tolerance * scale) {
+        printf "TEST FAILED: %s = %s (tolerance %s x scale %s)\n", label, value, tolerance, scale
         exit 1
       }
     }'
@@ -49,6 +50,10 @@ test "$(value_for 'NUMBER OF K-POINTS')" = "8" || {
 }
 
 check_abs "SKALA POSITIVE TAU CHECK" 1.0e-10
+check_abs "PS GRID MINUS TRACE" 1.0e-10
+# The CPU iterative orthogonalizer stops at max|S-I| < 1e-8; its occupied
+# trace is bounded by that tolerance times the occupation sum.
+check_abs "TRACE MINUS OCCUPATIONS" 1.0e-8 "$(value_for 'OCCUPATION ELECTRONS')"
 check_abs "GRAD ADJOINT DIFFERENCE" 1.0e-10
 check_abs "TAU OPERATOR DIFFERENCE" 1.0e-10
 check_abs "ONE-CENTER MATRIX DIFFERENCE" 1.0e-10

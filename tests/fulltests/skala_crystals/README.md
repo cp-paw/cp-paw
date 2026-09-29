@@ -37,8 +37,15 @@ PAW frozen-core and CP2K GAPW/all-electron energies are not interchangeable.
 No D3 correction is included. AlN is not Mani's original case and is not
 substituted silently for one of these three crystals.
 
-`--image-shells` controls the finite partition/descriptor image layout
+`--image-shells` controls the compact periodic partition/descriptor support
 independently of the quadrature resolution. Results include the constant-field
 volume error as well as electron number; neither is normalized away.
+`--orientations` adds rotated copies of the selected Lebedev rule and averages
+their weights. It does not increase that rule's polynomial exactness.
+Electron counts distinguish the reciprocal-space norm plus the PAW overlap
+correction, the native pseudo-density grid, and the reconstructed Skala grid.
+The first two must agree independently of the atom-grid quadrature. A correct
+overlap trace does not certify convergence of the latter; converge cutoff,
+radial and angular resolution separately.
 See [VALIDATION.md](VALIDATION.md) for the passing execution checks and the
 remaining accuracy failures. A successful smoke test is not an EOS validation.

@@ -141,6 +141,15 @@ weights and the independently constructed self-image descriptor window are
 distinct. This is a PAW-specific integration, not a literal copy of CP2K's GAPW
 implementation.
 
+The revised periodic partition sums compact, translated Becke seeds over all
+images in their support. Its force and strain derivatives include the cell
+dependence of the smooth image cutoffs. `RADIALPOINTS`, `LEBEDEVEXACTNESS`,
+`LEBEDEVORIENTATIONS` and `IMAGESHELLS` control distinct convergence parameters;
+the native density grid additionally depends on `EPWPSI` and `CDUAL`. With
+`CHECK=T`, independent reciprocal/PAW-overlap electron counts distinguish
+normalization errors from atom-grid quadrature errors. Details and model-free
+tests are in [`tests/unittests/skala_reconstruction/README.md`](tests/unittests/skala_reconstruction/README.md).
+
 The joint-source reconstruction supersedes the original owner-only hybrid-grid
 prototype. Its scientific validation is in progress: the old Si2 force/stress
 and timing results do not validate this new discretization or resolve the

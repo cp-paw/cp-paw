@@ -27,6 +27,7 @@ tolerance=${SKALA_FORCE_FD_TOLERANCE:-0.002}
 radial_points=${SKALA_RADIAL_POINTS:-200}
 lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-53}
 lebedev_orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
+image_shells=${SKALA_IMAGE_SHELLS:-1}
 device=${SKALA_DEVICE:-AUTO}
 ranks=${MPI_RANKS:-1}
 mpiexec=${MPIEXEC:-mpirun}
@@ -34,9 +35,11 @@ case "$device" in AUTO|CPU|CUDA) ;; *) echo "SKALA_DEVICE must be AUTO, CPU, or 
 case "$radial_points" in *[!0-9]*|'') echo "SKALA_RADIAL_POINTS must be an integer" >&2; exit 2 ;; esac
 case "$lebedev_exactness" in *[!0-9]*|'') echo "SKALA_LEBEDEV_EXACTNESS must be an integer" >&2; exit 2 ;; esac
 case "$lebedev_orientations" in *[!0-9]*|'') echo "SKALA_LEBEDEV_ORIENTATIONS must be an integer" >&2; exit 2 ;; esac
+case "$image_shells" in *[!0-9]*|'') echo "SKALA_IMAGE_SHELLS must be an integer" >&2; exit 2 ;; esac
 test "$radial_points" -gt 0 || { echo "SKALA_RADIAL_POINTS must be positive" >&2; exit 2; }
 test "$lebedev_exactness" -gt 0 || { echo "SKALA_LEBEDEV_EXACTNESS must be positive" >&2; exit 2; }
 test "$lebedev_orientations" -gt 0 || { echo "SKALA_LEBEDEV_ORIENTATIONS must be positive" >&2; exit 2; }
+test "$image_shells" -gt 0 || { echo "SKALA_IMAGE_SHELLS must be positive" >&2; exit 2; }
 work=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-skala-force.XXXXXX")
 keep=${SKALA_FORCE_FD_KEEP:-0}
 cleanup() {
@@ -60,7 +63,7 @@ make_control() {
       -e 's/!CELL MOVE=T/!CELL MOVE=F/' \
       -e "s/RADIALPOINTS=200/RADIALPOINTS=$radial_points/" \
       -e "s/LEBEDEVEXACTNESS=53/LEBEDEVEXACTNESS=$lebedev_exactness/" \
-      -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$lebedev_orientations/" \
+      -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$lebedev_orientations IMAGESHELLS=$image_shells/" \
       -e "s/DEVICE='AUTO'/DEVICE='$device'/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"
