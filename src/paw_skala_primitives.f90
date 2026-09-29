@@ -13,6 +13,15 @@ MODULE PAW_SKALA_PRIMITIVES_MODULE
     REAL(8),ALLOCATABLE :: COEFF(:,:)    !(NPOLY,LMX)
   END TYPE PAW_SKALA_SOLID_BASIS
 
+  TYPE, PUBLIC :: PAW_SKALA_SOURCE
+    INTEGER(4) :: NR=0,LNX=0,LMNX=0,NDIMD=0
+    REAL(8) :: RCUT=0.D0
+    INTEGER(4),ALLOCATABLE :: LOX(:)
+    REAL(8),ALLOCATABLE :: R(:),PHI(:,:,:),CORE(:,:)
+    COMPLEX(8),ALLOCATABLE :: DM(:,:,:),DH(:,:,:)
+    TYPE(PAW_SKALA_SOLID_BASIS) :: BASIS
+  END TYPE PAW_SKALA_SOURCE
+
   PUBLIC :: PAW_SKALA_SOLID_BASIS_INIT
   PUBLIC :: PAW_SKALA_SOLID_BASIS_EVALUATE
   PUBLIC :: PAW_SKALA_ONECENTER_GRID_SIZE
@@ -20,6 +29,9 @@ MODULE PAW_SKALA_PRIMITIVES_MODULE
   PUBLIC :: PAW_SKALA_ONECENTER_POINTS
   PUBLIC :: PAW_SKALA_ONECENTER_ADJOINT_POINTS
   PUBLIC :: PAW_SKALA_PRIMITIVES_TEST
+  PUBLIC :: PAW_SKALA_RADIAL_SAMPLE
+  PUBLIC :: PAW_SKALA_SOURCE_POINT
+  PUBLIC :: PAW_SKALA_SOURCE_IMAGES
 
 CONTAINS
 
@@ -54,12 +66,13 @@ CONTAINS
    &                             ,BASIS%COEFF)
   END SUBROUTINE PAW_SKALA_SOLID_BASIS_INIT
 
-  SUBROUTINE PAW_SKALA_SOLID_BASIS_EVALUATE(BASIS,R,SOLID,GRAD)
+  SUBROUTINE PAW_SKALA_SOLID_BASIS_EVALUATE(BASIS,R,SOLID,GRAD,HESS)
     TYPE(PAW_SKALA_SOLID_BASIS),INTENT(IN) :: BASIS
     REAL(8),INTENT(IN) :: R(3)
     REAL(8),INTENT(OUT) :: SOLID(BASIS%LMX)
     REAL(8),INTENT(OUT) :: GRAD(3,BASIS%LMX)
-    INTEGER(4) :: I,J,K,IND,LM
+    REAL(8),INTENT(OUT),OPTIONAL :: HESS(3,3,BASIS%LMX)
+    INTEGER(4) :: I,J,K,IND,LM,A,B,P(3)
     REAL(8) :: C,TERM
 
     IF(.NOT.ALLOCATED(BASIS%COEFF)) THEN
@@ -68,6 +81,7 @@ CONTAINS
     END IF
     SOLID(:)=0.D0
     GRAD(:,:)=0.D0
+    IF(PRESENT(HESS)) HESS=0.D0
     DO LM=1,BASIS%LMX
       DO IND=1,BASIS%NPOLY
         C=BASIS%COEFF(IND,LM)
@@ -83,9 +97,221 @@ CONTAINS
        &                    +C*REAL(J,KIND=8)*R(1)**I*R(2)**(J-1)*R(3)**K
         IF(K.GT.0) GRAD(3,LM)=GRAD(3,LM) &
        &                    +C*REAL(K,KIND=8)*R(1)**I*R(2)**J*R(3)**(K-1)
+        IF(PRESENT(HESS)) THEN
+          DO A=1,3
+            DO B=1,3
+              P=(/I,J,K/)
+              TERM=C*P(A)
+              P(A)=P(A)-1
+              TERM=TERM*P(B)
+              P(B)=P(B)-1
+              IF(ANY(P.LT.0)) CYCLE
+              HESS(A,B,LM)=HESS(A,B,LM)+TERM*PRODUCT(R**P)
+            END DO
+          END DO
+        END IF
       END DO
     END DO
   END SUBROUTINE PAW_SKALA_SOLID_BASIS_EVALUATE
+
+  SUBROUTINE PAW_SKALA_RADIAL_SAMPLE(R,F,X,V,DV,DDV)
+    ! One polynomial defines values and both derivatives of the discrete map.
+    REAL(8),INTENT(IN) :: R(:),F(:),X
+    REAL(8),INTENT(OUT) :: V,DV,DDV
+    INTEGER :: LO,HI,MID,FIRST,I,J,N
+    REAL(8) :: SCALE,T,Z(6),L,DL,DDL,DEN
+    N=SIZE(R)
+    IF(N.LT.6.OR.SIZE(F).NE.N) THEN
+      CALL ERROR$MSG('SKALA RADIAL INTERPOLATION NEEDS SIX MATCHING NODES')
+      CALL ERROR$STOP('PAW_SKALA_RADIAL_SAMPLE')
+    END IF
+    LO=1
+    HI=N
+    DO WHILE(HI-LO.GT.1)
+      MID=(HI+LO)/2
+      IF(R(MID).GT.X) THEN
+        HI=MID
+      ELSE
+        LO=MID
+      END IF
+    END DO
+    FIRST=MAX(1,MIN(N-5,LO-2))
+    SCALE=R(FIRST+5)-R(FIRST)
+    Z=(R(FIRST:FIRST+5)-R(FIRST))/SCALE
+    T=(X-R(FIRST))/SCALE
+    V=0.D0
+    DV=0.D0
+    DDV=0.D0
+    DO I=1,6
+      L=1.D0
+      DL=0.D0
+      DDL=0.D0
+      DEN=1.D0
+      DO J=1,6
+        IF(I.EQ.J) CYCLE
+        DDL=DDL*(T-Z(J))+2.D0*DL
+        DL=DL*(T-Z(J))+L
+        L=L*(T-Z(J))
+        DEN=DEN*(Z(I)-Z(J))
+      END DO
+      V=V+F(FIRST+I-1)*L/DEN
+      DV=DV+F(FIRST+I-1)*DL/DEN/SCALE
+      DDV=DDV+F(FIRST+I-1)*DDL/DEN/SCALE**2
+    END DO
+  END SUBROUTINE PAW_SKALA_RADIAL_SAMPLE
+
+  SUBROUTINE PAW_SKALA_SOURCE_POINT(S,X,VALUE,BAR,DX)
+    ! All five fields and their adjoints use the same interpolated orbitals.
+    TYPE(PAW_SKALA_SOURCE),INTENT(INOUT) :: S
+    REAL(8),INTENT(IN) :: X(3)
+    REAL(8),INTENT(OUT) :: VALUE(5,2)
+    REAL(8),INTENT(IN),OPTIONAL :: BAR(5,2)
+    REAL(8),INTENT(OUT),OPTIONAL :: DX(3)
+    REAL(8),PARAMETER :: Y00=1.D0/SQRT(16.D0*ATAN(1.D0))
+    REAL(8) :: R,U(3),F,DF,DDF,A,B,SGN,SPIN,DM
+    REAL(8) :: Y(S%BASIS%LMX),GY(3,S%BASIS%LMX)
+    REAL(8) :: HY(3,3,S%BASIS%LMX),C(S%LMNX),G(3,S%LMNX)
+    REAL(8) :: H(3,3,S%LMNX),FIELD(5,S%NDIMD),KB(5,S%NDIMD)
+    REAL(8) :: KERNEL(5),JAC(5,3),COREJAC(5,3),EYE(3,3)
+    INTEGER :: Q,LN,L,IM,LM,LMN,I,J,D,K,ID,JD
+    LOGICAL :: BACK
+    VALUE=0.D0
+    IF(PRESENT(DX)) DX=0.D0
+    R=SQRT(SUM(X**2))
+    IF(R.GE.S%RCUT) RETURN
+    ! Radial quadrature never contains a nucleus. Coincident foreign rows
+    ! have measure zero but need a deterministic finite limiting direction.
+    R=MAX(R,1.D-12)
+    U=X/R
+    IF(SUM(U**2).LT.0.5D0) U=(/1.D0,0.D0,0.D0/)
+    EYE=0.D0
+    DO K=1,3
+      EYE(K,K)=1.D0
+    END DO
+    BACK=PRESENT(BAR)
+    KB=0.D0
+    IF(BACK) THEN
+      KB(:,1)=0.5D0*(BAR(:,1)+BAR(:,2))
+      IF(S%NDIMD.EQ.2) KB(:,2)=0.5D0*(BAR(:,1)-BAR(:,2))
+    END IF
+    CALL PAW_SKALA_SOLID_BASIS_EVALUATE(S%BASIS,U,Y,GY,HY)
+    FIELD=0.D0
+    DO Q=1,2
+      SGN=MERGE(1.D0,-1.D0,Q.EQ.1)
+      LMN=0
+      DO LN=1,S%LNX
+        L=S%LOX(LN)
+        CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%PHI(:,LN,Q),R,F,DF,DDF)
+        A=(DF-L*F/R)/R
+        B=DDF-(2*L+1)*DF/R+L*(L+2)*F/R**2
+        DO IM=1,2*L+1
+          LMN=LMN+1
+          LM=L*L+IM
+          C(LMN)=F*Y(LM)
+          G(:,LMN)=A*R*Y(LM)*U+F/R*GY(:,LM)
+          IF(PRESENT(DX)) THEN
+            DO JD=1,3
+              DO ID=1,3
+                H(ID,JD,LMN)=B*Y(LM)*U(ID)*U(JD) &
+ &                +A*(Y(LM)*EYE(ID,JD)+U(ID)*GY(JD,LM)+GY(ID,LM)*U(JD)) &
+ &                +F/R**2*HY(ID,JD,LM)
+              END DO
+            END DO
+          END IF
+        END DO
+      END DO
+      DO J=1,S%LMNX
+        DO I=1,S%LMNX
+          KERNEL(1)=C(I)*C(J)
+          KERNEL(2:4)=G(:,I)*C(J)+C(I)*G(:,J)
+          KERNEL(5)=0.5D0*SUM(G(:,I)*G(:,J))
+          DO D=1,S%NDIMD
+            DM=SGN*REAL(S%DM(I,J,D),KIND=8)
+            FIELD(:,D)=FIELD(:,D)+DM*KERNEL
+            IF(BACK) S%DH(I,J,D)=S%DH(I,J,D)+SGN*SUM(KB(:,D)*KERNEL)
+            IF(PRESENT(DX).AND.BACK) THEN
+              JAC(1,:)=KERNEL(2:4)
+              DO K=1,3
+                JAC(2:4,K)=H(:,K,I)*C(J)+G(:,I)*G(K,J) &
+ &                         +G(K,I)*G(:,J)+C(I)*H(:,K,J)
+                JAC(5,K)=0.5D0*SUM(H(:,K,I)*G(:,J)+G(:,I)*H(:,K,J))
+                DX(K)=DX(K)+DM*SUM(KB(:,D)*JAC(:,K))
+              END DO
+            END IF
+          END DO
+        END DO
+      END DO
+    END DO
+    ! CORE(:,1) is AE minus pseudo core density, CORE(:,2) the complete
+    ! frozen-core positive tau. The smooth tau contains valence only.
+    COREJAC=0.D0
+    CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%CORE(:,1),R,F,DF,DDF)
+    FIELD(1,1)=FIELD(1,1)+Y00*F
+    FIELD(2:4,1)=FIELD(2:4,1)+Y00*DF*U
+    COREJAC(1,:)=Y00*DF*U
+    DO K=1,3
+      COREJAC(2:4,K)=Y00*((DDF-DF/R)*U*U(K)+DF/R*EYE(:,K))
+    END DO
+    CALL PAW_SKALA_RADIAL_SAMPLE(S%R,S%CORE(:,2),R,F,DF,DDF)
+    FIELD(5,1)=FIELD(5,1)+Y00*F
+    COREJAC(5,:)=Y00*DF*U
+    IF(PRESENT(DX).AND.BACK) THEN
+      DO K=1,3
+        DX(K)=DX(K)+SUM(KB(:,1)*COREJAC(:,K))
+      END DO
+    END IF
+    DO D=1,2
+      VALUE(:,D)=0.5D0*FIELD(:,1)
+      IF(S%NDIMD.EQ.2) THEN
+        SPIN=MERGE(1.D0,-1.D0,D.EQ.1)
+        VALUE(:,D)=VALUE(:,D)+0.5D0*SPIN*FIELD(:,2)
+      END IF
+    END DO
+  END SUBROUTINE PAW_SKALA_SOURCE_POINT
+
+  SUBROUTINE PAW_SKALA_SOURCE_IMAGES(S,CELL,AINV,CENTER,POINT,VALUE,BAR,DX,MOMENT)
+    TYPE(PAW_SKALA_SOURCE),INTENT(INOUT) :: S
+    REAL(8),INTENT(IN) :: CELL(3,3),AINV(3,3),CENTER(3),POINT(3)
+    REAL(8),INTENT(OUT) :: VALUE(5,2)
+    REAL(8),INTENT(IN),OPTIONAL :: BAR(5,2)
+    REAL(8),INTENT(OUT),OPTIONAL :: DX(3),MOMENT(3,3)
+    REAL(8) :: F(3),REACH(3),IMAGE(3),REL(3),V(5,2),D(3)
+    INTEGER :: LO(3),HI(3),N1,N2,N3,K
+    VALUE=0.D0
+    IF(PRESENT(DX)) DX=0.D0
+    IF(PRESENT(MOMENT)) MOMENT=0.D0
+    F=MATMUL(AINV,POINT-CENTER)
+    DO K=1,3
+      REACH(K)=S%RCUT*SQRT(SUM(AINV(K,:)**2))
+    END DO
+    LO=CEILING(F-REACH)
+    HI=FLOOR(F+REACH)
+    DO N3=LO(3),HI(3)
+      DO N2=LO(2),HI(2)
+        DO N1=LO(1),HI(1)
+          IMAGE=CENTER+MATMUL(CELL,REAL((/N1,N2,N3/),KIND=8))
+          REL=POINT-IMAGE
+          IF(SUM(REL**2).GE.S%RCUT**2) CYCLE
+          IF(PRESENT(BAR)) THEN
+            IF(PRESENT(DX).OR.PRESENT(MOMENT)) THEN
+              CALL PAW_SKALA_SOURCE_POINT(S,REL,V,BAR,D)
+              IF(PRESENT(DX)) DX=DX+D
+              IF(PRESENT(MOMENT)) THEN
+                DO K=1,3
+                  MOMENT(:,K)=MOMENT(:,K)+D*IMAGE(K)
+                END DO
+              END IF
+            ELSE
+              CALL PAW_SKALA_SOURCE_POINT(S,REL,V,BAR)
+            END IF
+          ELSE
+            CALL PAW_SKALA_SOURCE_POINT(S,REL,V)
+          END IF
+          VALUE=VALUE+V
+        END DO
+      END DO
+    END DO
+  END SUBROUTINE PAW_SKALA_SOURCE_IMAGES
 
   SUBROUTINE PAW_SKALA_ONECENTER_GRID_SIZE(GID,NR,RCUT,LEBEDEV_L &
  &                                         ,NRUSE,NANG,NPOINT)
