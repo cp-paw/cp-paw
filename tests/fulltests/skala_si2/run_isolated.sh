@@ -15,7 +15,7 @@ for value in "$radial" "$angular" "$orientations" "$shells"; do
   case "$value" in *[!0-9]*|'') echo 'Invalid quadrature size' >&2; exit 2 ;; esac
   test "$value" -gt 0 || exit 2
 done
-test "$angular" -le 53 || { echo 'Maximum supported Lebedev exactness is 53' >&2; exit 2; }
+test "$angular" -le 65 || { echo 'Maximum supported Lebedev exactness is 65' >&2; exit 2; }
 for value in "$cutoff" "$cdual"; do
   case "$value" in *[!0-9.eE+-]*|'') echo 'Invalid Fourier cutoff' >&2; exit 2 ;; esac
   awk -v value="$value" 'BEGIN { exit !(value + 0 > 0) }' || exit 2

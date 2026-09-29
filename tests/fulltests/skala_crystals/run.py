@@ -124,8 +124,8 @@ def main():
     if min(args.pbe_steps, args.skala_steps, args.radial, args.angular,
            args.kmesh, args.image_shells, args.orientations) < 1:
         parser.error("Step counts and grid settings must be positive")
-    if args.angular > 53:
-        parser.error("Maximum supported Lebedev exactness is 53")
+    if args.angular > 65:
+        parser.error("Maximum supported Lebedev exactness is 65")
     if not (math.isfinite(args.dt) and args.dt > 0 and math.isfinite(args.cutoff) and args.cutoff > 0):
         parser.error("Time step and cutoff must be positive and finite")
     executable, model = args.executable.resolve(strict=True), args.model.resolve(strict=True)

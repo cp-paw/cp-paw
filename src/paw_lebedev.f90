@@ -7,7 +7,7 @@
 
 ! **************************************************************************************************
 !> \brief   Generation of the spherical Lebedev grids.
-!>          All Lebedev grids were generated with a precision of at least
+!>          The original 14 grids were generated with a precision of at least
 !>          33 digits (Mathematica). Thus the Lebedev abscissas and weights
 !>          are accurate to 32 digits (quadruple precision).
 !> \version 1.0
@@ -36,6 +36,11 @@
 !>            12    41        20           590
 !>            13    47        25           770
 !>            14    53        30           974
+!>            15    59        36          1202
+!>            16    65        42          1454
+!>          The last two rules use 16-digit Lebedev-Laikov coefficients;
+!>          the 32-digit precision statement above applies to rules 1-14.
+!>          Source/attribution: tests/unittests/skala_reconstruction/LEBEDEV.md.
 !> \par Variables:
 !>        - lebedev_grid: Lebedev grids.
 !>                        l: Angular momentum quantum number l.
@@ -67,7 +72,7 @@ MODULE PAW_LEBEDEV_MODULE
                           nb = 24, &
                           nc = 24, &
                           nd = 48, &
-                          nlg = 14, &
+                          nlg = 16, &
                           max_np = 36
 
 ! **************************************************************************************************
@@ -87,19 +92,22 @@ MODULE PAW_LEBEDEV_MODULE
    REAL(8), DIMENSION(max_np)   :: r = 0.0_8
 
    PUBLIC :: paw_lebedev_get, paw_lebedev_size, paw_lebedev_test
+   INTEGER, PARAMETER, PUBLIC :: PAW_LEBEDEV_MAX_EXACTNESS = 65
 
 CONTAINS
 
 ! **************************************************************************************************
 !> \brief Return the size of the smallest grid exact through lmin.
 ! **************************************************************************************************
-   SUBROUTINE paw_lebedev_size(lmin, npoint)
+   SUBROUTINE paw_lebedev_size(lmin, npoint, lexact)
       INTEGER, INTENT(IN)  :: lmin
       INTEGER, INTENT(OUT) :: npoint
+      INTEGER, INTENT(OUT), OPTIONAL :: lexact
       INTEGER              :: ilg
 
       ilg = get_number_of_lebedev_grid(l=lmin)
       npoint = lebedev_grid(ilg)%n
+      IF (PRESENT(lexact)) lexact = lebedev_grid(ilg)%l
    END SUBROUTINE paw_lebedev_size
 
 ! **************************************************************************************************
@@ -181,6 +189,9 @@ CONTAINS
          ll(i) = lebedev_grid(i)%l
       END DO
       IF (PRESENT(l)) THEN
+         IF (l < 1 .OR. l > PAW_LEBEDEV_MAX_EXACTNESS) THEN
+            CALL paw_lebedev_abort("Lebedev minimum exactness must lie in 1..65")
+         END IF
 !      lgnum(:) = MINLOC(lebedev_grid(:)%n,MASK=(lebedev_grid(:)%l >= l))
          lgnum(:) = MINLOC(nn(:), MASK=(ll(:) >= l))
       ELSE IF (PRESENT(n)) THEN
@@ -385,6 +396,33 @@ CONTAINS
 
    END SUBROUTINE deallocate_lebedev_grids
 
+   ! Map the published orbit codes onto the existing symmetry generator.
+   SUBROUTINE load_laikov_orbit(lgnum, code, a, b, weight)
+      INTEGER, INTENT(IN) :: lgnum, code
+      REAL(8), INTENT(IN) :: a, b, weight
+      w(1) = weight
+      SELECT CASE (code)
+      CASE (0)
+         CALL load_sub_grid("A1", lgnum, 0)
+      CASE (1)
+         CALL load_sub_grid("A2", lgnum, 0)
+      CASE (2)
+         CALL load_sub_grid("A3", lgnum, 0)
+      CASE (3)
+         ! CP2K's B orbit takes the unequal coordinate of (a,a,c).
+         r(1) = SQRT(1.0_8 - 2.0_8*a*a)
+         CALL load_sub_grid("B", lgnum, 1)
+      CASE (4)
+         r(1) = a
+         CALL load_sub_grid("C", lgnum, 1)
+      CASE (5)
+         r(1:3) = [a, b, SQRT(1.0_8 - a*a - b*b)]
+         CALL load_sub_grid("D", lgnum, 3)
+      CASE DEFAULT
+         CALL paw_lebedev_abort("Invalid Lebedev-Laikov orbit type")
+      END SELECT
+   END SUBROUTINE load_laikov_orbit
+
 ! **************************************************************************************************
 !> \brief Load the coordinates and weights of the nonredundant Lebedev grid
 !>         points.
@@ -402,12 +440,12 @@ CONTAINS
 
 !   *** Load the angular momentum quantum numbers l of the Lebedev grids ***
 
-      lebedev_grid(1:nlg)%l = [3, 5, 7, 9, 11, 15, 17, 19, 23, 29, 35, 41, 47, 53]
+      lebedev_grid(1:nlg)%l = [3, 5, 7, 9, 11, 15, 17, 19, 23, 29, 35, 41, 47, 53, 59, 65]
 
 !   *** Load the total number of grid points for each Lebedev grid ***
 
       lebedev_grid(1:nlg)%n = [6, 14, 26, 38, 50, 86, 110, 146, 194, 302, 434, 590, 770, &
-                               974]
+                               974, 1202, 1454]
 
 !   *** Allocate storage for the Lebedev grids ***
 
@@ -886,6 +924,171 @@ CONTAINS
       r(35) = 5.67499754607437348401393912269671E-1_8
       r(36) = 7.16591845467023718833743633176626E-1_8
       CALL load_sub_grid("D", 14, 36)
+
+      ! Lebedev-Laikov numerical tables, as distributed in PySCF (Apache-2.0).
+      ! See LEBEDEV.md for pinned provenance and the original literature.
+
+      ! l = 59, 1202 points.
+      CALL load_laikov_orbit(15,0,0.0_8,0.0_8, &
+                             0.1105189233267572E-3_8)
+      CALL load_laikov_orbit(15,1,0.0_8,0.0_8, &
+                             0.9205232738090741E-3_8)
+      CALL load_laikov_orbit(15,2,0.0_8,0.0_8, &
+                             0.9133159786443561E-3_8)
+      CALL load_laikov_orbit(15,3,0.3712636449657089E-1_8,0.0_8, &
+                             0.3690421898017899E-3_8)
+      CALL load_laikov_orbit(15,3,0.9140060412262223E-1_8,0.0_8, &
+                             0.5603990928680660E-3_8)
+      CALL load_laikov_orbit(15,3,0.1531077852469906E+0_8,0.0_8, &
+                             0.6865297629282609E-3_8)
+      CALL load_laikov_orbit(15,3,0.2180928891660612E+0_8,0.0_8, &
+                             0.7720338551145630E-3_8)
+      CALL load_laikov_orbit(15,3,0.2839874532200175E+0_8,0.0_8, &
+                             0.8301545958894795E-3_8)
+      CALL load_laikov_orbit(15,3,0.3491177600963764E+0_8,0.0_8, &
+                             0.8686692550179628E-3_8)
+      CALL load_laikov_orbit(15,3,0.4121431461444309E+0_8,0.0_8, &
+                             0.8927076285846890E-3_8)
+      CALL load_laikov_orbit(15,3,0.4718993627149127E+0_8,0.0_8, &
+                             0.9060820238568219E-3_8)
+      CALL load_laikov_orbit(15,3,0.5273145452842337E+0_8,0.0_8, &
+                             0.9119777254940867E-3_8)
+      CALL load_laikov_orbit(15,3,0.6209475332444019E+0_8,0.0_8, &
+                             0.9128720138604181E-3_8)
+      CALL load_laikov_orbit(15,3,0.6569722711857291E+0_8,0.0_8, &
+                             0.9130714935691735E-3_8)
+      CALL load_laikov_orbit(15,3,0.6841788309070143E+0_8,0.0_8, &
+                             0.9152873784554116E-3_8)
+      CALL load_laikov_orbit(15,3,0.7012604330123631E+0_8,0.0_8, &
+                             0.9187436274321654E-3_8)
+      CALL load_laikov_orbit(15,4,0.1072382215478166E+0_8,0.0_8, &
+                             0.5176977312965694E-3_8)
+      CALL load_laikov_orbit(15,4,0.2582068959496968E+0_8,0.0_8, &
+                             0.7331143682101417E-3_8)
+      CALL load_laikov_orbit(15,4,0.4172752955306717E+0_8,0.0_8, &
+                             0.8463232836379928E-3_8)
+      CALL load_laikov_orbit(15,4,0.5700366911792503E+0_8,0.0_8, &
+                             0.9031122694253992E-3_8)
+      CALL load_laikov_orbit(15,5,0.9827986018263947E+0_8,0.1771774022615325E+0_8, &
+                             0.6485778453163257E-3_8)
+      CALL load_laikov_orbit(15,5,0.9624249230326228E+0_8,0.2475716463426288E+0_8, &
+                             0.7435030910982369E-3_8)
+      CALL load_laikov_orbit(15,5,0.9402007994128811E+0_8,0.3354616289066489E+0_8, &
+                             0.7998527891839054E-3_8)
+      CALL load_laikov_orbit(15,5,0.9320822040143202E+0_8,0.3173615246611977E+0_8, &
+                             0.8101731497468018E-3_8)
+      CALL load_laikov_orbit(15,5,0.9043674199393299E+0_8,0.4090268427085357E+0_8, &
+                             0.8483389574594331E-3_8)
+      CALL load_laikov_orbit(15,5,0.8912407560074747E+0_8,0.3854291150669224E+0_8, &
+                             0.8556299257311812E-3_8)
+      CALL load_laikov_orbit(15,5,0.8676435628462708E+0_8,0.4932221184851285E+0_8, &
+                             0.8803208679738260E-3_8)
+      CALL load_laikov_orbit(15,5,0.8581979986041619E+0_8,0.4785320675922435E+0_8, &
+                             0.8811048182425720E-3_8)
+      CALL load_laikov_orbit(15,5,0.8396753624049856E+0_8,0.4507422593157064E+0_8, &
+                             0.8850282341265444E-3_8)
+      CALL load_laikov_orbit(15,5,0.8165288564022188E+0_8,0.5632123020762100E+0_8, &
+                             0.9021342299040653E-3_8)
+      CALL load_laikov_orbit(15,5,0.8015469370783529E+0_8,0.5434303569693900E+0_8, &
+                             0.9010091677105086E-3_8)
+      CALL load_laikov_orbit(15,5,0.7773563069070351E+0_8,0.5123518486419871E+0_8, &
+                             0.9022692938426915E-3_8)
+      CALL load_laikov_orbit(15,5,0.7661621213900394E+0_8,0.6394279634749102E+0_8, &
+                             0.9158016174693465E-3_8)
+      CALL load_laikov_orbit(15,5,0.7553584143533510E+0_8,0.6269805509024392E+0_8, &
+                             0.9131578003189435E-3_8)
+      CALL load_laikov_orbit(15,5,0.7344305757559503E+0_8,0.6031161693096310E+0_8, &
+                             0.9107813579482705E-3_8)
+      CALL load_laikov_orbit(15,5,0.7043837184021765E+0_8,0.5693702498468441E+0_8, &
+                             0.9105760258970126E-3_8)
+      IF (nlgp /= 1202) CALL paw_lebedev_abort("Invalid Lebedev 1202-point table")
+
+      ! l = 65, 1454 points.
+      CALL load_laikov_orbit(16,0,0.0_8,0.0_8, &
+                             0.7777160743261247E-4_8)
+      CALL load_laikov_orbit(16,2,0.0_8,0.0_8, &
+                             0.7557646413004701E-3_8)
+      CALL load_laikov_orbit(16,3,0.3229290663413854E-1_8,0.0_8, &
+                             0.2841633806090617E-3_8)
+      CALL load_laikov_orbit(16,3,0.8036733271462222E-1_8,0.0_8, &
+                             0.4374419127053555E-3_8)
+      CALL load_laikov_orbit(16,3,0.1354289960531653E+0_8,0.0_8, &
+                             0.5417174740872172E-3_8)
+      CALL load_laikov_orbit(16,3,0.1938963861114426E+0_8,0.0_8, &
+                             0.6148000891358593E-3_8)
+      CALL load_laikov_orbit(16,3,0.2537343715011275E+0_8,0.0_8, &
+                             0.6664394485800705E-3_8)
+      CALL load_laikov_orbit(16,3,0.3135251434752570E+0_8,0.0_8, &
+                             0.7025039356923220E-3_8)
+      CALL load_laikov_orbit(16,3,0.3721558339375338E+0_8,0.0_8, &
+                             0.7268511789249627E-3_8)
+      CALL load_laikov_orbit(16,3,0.4286809575195696E+0_8,0.0_8, &
+                             0.7422637534208629E-3_8)
+      CALL load_laikov_orbit(16,3,0.4822510128282994E+0_8,0.0_8, &
+                             0.7509545035841214E-3_8)
+      CALL load_laikov_orbit(16,3,0.5320679333566263E+0_8,0.0_8, &
+                             0.7548535057718401E-3_8)
+      CALL load_laikov_orbit(16,3,0.6172998195394274E+0_8,0.0_8, &
+                             0.7554088969774001E-3_8)
+      CALL load_laikov_orbit(16,3,0.6510679849127481E+0_8,0.0_8, &
+                             0.7553147174442808E-3_8)
+      CALL load_laikov_orbit(16,3,0.6777315251687360E+0_8,0.0_8, &
+                             0.7564767653292297E-3_8)
+      CALL load_laikov_orbit(16,3,0.6963109410648741E+0_8,0.0_8, &
+                             0.7587991808518730E-3_8)
+      CALL load_laikov_orbit(16,3,0.7058935009831749E+0_8,0.0_8, &
+                             0.7608261832033027E-3_8)
+      CALL load_laikov_orbit(16,4,0.9955546194091857E+0_8,0.0_8, &
+                             0.4021680447874916E-3_8)
+      CALL load_laikov_orbit(16,4,0.9734115901794209E+0_8,0.0_8, &
+                             0.5804871793945964E-3_8)
+      CALL load_laikov_orbit(16,4,0.9275693732388626E+0_8,0.0_8, &
+                             0.6792151955945159E-3_8)
+      CALL load_laikov_orbit(16,4,0.8568022422795103E+0_8,0.0_8, &
+                             0.7336741211286294E-3_8)
+      CALL load_laikov_orbit(16,4,0.7623495553719372E+0_8,0.0_8, &
+                             0.7581866300989608E-3_8)
+      CALL load_laikov_orbit(16,5,0.5707522908892223E+0_8,0.4387028039889501E+0_8, &
+                             0.7538257859800743E-3_8)
+      CALL load_laikov_orbit(16,5,0.5196463388403083E+0_8,0.3858908414762617E+0_8, &
+                             0.7483517247053123E-3_8)
+      CALL load_laikov_orbit(16,5,0.4646337531215351E+0_8,0.3301937372343854E+0_8, &
+                             0.7371763661112059E-3_8)
+      CALL load_laikov_orbit(16,5,0.4063901697557691E+0_8,0.2725423573563777E+0_8, &
+                             0.7183448895756934E-3_8)
+      CALL load_laikov_orbit(16,5,0.3456329466643087E+0_8,0.2139510237495250E+0_8, &
+                             0.6895815529822191E-3_8)
+      CALL load_laikov_orbit(16,5,0.2831395121050332E+0_8,0.1555922309786647E+0_8, &
+                             0.6480105801792886E-3_8)
+      CALL load_laikov_orbit(16,5,0.2197682022925330E+0_8,0.9892878979686097E-1_8, &
+                             0.5897558896594636E-3_8)
+      CALL load_laikov_orbit(16,5,0.1564696098650355E+0_8,0.4598642910675510E-1_8, &
+                             0.5095708849247346E-3_8)
+      CALL load_laikov_orbit(16,5,0.6027356673721295E+0_8,0.3376625140173426E+0_8, &
+                             0.7536906428909755E-3_8)
+      CALL load_laikov_orbit(16,5,0.5496032320255096E+0_8,0.2822301309727988E+0_8, &
+                             0.7472505965575118E-3_8)
+      CALL load_laikov_orbit(16,5,0.4921707755234567E+0_8,0.2248632342592540E+0_8, &
+                             0.7343017132279698E-3_8)
+      CALL load_laikov_orbit(16,5,0.4309422998598483E+0_8,0.1666224723456479E+0_8, &
+                             0.7130871582177445E-3_8)
+      CALL load_laikov_orbit(16,5,0.3664108182313672E+0_8,0.1086964901822169E+0_8, &
+                             0.6817022032112776E-3_8)
+      CALL load_laikov_orbit(16,5,0.2990189057758436E+0_8,0.5251989784120085E-1_8, &
+                             0.6380941145604121E-3_8)
+      CALL load_laikov_orbit(16,5,0.6268724013144998E+0_8,0.2297523657550023E+0_8, &
+                             0.7550381377920310E-3_8)
+      CALL load_laikov_orbit(16,5,0.5707324144834607E+0_8,0.1723080607093800E+0_8, &
+                             0.7478646640144802E-3_8)
+      CALL load_laikov_orbit(16,5,0.5096360901960365E+0_8,0.1140238465390513E+0_8, &
+                             0.7335918720601220E-3_8)
+      CALL load_laikov_orbit(16,5,0.4438729938312456E+0_8,0.5611522095882537E-1_8, &
+                             0.7110120527658118E-3_8)
+      CALL load_laikov_orbit(16,5,0.6419978471082389E+0_8,0.1164174423140873E+0_8, &
+                             0.7571363978689501E-3_8)
+      CALL load_laikov_orbit(16,5,0.5817218061802611E+0_8,0.5797589531445219E-1_8, &
+                             0.7489908329079234E-3_8)
+      IF (nlgp /= 1454) CALL paw_lebedev_abort("Invalid Lebedev 1454-point table")
 
       init_lebedev_grids_done = .TRUE.
 

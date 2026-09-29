@@ -340,6 +340,17 @@ deterministic rotations of the same Lebedev rule and preserve the normalized
 quadrature weights. They expose and reduce rotational integration error from
 nonlinear meta-GGA features.
 
+Angular exactness is a minimum: the library selects the next supported rule,
+up to 65. The largest rules are 53 (974 points), 59 (1202 points), and 65
+(1454 points). In particular, `LEBEDEVEXACTNESS=64` selects order 65; the
+protocol reports both the requested and actual exactness and the angular
+point count. At 200 radial points and one orientation this creates 290800
+candidate rows per atom, versus 194800 for order 53, before zero-weight
+filtering. The roughly 49% increase in quadrature rows also increases model
+work and memory demand. It does not replace native-grid cutoff convergence.
+See [`LEBEDEV.md`](../../tests/unittests/skala_reconstruction/LEBEDEV.md) for
+the coefficient provenance, polynomial tests, and periodic-volume results.
+
 The 300/53/8 setting is a memory-intensive reference grid: Skala's nonlocal
 atom layers require complete atom blocks, so peak accelerator memory grows
 with the number of orientations. It required about 74 GB on the tested CUDA

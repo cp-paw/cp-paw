@@ -116,12 +116,17 @@ Model-free Si2 constant-field checks:
 | 1 / 400 / 53 / 1 | 5.606297863e-5 | -0.006812607749 | Pass |
 | 1 / 200 / 53 / 3 | 2.600373546e-5 | -0.003484566173 | Pass |
 | 2 / 200 / 53 / 1 | 1.809252458e-4 | -0.021658174220 | **Fail** |
+| 1 / 200 / 59 / 1 | 2.312483851e-5 | -0.002819803756 | Pass |
+| 1 / 200 / 65 / 1 | 9.684943826e-6 | -0.001185767227 | Pass |
+| 2 / 200 / 65 / 1 | 4.166476066e-5 | -0.005028693319 | Pass |
 
 Increasing radial resolution alone is ineffective here. Increasing the image
 support does not guarantee a smaller finite-quadrature error at a fixed
 angular rule. The failed two-shell test is retained, not used to select a
 convenient shell default. More angular refinement and model-energy convergence
-remain required.
+remain required. The extended order-65 rule reduces the two-shell integration
+error below the stated tolerance; it does not remove the need for separate
+image-shell and energy/force convergence tests.
 
 Applied Skala Si2 checks use the periodic two-atom diamond primitive cell,
 eight k points, 200 radial points, angular exactness 53 (974 directions),
@@ -172,11 +177,43 @@ paw_skala_partition.f90 e534c00660392f2025c49de6a378ab49eea8e467a53be4caf6ef49e2
 paw_waves1.f90 d11057f68d79ee531705a92ff5a03f4131e7f83ee77d6d30ac1f73a00e752b66
 ```
 
-The new crystal driver records all three electron-count routes; its four
+The new crystal driver records all three electron-count routes; its five
 Python tests pass. The three molecular-crystal calculations in the earlier
 table have **not yet been repeated with this new partition**. The new
 end-to-end MPI check is also pending. The NVHPC/LibTorch executable still
 emits a multiple-OpenMP-runtime warning; these checks used one OpenMP thread.
+
+### Higher Lebedev rules
+
+Orders 59 (1202 points) and 65 (1454 points) were added without changing the
+default 53. A requested minimum of 64 selects order 65. The independent
+polynomial tests pass with both GNU/Terok and NVHPC/Spark; see
+[`LEBEDEV.md`](../../unittests/skala_reconstruction/LEBEDEV.md) for coefficient
+provenance, moment errors and the model-free angular sweep.
+
+The applied Si2 check was repeated on Spark with requested exactness 64,
+200 radial points, one orientation, one image shell, EPWPSI=20 and eight
+k points. The protocol confirms actual order 65 and 1454 directions. Like
+the order-53 comparison, this is a cold near-zero-time-step integration probe,
+not an electronically stationary state:
+
+| Actual angular order | Grid minus all-electron trace | Relative volume error | Model XC energy (H) |
+| ---: | ---: | ---: | ---: |
+| 53 | 5.725362595e-4 | 5.606297506e-5 | -41.4437984610168 |
+| 65 | 8.741174813e-5 | 9.684943808e-6 | -41.4435426565372 |
+
+The order-65 overlap trace is 28 electrons; the integrated atom-grid count
+is 28.0000874117481. The latter error is about 6.55 times smaller than at
+order 53, without density normalization. The model XC energy changes by
+2.558044796e-4 H, so these two grids alone do not establish energy convergence.
+The maximum reported adjoint/operator-contraction error is 4.781e-15, all
+tested strain tensors are finite, and the integration test passes. These
+checks are not stationary-state force/stress finite differences.
+
+Evidence: Spark `validation/si2-periodic-lebedev64`, with executable SHA-256
+`ef88b93117beed97c3d36e159aba812d52670beb70f0e4623a059b881b44e153` and the
+same CUDA model as above. The default remains 53 pending a broader convergence
+study; the new orders are selectable on both CPU and GPU.
 
 ### Remaining acceptance gates
 

@@ -47,6 +47,13 @@ class CrystalDriverTest(unittest.TestCase):
             with self.subTest(label=label), self.assertRaises(ValueError):
                 run.check_electron_counts(dict(record, **{label: 1.e-4}))
 
+    def test_higher_angular_request_is_preserved(self):
+        args = SimpleNamespace(skala_steps=1, pbe_steps=180, device="CUDA",
+                               radial=200, angular=64, image_shells=1, orientations=1,
+                               dt=5.0, cutoff=40.0)
+        # The Fortran grid library, not the input writer, rounds 64 up to 65.
+        self.assertIn("LEBEDEVEXACTNESS=64", run.control(args, True))
+
 
 if __name__ == "__main__":
     unittest.main()

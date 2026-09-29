@@ -150,6 +150,13 @@ the native density grid additionally depends on `EPWPSI` and `CDUAL`. With
 normalization errors from atom-grid quadrature errors. Details and model-free
 tests are in [`tests/unittests/skala_reconstruction/README.md`](tests/unittests/skala_reconstruction/README.md).
 
+`LEBEDEVEXACTNESS` requests a minimum algebraic exactness, not a point count.
+The supported rules now extend through 65: 53 uses 974 angular points, 59 uses
+1202, and 65 uses 1454 per radial shell and orientation. A request of 64 selects
+65 automatically. The default remains 53; higher resolution must be checked
+for the system of interest. Rule provenance and tests are documented in
+[`LEBEDEV.md`](tests/unittests/skala_reconstruction/LEBEDEV.md).
+
 The joint-source reconstruction supersedes the original owner-only hybrid-grid
 prototype. Its scientific validation is in progress: the old Si2 force/stress
 and timing results do not validate this new discretization or resolve the

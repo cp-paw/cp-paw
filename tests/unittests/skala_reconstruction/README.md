@@ -13,6 +13,11 @@ self-image descriptors, skew cells, integer lattice translations, and
 changes of the nearest-image enumeration. The sum over all atom/image
 weights must be one. These tests do not evaluate the neural model.
 
+The same suite tests the Lebedev rules through order 65, including analytic
+Cartesian moments and rounding a requested exactness of 64 to the 1454-point
+rule. See [LEBEDEV.md](LEBEDEV.md) for provenance and angular-convergence
+results from the model-free integration probe.
+
 ## Periodized Becke weights
 
 The previous common finite cluster gave its edge images inequivalent
