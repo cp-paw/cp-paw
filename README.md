@@ -169,7 +169,7 @@ CP-PAW so they cannot collide with LibTorch's embedded BLAS. Ordinary builds
 without Skala retain their existing BLAS linking. See the
 [bridge notes](src/SkalaBridge/README.md) for the ABI details and validation limits.
 
-The latter creates `bin/skala_cpu_fast/paw_skala_cpu_fast.x` and
+The `paw_install` command creates `bin/skala_cpu_fast/paw_skala_cpu_fast.x` and
 `bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x`. It never downloads
 PyTorch, LibTorch, FTorch, or a model; dependency setup remains an explicit
 preceding step. A CUDA bridge can instead be composed with an NVIDIA target:

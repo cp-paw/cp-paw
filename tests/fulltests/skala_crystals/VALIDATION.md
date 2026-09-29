@@ -51,6 +51,21 @@ Every row completed successfully on Spark. The CO2 XC energy changes by about
 energies. Logs/results are in `validation/crystals-integration` and
 `validation/co2-grid-refinement` on Spark.
 
+A repeat with the volume diagnostic and exact-zero pair-loop shortcuts gives
+the same three coarse-grid XC energies to all digits printed above. All three
+operator checks pass. Its constant-field diagnostics are:
+
+| Crystal, 96/17/1 | Relative volume error |
+| --- | ---: |
+| CO2 | -0.2523% |
+| NH3 | -0.4837% |
+| Urea | +0.1199% |
+
+These errors mix angular/radial and finite-image effects; they must not be
+attributed to the image layout alone. The runs completed in
+`validation/crystals-volume-check`; their provenance files record structure,
+executable and model hashes. All tests at this checkpoint have finished.
+
 ## Accuracy failure isolated without Skala
 
 The constant-field volume integral on the Si2 primitive cell fails even
