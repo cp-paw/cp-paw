@@ -34,9 +34,10 @@ endif
 #-------------------------------------------------------------------------------
 #-- prepare lists
 #-------------------------------------------------------------------------------
-#_______TOOLS takes all executables except for paw.x____________________________
-export TOOLS=$(filter-out paw.x, $(wildcard *.x))
-export MODLIST=$(wildcard *.mod)
+# Only paw_*.x matches the tool installation rule; standalone test binaries do not.
+export TOOLS=$(wildcard paw_*.x)
+# A reused build directory can contain dangling links to optional module files.
+export MODLIST=$(foreach module,$(wildcard *.mod),$(if $(realpath $(module)),$(module)))
 export SCRIPTS=$(wildcard *.sh)
 
 # $(info TOOLS=$(TOOLS))
@@ -129,4 +130,3 @@ $(basename $(addprefix ${BINDIR}/, $(PTOOLS))): % : %.x
 
 $(basename $(addprefix ${BINDIR}/, $(SCRIPTS))): % : %.sh 
 	ln -sf $< $@
-
