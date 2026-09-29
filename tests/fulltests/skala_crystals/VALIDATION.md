@@ -178,11 +178,57 @@ paw_skala_partition.f90 e534c00660392f2025c49de6a378ab49eea8e467a53be4caf6ef49e2
 paw_waves1.f90 d11057f68d79ee531705a92ff5a03f4131e7f83ee77d6d30ac1f73a00e752b66
 ```
 
-The new crystal driver records all three electron-count routes; its five
-Python tests pass. The three molecular-crystal calculations in the earlier
-table have **not yet been repeated with this new partition**. The new
-end-to-end MPI check is also pending. The NVHPC/LibTorch executable still
-emits a multiple-OpenMP-runtime warning; these checks used one OpenMP thread.
+At this checkpoint the crystal repeats and current-build MPI checks were
+still pending. The completed follow-up checks are recorded below. The
+NVHPC/LibTorch executable still emits a multiple-OpenMP-runtime warning;
+these checks used one OpenMP thread without suppressing the warning.
+
+### Molecular crystals with the current partition
+
+All three structures have now completed applied Skala snapshots with the
+current periodic partition and electronic diagnostics. CO2 and NH3 use the
+GNU CPU-only build on Terok; urea uses Spark's NVHPC/NVPL binary in explicit
+CPU mode (`CPPAW_GPU_MODE=off`, `DEVICE='CPU'`, no visible CUDA devices).
+All use eight MPI ranks, one OpenMP/OpenBLAS thread per rank, the same CPU
+model export, 96 radial points, angular order 17, one orientation and one
+image shell. The unchanged preparation is 180 PBE steps, Gamma sampling,
+40 Ry, no D3, followed by one near-zero-time-step Skala snapshot.
+
+| Crystal / CPU host | Model XC energy (H) | All-electron trace | Grid minus trace | Relative volume error | Occupied maximum residual (H) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| CO2 / Terok | -89.9746595603607 | 88 | -3.879892690e-2 | -0.45066585% | 8.520398811e-2 |
+| NH3 / Terok | -32.0491171650467 | 40 | +5.914619114e-3 | -0.64071940% | 7.563157745e-2 |
+| Urea / Spark | -58.6138316838099 | 64 | -1.985967666e-3 | -0.09182597% | 7.786199297e-2 |
+
+The native pseudo-density grid and reciprocal norm agree within 2.843e-14
+electrons. The independent PAW valence trace agrees with occupations within
+1.422e-14 electrons. The largest tested adjoint/operator-contraction error is
+2.843e-14, overlap error 1.111e-15 and Hamiltonian Hermiticity error
+1.321e-15 H. All three completed protocols pass diagnostic-consistency checks.
+None passes the 1e-4 relative-volume target at this coarse quadrature; their
+Skala electronic states are also not stationary. These results therefore
+remain integration probes, not physical reference energies or an AlN EOS fix.
+No weights, densities or energies were adjusted to remove the errors.
+
+Evidence: Terok `validation/crystals-periodic-cpu-mpi8/{CO2,NH3}` and Spark
+`validation/crystal-urea-spark-cpu-mpi8/urea`. Their executable/model hashes
+are the same as the CPU MPI checks below; per-case `provenance.json` files
+also record structure hashes and settings. Spark's urea protocol SHA-256 is
+`8871324e691b477ace386c8938fab1c3290c6381a129876a2558c061dd01e516`.
+
+The original serial Terok CO2 attempt was intentionally stopped to switch to
+MPI and is not counted as a pass. After CO2 and NH3 completed, the redundant
+Terok urea attempt was stopped because urea was already running on Spark;
+the Terok batch exit 143 is a cancellation, not three completed cases.
+All partial logs are retained. Spark's numerical urea run finished normally,
+but its initially loaded Python harness exited 1 on a field-name collision
+between `PARTITION VOLUME` and `PARTITION VOLUME RELATIVE ERROR`. The parser
+was corrected, and all 22 scalar fields in each completed crystal protocol
+were rechecked without rerunning or modifying the calculations. Its eight
+unit tests now cover both that collision and hidden/nonfinite earlier values.
+The successful Spark reanalysis is saved separately in
+`validation/crystal-urea-spark-cpu-mpi8-recheck.log`; the initial failure log
+has not been overwritten.
 
 ### Higher Lebedev rules
 
@@ -308,6 +354,14 @@ Evidence: `validation/si2-current-spark-gpu-mpi2.log` and
 check, not multi-GPU/distributed-model validation, stationary-state finite
 differences, or the mixed-OpenMP-runtime acceptance limitation. It ran alongside
 a separate CPU crystal calculation and must not be used as a timing benchmark.
+
+Comparing the one-rank CPU and GPU protocols above, with identical structure,
+restart and quadrature, gives energy difference 1.539133e-7 H, force difference
+1.157903e-9 H/bohr, strain-derivative difference 5.866493e-9 H,
+smooth-operator norm difference 1.818030e-6, and electronic-diagnostic difference
+3.572231e-9 H. These are observed backend differences for the float32 model,
+not bitwise equivalence, stationary-state force accuracy, or a new reference
+energy. The CPU and CUDA model exports have distinct hashes as recorded above.
 
 Two bounded electronic-relaxation probes were also completed from that PBE
 restart, with `DT=5`, `MPSI=100`, fixed nuclei/cell and applied Skala:

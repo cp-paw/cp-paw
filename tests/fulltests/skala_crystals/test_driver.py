@@ -41,6 +41,16 @@ class CrystalDriverTest(unittest.TestCase):
         self.assertEqual(run.last_value("COMPOSITE MINUS TRACE 0.1\n",
                                         "COMPOSITE MINUS TRACE"), .1)
 
+    def test_diagnostic_names_do_not_shadow_longer_names(self):
+        text = ("PARTITION VOLUME 1200.0\n"
+                "PARTITION VOLUME RELATIVE ERROR -1.0e-3\n")
+        self.assertEqual(run.last_value(text, "PARTITION VOLUME"), 1200.)
+        self.assertEqual(run.last_value(text, "PARTITION VOLUME RELATIVE ERROR"), -.001)
+        text += "PARTITION VOLUME RELATIVE ERROR NaN\n"
+        self.assertEqual(run.last_value(text, "PARTITION VOLUME"), 1200.)
+        with self.assertRaises(ValueError):
+            run.last_value(text, "PARTITION VOLUME RELATIVE ERROR")
+
     def test_probe_time_step_has_real_mantissa(self):
         args = SimpleNamespace(skala_steps=1, pbe_steps=180, device="CUDA",
                                radial=96, angular=17, image_shells=2, orientations=3,

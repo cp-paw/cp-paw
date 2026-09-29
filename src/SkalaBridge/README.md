@@ -170,6 +170,12 @@ default to a step of `3e-4` and an absolute tolerance of `2e-3`.
 stress, and MPI drivers for quadrature-convergence checks.
 `SKALA_DEVICE=CPU|CUDA|AUTO` selects the model device without hiding CUDA from
 an otherwise GPU-enabled CP-PAW executable.
+For CPU execution of a CUDA-capable binary, set both `CPPAW_GPU_MODE=off`
+for the PAW acceleration libraries and `DEVICE='CPU'` in `!SKALA` (or
+`SKALA_DEVICE=CPU` in these test drivers), using the CPU model export.
+The two controls are independent: disabling PAW GPU acceleration alone does
+not prevent an `AUTO` Skala model from selecting CUDA. This runtime CPU mode
+is distinct from the GPU-library-free GNU installation described below.
 `SKALA_MPI_NORM_TOLERANCE` controls the separate absolute tolerance for the
 large smooth-operator L2 diagnostics and defaults to `2e-5`.
 `quadrature_convergence.sh` defaults to radial counts `100 200 400` at Lebedev

@@ -15,6 +15,17 @@ import subprocess
 HERE = Path(__file__).resolve().parent
 SPECIES = {"H": (1, "1 1", 1.008), "C": (4, "2 2 1", 12.011),
            "N": (5, "2 2 1", 14.007), "O": (6, "2 2 1", 15.999)}
+DIAGNOSTIC_LABELS = (
+    "MODEL XC ENERGY", "COMPOSITE ELECTRONS", "COMPOSITE POSITIVE TAU",
+    "PARTITION VOLUME", "EXACT CELL VOLUME", "PARTITION VOLUME RELATIVE ERROR",
+    "PS RECIPROCAL NORM TRACE", "PS NATIVE GRID ELECTRONS", "PS GRID MINUS TRACE",
+    "PAW VALENCE TRACE", "PAW ALL ELECTRON TRACE", "TRACE MINUS OCCUPATIONS",
+    "OCCUPATION ELECTRONS", "COMPOSITE MINUS TRACE",
+    "SKALA OCCUPIED RESIDUAL RMS", "SKALA OCCUPIED RESIDUAL MAX",
+    "SKALA OCCUPATION COMMUTATOR MAX", "SKALA SCF OVERLAP ERROR",
+    "SKALA HAMILTONIAN HERMITICITY", "GRAD ADJOINT DIFFERENCE",
+    "TAU OPERATOR DIFFERENCE", "ONE-CENTER MATRIX DIFFERENCE",
+)
 
 
 def read_structure(path):
@@ -70,7 +81,12 @@ def control(args, skala):
 
 
 def diagnostic_values(text, label):
-    matches = re.findall(r"^" + re.escape(label) + r"(?:[ \t]+([^\r\n]*))?$", text, re.M)
+    # Prefer complete field names over a shorter prefix (e.g. PARTITION VOLUME).
+    names = sorted({label, *(name for name in DIAGNOSTIC_LABELS
+                             if name.startswith(label + " "))}, key=len, reverse=True)
+    pattern = re.compile(r"^(" + "|".join(re.escape(name) for name in names)
+                         + r")(?=$|[ \t])([^\r\n]*)$", re.M)
+    matches = [raw.strip() for name, raw in pattern.findall(text) if name == label]
     if not matches:
         raise ValueError(f"Missing diagnostic: {label}")
     values = []
@@ -182,15 +198,7 @@ def main():
         print(f"{case}: Skala ({args.skala_steps} steps)", flush=True)
         text = execute(executable, work, "skala", args.mpi_ranks, args.mpiexec)
         record = {"case": case}
-        for label in ["MODEL XC ENERGY", "COMPOSITE ELECTRONS", "COMPOSITE POSITIVE TAU",
-                      "PARTITION VOLUME", "EXACT CELL VOLUME", "PARTITION VOLUME RELATIVE ERROR",
-                      "PS RECIPROCAL NORM TRACE", "PS NATIVE GRID ELECTRONS", "PS GRID MINUS TRACE",
-                      "PAW VALENCE TRACE", "PAW ALL ELECTRON TRACE", "TRACE MINUS OCCUPATIONS",
-                      "OCCUPATION ELECTRONS", "COMPOSITE MINUS TRACE",
-                      "SKALA OCCUPIED RESIDUAL RMS", "SKALA OCCUPIED RESIDUAL MAX",
-                      "SKALA OCCUPATION COMMUTATOR MAX", "SKALA SCF OVERLAP ERROR",
-                      "SKALA HAMILTONIAN HERMITICITY",
-                      "GRAD ADJOINT DIFFERENCE", "TAU OPERATOR DIFFERENCE", "ONE-CENTER MATRIX DIFFERENCE"]:
+        for label in DIAGNOSTIC_LABELS:
             tolerance = 1.e-8 if "DIFFERENCE" in label else None
             record[label] = last_value(text, label, tolerance=tolerance)
         check_electron_counts(record)
