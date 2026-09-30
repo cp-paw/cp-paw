@@ -488,7 +488,7 @@ CONTAINS
     REAL(8) :: C(S%LMNX),G(3,S%LMNX),H(3,3,S%LMNX)
     REAL(8) :: FIELD(5,S%NDIMD),KB(5,S%NDIMD),KERNEL(5),JAC(5)
     REAL(8) :: DC(S%LMNX),DG(3,S%LMNX)
-    REAL(8) :: SGN,SPIN,DM
+    REAL(8) :: SGN,SPIN,DM,ADJOINT
     INTEGER :: Q,I,J,D,K
     LOGICAL :: BACK,GEOMETRY
     BACK=PRESENT(BAR)
@@ -531,12 +531,16 @@ CONTAINS
       END DO
       IF(BACK) THEN
         DO J=1,S%LMNX
-          DO I=1,S%LMNX
+          ! The real primitive kernel is symmetric, even for complex DM/DH.
+          ! Preserve both pre-existing DH entries, which need not be symmetric.
+          DO I=1,J
             KERNEL(1)=C(I)*C(J)
             KERNEL(2:4)=G(:,I)*C(J)+C(I)*G(:,J)
             KERNEL(5)=0.5D0*SUM(G(:,I)*G(:,J))
             DO D=1,S%NDIMD
-              S%DH(I,J,D)=S%DH(I,J,D)+SGN*SUM(KB(:,D)*KERNEL)
+              ADJOINT=SGN*SUM(KB(:,D)*KERNEL)
+              S%DH(I,J,D)=S%DH(I,J,D)+ADJOINT
+              IF(I.NE.J) S%DH(J,I,D)=S%DH(J,I,D)+ADJOINT
             END DO
           END DO
         END DO
@@ -1242,7 +1246,7 @@ CONTAINS
           DO I=1,N
             ! Deliberately nonsymmetric and complex to test the exact contraction.
             S%DM(I,J,D)=CMPLX(SIN(REAL(I+2*J+D,KIND=8)),0.03D0*(I-J),KIND=8)
-            INITIAL(I,J,D)=CMPLX(0.01D0*(I+J),0.02D0*(I-J),KIND=8)
+            INITIAL(I,J,D)=CMPLX(0.01D0*(I+2*J),0.02D0*(I-J),KIND=8)
           END DO
         END DO
       END DO
