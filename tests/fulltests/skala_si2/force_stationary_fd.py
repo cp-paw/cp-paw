@@ -158,6 +158,8 @@ def compare(center, minus, plus, step, atom, axis, tolerance=None, *, rigid_tran
 def control(args):
     tolerance = getattr(args, "orthogonality_tolerance", None)
     ortho = "" if tolerance is None else f" ORTHOTOL={tolerance:.16e}"
+    dual = getattr(args, "density_dual", 2.)
+    dual_text = "2" if dual == 2. else f"{dual:.16e}"
     return f"""!CONTROL
  !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={args.block_steps} NWRITE=10 START=F
           RSTRTTYPE='STATIC' AUTOCONV=1000 !END
@@ -167,7 +169,7 @@ def control(args):
    LEBEDEVORIENTATIONS=1 IMAGESHELLS=1 APPLY=T CHECK=T
   !END
  !END
- !FOURIER EPWPSI={args.cutoff:.16e} CDUAL=2 !END
+ !FOURIER EPWPSI={args.cutoff:.16e} CDUAL={dual_text} !END
  !CELL MOVE=F FRIC=0.0 M=1.E30 !END
  !PSIDYN SAFEORTHO=T{ortho} MPSI={args.mass:.16e} MPSICG2={args.mass_g2:.16e}
          FRIC={args.friction:.16e} !END
@@ -251,6 +253,8 @@ def main():
     parser.add_argument("--radial-points", type=int, default=96)
     parser.add_argument("--lebedev-exactness", type=int, default=17)
     parser.add_argument("--cutoff", type=float, default=20)
+    parser.add_argument("--density-dual", type=float, default=2,
+                        help="Density/wavefunction cutoff ratio, independently refining the FFT grid")
     parser.add_argument("--dt", type=float, default=5)
     parser.add_argument("--mass", type=float, default=25)
     parser.add_argument("--mass-g2", type=float, default=0.3166286988823056)
@@ -260,7 +264,7 @@ def main():
     parser.add_argument("--jobs", type=int, default=1, help="Independent serial processes, not MPI ranks")
     parser.add_argument("--timeout", type=float, default=3600, help="Seconds per relaxation block")
     args = parser.parse_args()
-    positive = [args.residual_tolerance, args.commutator_tolerance, args.cutoff,
+    positive = [args.residual_tolerance, args.commutator_tolerance, args.cutoff, args.density_dual,
                 args.dt, args.mass, args.mass_g2, args.friction, args.timeout, *args.steps]
     if args.absolute_tolerance is not None:
         positive.append(args.absolute_tolerance)

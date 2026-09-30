@@ -88,6 +88,21 @@ class StationaryForceTest(unittest.TestCase):
         self.assertNotIn("ORTHOTOL", text)
         args.orthogonality_tolerance = 1e-12
         self.assertIn("ORTHOTOL=9.9999999999999998e-13", force_fd.control(args))
+        self.assertIn("CDUAL=2 !END", force_fd.control(args))
+        args.density_dual = 4.
+        text = force_fd.control(args)
+        self.assertIn("EPWPSI=2.0000000000000000e+01 CDUAL=4.0000000000000000e+00", text)
+
+    def test_invalid_density_duals_fail_before_creating_output(self):
+        arguments = ["force_stationary_fd.py"]
+        for key in ("executable", "model", "restart", "structure", "output"):
+            arguments.extend(["--" + key, "unused"])
+        for value in ("0", "-2", "nan", "inf"):
+            with self.subTest(value=value), redirect_stderr(io.StringIO()), \
+                    patch.object(sys, "argv", arguments + ["--density-dual", value]), \
+                    self.assertRaises(SystemExit) as error:
+                force_fd.main()
+            self.assertEqual(error.exception.code, 2)
 
     def test_invalid_orthogonality_tolerances_fail_before_creating_output(self):
         arguments = ["force_stationary_fd.py"]

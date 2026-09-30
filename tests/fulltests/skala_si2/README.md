@@ -132,6 +132,11 @@ gates. This tests the derivative of the discrete energy under translation,
 not translational invariance itself. A nonzero total force still requires
 grid refinement even when it agrees with the energy derivative.
 `--center-displacement` now translates the entire reference crystal.
+Use `--density-dual` to vary `CDUAL` independently of the wavefunction cutoff,
+radial quadrature and angular rule. Its diagnostic default is 2, while 4
+retains density Fourier components through twice the wavefunction G cutoff.
+Neither value guarantees convergence of a nonlinear functional or atom-grid
+interpolation. Changing only `--cutoff` would change both bases at once.
 
 The older `force_fd.sh` and `stress_fd.sh` are single-step restart probes.
 They do not reconverge displaced orbitals and do not certify stationary
