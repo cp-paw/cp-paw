@@ -306,7 +306,9 @@ big.mk : $(addsuffix .mk, $(PAWLIST) $(LIBLIST) $(TOOLS))
 	echo '##                       ' >> $@
 	cat $(OLIST:.o=.mk)              >> $@
 
+# Refresh object timestamps after the recursive build before testing link targets.
 $(OLIST) : objects
+	@test -f $@
 
 .PHONY: objects
 objects :  $(addsuffix .f90pp , $(BIGLIST)) big.mk cppaw_version.info 
@@ -370,5 +372,3 @@ libpawfull.a: $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
 	$(AR) -r -c libpawfull.a $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
-
-

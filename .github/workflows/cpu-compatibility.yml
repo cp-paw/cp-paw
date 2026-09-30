@@ -57,6 +57,8 @@ jobs:
             -f ../../tests/unittests/orthogonality_tolerance/driver.mk orthogonality-tolerance-test
           python3 tests/unittests/orthogonality_tolerance/input_checks.py bin/Build_fast/paw.x
           python3 tests/unittests/orthogonality_tolerance/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
+      - name: Check incremental rebuild relinks the executable
+        run: python3 tests/buildtools/check_incremental_link.py bin/Build_fast
 
   skala-cpu:
     runs-on: ubuntu-latest
