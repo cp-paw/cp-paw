@@ -41,6 +41,7 @@ python3 -m py_compile \
   tests/profile/si64/nsys_sql_summary.py
 
 python3 tests/profile/si64/check_benchmark_tools.py
+python3 tests/buildtools/check_failed_build.py
 grep -q "!OCCUPATIONS EMPTY=256 NSPIN=1" tests/profile/si64/si2_ozaki.strc
 
 tmpdir=$(mktemp -d)
