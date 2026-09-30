@@ -1,5 +1,5 @@
 import copy
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 import io
 import json
 from pathlib import Path
@@ -42,6 +42,65 @@ PROGRAM FINISHED
 
 
 class StationaryForceTest(unittest.TestCase):
+    def test_all_cartesian_tasks_share_only_the_center(self):
+        args = SimpleNamespace(all_cartesian=True, rigid_translation=False,
+                               center_displacement=0., atom=2, axis=1, steps=(3e-5, 1e-5))
+        tasks, comparisons = force_fd.displacement_tasks(args, 2)
+        self.assertEqual(len(tasks), 26)
+        self.assertEqual(len({row[0] for row in tasks}), 26)
+        self.assertEqual(len(comparisons), 12)
+        self.assertEqual([row[0] for row in tasks if row[1] == 0.], ["center", "center-repeat"])
+        indexed = {row[0]: row[1:] for row in tasks}
+        for minus, plus, h, atom, axis in comparisons:
+            self.assertEqual(indexed[minus], (-h, atom, axis))
+            self.assertEqual(indexed[plus], (h, atom, axis))
+        for field, value in (("rigid_translation", True), ("center_displacement", 0.001)):
+            changed = copy.copy(args)
+            setattr(changed, field, value)
+            with self.assertRaises(ValueError):
+                force_fd.displacement_tasks(changed, 2)
+        args.all_cartesian = False
+        args.center_displacement = 0.002
+        tasks, comparisons = force_fd.displacement_tasks(args, 2)
+        self.assertEqual(tasks[0], ("center", 0.002, 2, 1))
+        self.assertEqual(tasks[2], ("step-1-minus", 0.002-3e-5, 2, 1))
+        self.assertEqual(len(comparisons), 2)
+
+    def test_cartesian_main_checks_every_component_and_repeat(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            argv = ["force_stationary_fd.py", "--all-cartesian", "--steps", "0.001", "0.0003",
+                    "--absolute-tolerance", "1e-8", "--jobs", "4"]
+            for key in ("restart", "model", "executable", "structure"):
+                path = root / key
+                path.write_bytes(restart() if key == "restart" else b"fixture")
+                argv.extend(["--" + key, str(path)])
+            forces = [[0.1, -0.2, 0.3], [-0.4, 0.5, -0.6]]
+            def run(name, delta, settings, inputs, env):
+                result = force_fd.analyze(protocol(), 2, 1, 1, 1e-6, 1e-6)
+                result["final"]["forces"] = copy.deepcopy(forces)
+                result["final"]["energy"] = -2.-delta*forces[settings.atom-1][settings.axis-1]
+                result["final_energy_span_hartree"] = 1e-12
+                if name == "center-repeat":
+                    result["final"]["forces"][1][2] += repeat_error
+                return name, result
+            for repeat_error in (0., 1e-5):
+                output = root / str(repeat_error)
+                with patch.object(force_fd, "run_leg", side_effect=run), \
+                        patch.object(sys, "argv", argv + ["--output", str(output)]), \
+                        redirect_stdout(io.StringIO()):
+                    code = force_fd.main()
+                report = json.loads((output / "results.json").read_text())
+                self.assertEqual(code, int(repeat_error > 0.))
+                self.assertEqual(report["passed"], repeat_error == 0.)
+                self.assertEqual(len(report["comparisons"]), 12)
+                self.assertTrue(all(row["passed"] for row in report["comparisons"]))
+                for row in report["comparisons"]:
+                    self.assertEqual(row["analytic_hartree_per_bohr"],
+                                     forces[row["atom"]-1][row["axis"]-1])
+                    self.assertAlmostEqual(row["energy_span_sensitivity_hartree_per_bohr"],
+                                           1e-12/row["step_bohr"])
+
     def test_relaxation_retains_failed_blocks_and_requires_a_pass(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

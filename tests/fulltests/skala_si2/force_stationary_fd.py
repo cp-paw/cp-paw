@@ -276,6 +276,27 @@ def validate_relaxation_arguments(parser, args):
         parser.error("Invalid indices, sizes, relaxation settings or finite-difference parameters")
 
 
+def displacement_tasks(args, natom):
+    """Share an undisplaced center across Cartesian components, never displaced seeds."""
+    if args.all_cartesian:
+        if args.rigid_translation or args.center_displacement != 0:
+            raise ValueError("All-Cartesian mode requires zero center displacement and no rigid translation")
+        components = [(atom, axis) for atom in range(1, natom + 1) for axis in (1, 2, 3)]
+    else:
+        components = [(args.atom, args.axis)]
+    tasks = [("center", args.center_displacement, *components[0]),
+             ("center-repeat", args.center_displacement, *components[0])]
+    comparisons = []
+    for atom, axis in components:
+        prefix = f"atom-{atom}-axis-{axis}-" if args.all_cartesian else ""
+        for index, step in enumerate(args.steps, 1):
+            minus, plus = (f"{prefix}step-{index}-{sign}" for sign in ("minus", "plus"))
+            tasks.extend([(minus, args.center_displacement - step, atom, axis),
+                          (plus, args.center_displacement + step, atom, axis)])
+            comparisons.append((minus, plus, step, atom, axis))
+    return tasks, comparisons
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     add_relaxation_arguments(parser)
@@ -284,14 +305,21 @@ def main():
     parser.add_argument("--rigid-translation", action="store_true",
                         help="Displace every atom along --axis and test the total force; --atom is unused")
     parser.add_argument("--center-displacement", type=float, default=0)
+    parser.add_argument("--all-cartesian", action="store_true",
+                        help="Test every atom and axis with a shared center; --atom/--axis are unused")
     args = parser.parse_args()
     validate_relaxation_arguments(parser, args)
     if args.atom < 1 or not math.isfinite(args.center_displacement):
         parser.error("Need a positive atom index and finite displacement")
     inputs = {key: getattr(args, key).resolve(strict=True)
               for key in ("executable", "model", "restart", "structure")}
-    geometry(displace_geometry(inputs["restart"].read_bytes(), args.atom, args.axis,
-                               args.center_displacement, args.rigid_translation))
+    initial = inputs["restart"].read_bytes()
+    try:
+        tasks, comparisons = displacement_tasks(args, geometry(initial)["natom"])
+    except ValueError as error:
+        parser.error(str(error))
+    for _, delta, atom, axis in tasks:
+        displace_geometry(initial, atom, axis, delta, args.rigid_translation)
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
     env = dict(os.environ, CPPAW_GPU_MODE=args.gpu_mode, CPPAW_SKALA_SCF_DETAIL="1",
@@ -306,13 +334,14 @@ def main():
                                   if key.startswith("CPPAW_") or key in
                                   ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "CUDA_VISIBLE_DEVICES")}
     write_json(args.output / "provenance.json", provenance)
-    tasks = [("center", args.center_displacement), ("center-repeat", args.center_displacement)]
-    for index, step in enumerate(args.steps, 1):
-        tasks.extend([(f"step-{index}-minus", args.center_displacement - step),
-                      (f"step-{index}-plus", args.center_displacement + step)])
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
-        futures = [pool.submit(run_leg, name, delta, args, inputs, env) for name, delta in tasks]
+        futures = [pool.submit(run_leg, name, delta,
+                   argparse.Namespace(**{**vars(args), "atom": atom, "axis": axis}), inputs, env)
+                   for name, delta, atom, axis in tasks]
         legs = dict(future.result() for future in futures)
+    for key, path in inputs.items():
+        if digest(path) != provenance[key]["sha256"]:
+            raise ValueError(f"Changed input during force verification: {key}")
     summary = {"scope": ("stationary rigid-translation total-force differences at the specified grid"
                          if args.rigid_translation else
                          "stationary fixed-occupation ionic force differences at the specified grid"),
@@ -322,15 +351,19 @@ def main():
         try:
             if legs["center-repeat"]["occupations"] != legs["center"]["occupations"]:
                 raise ValueError("Changed band layout or occupations in repeated center")
-            summary["comparisons"] = [compare(legs["center"], legs[f"step-{i}-minus"],
-                legs[f"step-{i}-plus"], h, args.atom, args.axis, args.absolute_tolerance,
-                rigid_translation=args.rigid_translation)
-                for i, h in enumerate(args.steps, 1)]
+            summary["comparisons"] = [dict(
+                **({"atom": atom, "axis": axis} if args.all_cartesian else {}),
+                energy_span_sensitivity_hartree_per_bohr=(legs[minus]["final_energy_span_hartree"]
+                    + legs[plus]["final_energy_span_hartree"])/(2*h),
+                **compare(legs["center"], legs[minus], legs[plus], h, atom, axis,
+                          args.absolute_tolerance, rigid_translation=args.rigid_translation))
+                for minus, plus, h, atom, axis in comparisons]
             summary["center_repeat_energy_difference_hartree"] = abs(
                 legs["center"]["final"]["energy"] - legs["center-repeat"]["final"]["energy"])
-            summary["center_repeat_force_difference_hartree_per_bohr"] = abs(
-                force_component(legs["center"], args.atom, args.axis, args.rigid_translation)
-                - force_component(legs["center-repeat"], args.atom, args.axis, args.rigid_translation))
+            summary["center_repeat_force_difference_hartree_per_bohr"] = max(abs(
+                force_component(legs["center"], atom, axis, args.rigid_translation)
+                - force_component(legs["center-repeat"], atom, axis, args.rigid_translation))
+                for _, _, _, atom, axis in comparisons)
             repeat_consistent = (args.absolute_tolerance is None or (
                 summary["center_repeat_force_difference_hartree_per_bohr"] <= args.absolute_tolerance
                 and summary["center_repeat_energy_difference_hartree"] / (2 * min(args.steps))

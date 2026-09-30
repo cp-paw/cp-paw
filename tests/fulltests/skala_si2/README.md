@@ -144,12 +144,23 @@ floating-point cancellation, electronic relaxation error or grid error.
 
 Without `--absolute-tolerance` the result is a measurement, not a passed
 force test. An explicit bound also checks repeated-center consistency.
+`energy_span_sensitivity_hartree_per_bohr` reports the sum of the two final
+energy-window spans divided by `2*h`. It is a sensitivity indicator, not an
+error bound and does not automatically widen the acceptance limit.
 Tighten residuals, vary displacement widths, and refine the grid before
 inferring physical accuracy. `--center-displacement` shifts the reference
 geometry in bohr to break crystal symmetry. The default 96/17 quadrature is
 diagnostic only. The example 4096 MiB source-cache budget is **per process**
 and optional. CUDA models and host electronic offloading are selected
 independently with `--device` and `--gpu-mode`.
+
+`--all-cartesian` tests every atom along all three Cartesian axes, using one
+center and one independent center repeat for the complete set. Each signed
+displacement starts from the same supplied restart, not from another displaced
+calculation. `--atom` and `--axis` are unused in this mode. Nonzero
+`--center-displacement` and `--rigid-translation` cannot be combined with it.
+The repeated-center force bound covers every tested component, and the input,
+model and executable hashes are rechecked after the last calculation.
 
 `--rigid-translation` moves **all** atoms along `--axis` and compares the
 energy difference with the sum of their analytic force components. `--atom`
