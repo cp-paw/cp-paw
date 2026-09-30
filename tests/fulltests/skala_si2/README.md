@@ -423,8 +423,11 @@ OpenACC Skala build. It compares disabled offloading, a 256 MiB device budget,
 a partial 1 MiB budget, zero device budget and disabled host caching. Each
 case uses the same initial state for two electronic steps. Electronic-only,
 force and fixed-cell stress modes are all checked by default. The test requires
-positive full and partial GPU row counts, so it cannot pass by silently using
-the CPU for every case. Missing GPUs should instead be tested with the
+positive, distinct GPU row counts for the larger and smaller budgets, so it
+cannot pass by silently using the CPU for every case. The 256 MiB variant
+does not guarantee that every source row fits on the device, especially when
+geometry derivatives or larger tile scratch are required. Missing GPUs
+should instead be tested with the
 model-free reconstruction test's CPU fallback mode.
 
 ```sh
@@ -450,5 +453,5 @@ The same driver records inherited `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS` in
 its provenance and exercises that tile size in every GPU variant. For example,
 run it in a new output directory with the environment prefix
 `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS=512` to check larger tiles. Keep the
-original numerical bound and check actual full/partial row coverage. Larger
+original numerical bound and check actual device row coverage. Larger
 scratch arrays may exhaust the 1 MiB test budget for larger partial-wave spaces.
