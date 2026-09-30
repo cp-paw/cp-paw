@@ -29,6 +29,10 @@ requires a GPU-enabled profile build. It compares four moving-cell steps
 with GPU mode off, transfer and resident from one conventional Si2 restart.
 The cell must move measurably. Cell histories, wave/Lambda payloads, energies
 and forces must agree within `1e-8` (electronic cell metadata within `1e-9`).
+The second atom is displaced by `0.01` Bohr along x in each restart and atom
+dynamics is enabled. The reference must have nonzero trajectory forces,
+not symmetry-enforced zeros or zeros imposed by fixed-atom constraints.
+The atomic position histories must also agree within `1e-8` Bohr.
 Profile counters must prove that setup left PSIM resident and host propagation
 explicitly retrieved it. This catches a stale device copy masking the host
 update when cell motion selects CPU propagation. Use `--mpi-ranks` for MPI.

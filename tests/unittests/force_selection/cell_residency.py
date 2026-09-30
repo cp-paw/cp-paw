@@ -6,6 +6,7 @@ import csv
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 import sys
 
@@ -49,8 +50,10 @@ def main():
         control = template
         if name != "seed":
             control = control.replace("START=t", "START=f")
-            control = control.replace("!PSIDYN", "!CELL MOVE=T FRIC=0.0 M=1.E6 !END\n !PSIDYN")
-            shutil.copy2(root / "seed/si2.rstrt", work / "si2.rstrt")
+            control = control.replace("!PSIDYN", "!CELL MOVE=T FRIC=0.0 M=1.E6 !END\n"
+                                      " !RDYN FRIC=0.0 !END\n !PSIDYN")
+            seed = (root / "seed/si2.rstrt").read_bytes()
+            (work / "si2.rstrt").write_bytes(fd.displace_geometry(seed, 2, 1, 0.01))
         (work / "si2.cntl").write_text(control)
         fd.write_json(work / "inputs.json", {p.name: fd.digest(p) for p in work.iterdir()
                                               if p.is_file()})
@@ -68,12 +71,20 @@ def main():
                                             results["seed"]["geometry"]["cells"][:9]))
     if movement < 1e-10:
         raise ValueError("Cell did not move measurably")
+    forces = modes.read_records((root / "off/si2_f.tra").read_bytes())
+    force_maximum = max(abs(value) for row in forces
+                        for value in struct.unpack(f"<{(len(row)-16)//8}d", row[16:]))
+    if force_maximum < 1e-8:
+        raise ValueError("Displacement did not produce measurable forces")
     differences = {}
     for name in ("transfer", "resident"):
         current = results[name]
         differences[name] = dict(
             cell=max(abs(a-b) for a, b in zip(reference["geometry"]["cells"],
                                              current["geometry"]["cells"])),
+            positions=max(abs(a-b) for u, v in zip(reference["geometry"]["positions"],
+                                                  current["geometry"]["positions"])
+                          for a, b in zip(u, v)),
             waves_and_lambda=modes.wave_difference(reference["waves"], current["waves"],
                                                     cell_tolerance=1e-9))
         for label, suffix in (("energy", "e"), ("force", "f")):
@@ -96,7 +107,8 @@ def main():
     if fd.digest(binary) != binary_sha256:
         raise ValueError("Executable changed during test")
     fd.write_json(root / "results.json", dict(passed=True, differences=differences,
-        cell_motion=movement, ownership_calls={key: counts[key] for key in
+        cell_motion=movement, force_maximum=force_maximum,
+        displacement_bohr=0.01, ownership_calls={key: counts[key] for key in
             ("ACC_COPY_SETUP_PSIM_IN", "ACC_COPY_PROP_PSIM_HOST_OUT")}))
     print(differences, flush=True)
 

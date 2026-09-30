@@ -65,11 +65,15 @@ def main():
     parser.add_argument("--mpi-ranks", type=int, default=1)
     parser.add_argument("--mpiexec", default="mpirun")
     parser.add_argument("--tolerance", type=float, default=1e-8)
+    parser.add_argument("--dt", type=float, default=0.01)
+    parser.add_argument("--steps", type=int, default=3)
     args = parser.parse_args()
     if args.source_cache_mib < 0 or args.mpi_ranks < 1:
         parser.error("Need a nonnegative cache budget and positive rank count")
     if not math.isfinite(args.tolerance) or args.tolerance <= 0:
         parser.error("Tolerance must be positive and finite")
+    if not math.isfinite(args.dt) or args.dt <= 0 or args.steps < 2:
+        parser.error("Need a positive finite timestep and at least two steps")
     inputs = {key: getattr(args, key).resolve(strict=True)
               for key in ("executable", "model", "restart", "structure")}
     args.output = args.output.resolve()
@@ -80,7 +84,7 @@ def main():
                CPPAW_SKALA_PARTITION_CACHE_MB="256")
     for key in ("CPPAW_SKALA_ORBITAL_ROTATION", "CPPAW_SKALA_ORBITAL_TANGENT"):
         env.pop(key, None)
-    settings = SimpleNamespace(dt=0.001, block_steps=2, device=args.device,
+    settings = SimpleNamespace(dt=args.dt, block_steps=args.steps, device=args.device,
                                radial_points=96, lebedev_exactness=17, cutoff=20.,
                                mass=25., mass_g2=0.3166286988823056, friction=0.4,
                                orthogonality_tolerance=1e-12)

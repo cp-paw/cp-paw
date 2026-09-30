@@ -49,7 +49,7 @@ python3 tests/fulltests/skala_si2/stress_mode_parity.py \
   --output /path/to/new-stress-check --device CPU --source-cache-mib 4096
 ```
 
-The four matched two-step runs use a fixed cell without stress, a fixed cell
+The four matched three-step runs at timestep `0.01` use a fixed cell without stress, a fixed cell
 with stress and either force setting, and the moving-cell stress path with
 mass `1.E30`. The test checks unchanged geometry, energies, electronic
 diagnostics, wave/Lambda restart payloads, complete forces and agreement of
@@ -57,6 +57,11 @@ all nine strain-derivative components. Use `--device CUDA --gpu-mode resident`
 or `--mpi-ranks 2` to exercise those paths. This verifies stress selection and
 assembly at matched states, not stationary strain finite differences or
 physical stress convergence.
+`--dt` and `--steps` allow timestep and multi-step controls without changing
+the acceptance tolerance. Very small timesteps amplify roundoff in the
+constraint multipliers through the inverse squared timestep. Inspect those
+payloads separately from the orbitals and repeat at a larger timestep when
+diagnosing this conditioning, rather than increasing the tolerance.
 
 ## Electronic stationarity
 
