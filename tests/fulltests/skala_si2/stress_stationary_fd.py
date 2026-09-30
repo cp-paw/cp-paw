@@ -96,16 +96,19 @@ def run_leg(name, components, args, inputs, env):
     result["initial_restart_sha256"] = fd.digest(seed)
     try:
         basis, grid = basis_signature(inputs["restart"].read_bytes()), None
-        for block in result["blocks"]:
+        electronic_blocks = result.get("electronic_blocks", [])
+        for block in electronic_blocks + result["blocks"]:
             work = Path(block["directory"])
             text = (work / "si2.prot").read_text()
-            trace = stress_records(text)
             current = grid_signature(text)
             if grid is not None and current != grid:
                 raise ValueError("Grid size changed across relaxation blocks")
             grid = current
             if basis_signature((work / "si2.rstrt").read_bytes()) != basis:
                 raise ValueError("Plane-wave basis changed during relaxation")
+            if block in electronic_blocks:
+                continue
+            trace = stress_records(text)
             fd.write_json(work / "stress.json", trace)
             result["final_stress"] = trace[-1]
             result["final_stress_span"] = max(

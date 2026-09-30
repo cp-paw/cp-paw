@@ -151,6 +151,69 @@ class StationaryForceTest(unittest.TestCase):
         args.density_dual = 4.
         text = force_fd.control(args)
         self.assertIn("EPWPSI=2.0000000000000000e+01 CDUAL=4.0000000000000000e+00", text)
+        args.stress = True
+        text = force_fd.control(args, electronic_only=True, steps=12)
+        self.assertIn("FORCE=F STRESS=F", text)
+        self.assertNotIn("STRESS=T", text)
+        self.assertIn("NSTEP=12 ", text)
+        self.assertIn("STRESS=T", force_fd.control(args))
+
+    def test_warmup_cannot_replace_complete_stationary_force_blocks(self):
+        from test_force_mode_parity import electronic
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            inputs = {key: root/key for key in ("restart", "model", "structure", "executable")}
+            for path in inputs.values():
+                path.write_bytes(b"fixture")
+            inputs["restart"].write_bytes(restart())
+            args = SimpleNamespace(output=root, atom=2, axis=1, dt=5, block_steps=1,
+                electronic_warmup_steps=2, max_blocks=2, last=1, residual_tolerance=1e-6,
+                commutator_tolerance=1e-6, device="CPU", radial_points=96, lebedev_exactness=17,
+                cutoff=20, mass=25, mass_g2=.3166286988823056, friction=.1, timeout=1)
+            calls = []
+            def run(command, cwd, **kwargs):
+                calls.append(cwd.name)
+                warmup = cwd.name.startswith("electronic")
+                text = (electronic(1)+electronic(2) if warmup else
+                        protocol(residual="0.1" if cwd.name == "block-1" else "1e-8"))
+                (cwd/"si2.prot").write_text(text)
+            with patch.object(force_fd.subprocess, "run", side_effect=run):
+                _, result = force_fd.run_leg("center", 0, args, inputs, {})
+            self.assertEqual(calls, ["electronic-1", "block-1", "electronic-2", "block-2"])
+            self.assertTrue(result["stationary"])
+            self.assertEqual([b["stationary"] for b in result["blocks"]], [False, True])
+            self.assertEqual(len(result["electronic_blocks"]), 2)
+            self.assertIn("forces", result["final"])
+            warm = json.loads((root/"center/electronic-1/results.json").read_text())
+            self.assertNotIn("force_trace", warm)
+            self.assertNotIn("forces", warm["final"])
+            self.assertEqual(len(warm["energy_trace"]), 2)
+            args.max_blocks = 1
+            with patch.object(force_fd.subprocess, "run", side_effect=run):
+                _, result = force_fd.run_leg("failed", 0, args, inputs, {})
+            self.assertFalse(result["stationary"])
+            def changed(command, cwd, **kwargs):
+                run(command, cwd, **kwargs)
+                if cwd.name == "block-1":
+                    path = cwd/"si2.prot"
+                    path.write_text(path.read_text().replace("RESIDUAL 1 1 1 1.0", "RESIDUAL 1 1 1 0.5"))
+            with patch.object(force_fd.subprocess, "run", side_effect=changed):
+                _, result = force_fd.run_leg("occupations", 0, args, inputs, {})
+            self.assertFalse(result["stationary"])
+            self.assertIn("occupations changed", result["failure"])
+        for bad in (electronic()+"SKALA TOTAL STRESS DIAGNOSTIC\n", protocol(),
+                    electronic().replace("NUCLEAR FORCES NOT CALCULATED", "")):
+            with self.assertRaises(ValueError):
+                force_fd.analyze(bad, 2, 1, 1, 1e-6, 1e-6, electronic_only=True)
+
+    def test_invalid_warmup_count_fails_before_creating_output(self):
+        arguments = ["force_stationary_fd.py", "--electronic-warmup-steps", "-1"]
+        for key in ("executable", "model", "restart", "structure", "output"):
+            arguments.extend(["--"+key, "unused"])
+        with redirect_stderr(io.StringIO()), patch.object(sys, "argv", arguments), \
+                self.assertRaises(SystemExit) as error:
+            force_fd.main()
+        self.assertEqual(error.exception.code, 2)
 
     def test_invalid_density_duals_fail_before_creating_output(self):
         arguments = ["force_stationary_fd.py"]

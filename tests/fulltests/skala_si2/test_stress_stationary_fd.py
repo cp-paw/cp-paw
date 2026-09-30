@@ -112,6 +112,29 @@ class StationaryStressTest(unittest.TestCase):
             control = (root/"xx/block-1/si2.cntl").read_text()
             self.assertIn("STRESS=T", control)
             self.assertIn("!CELL MOVE=F", control)
+            from test_force_mode_parity import electronic
+            args.electronic_warmup_steps = 1
+            def warmup(command, cwd, **kwargs):
+                if cwd.name.startswith("electronic"):
+                    (cwd/"si2.prot").write_text(electronic()+
+                        "#(G-VECTORS FOR DENSITY)...: 570\nGRID POINTS 4096\n")
+                else:
+                    run(command, cwd, **kwargs)
+            with patch.object(forces.subprocess, "run", side_effect=warmup):
+                _, result = stress.run_leg("warmup", [0.]*9, args, inputs, {})
+            self.assertTrue(result["stationary"])
+            self.assertEqual(len(result["electronic_blocks"]), 2)
+            self.assertEqual(result["final_stress"]["tensor"][0][0], 1.)
+            def changed_grid(command, cwd, **kwargs):
+                warmup(command, cwd, **kwargs)
+                if cwd.name.startswith("electronic"):
+                    path = cwd/"si2.prot"
+                    path.write_text(path.read_text().replace("GRID POINTS 4096", "GRID POINTS 8192"))
+            with patch.object(forces.subprocess, "run", side_effect=changed_grid):
+                _, result = stress.run_leg("grid-changed", [0.]*9, args, inputs, {})
+            self.assertFalse(result["stationary"])
+            self.assertIn("Grid size changed", result["failure"])
+            args.electronic_warmup_steps = 0
             def missing(command, cwd, **kwargs):
                 run(command, cwd, **kwargs)
                 file = cwd/"si2.prot"

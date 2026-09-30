@@ -144,6 +144,17 @@ Failed blocks, logs, input hashes, and residual/force traces are retained.
 An unconverged geometry prevents a successful force comparison. No input,
 model, or executable is modified, and existing output directories are refused.
 
+Optionally use `--electronic-warmup-steps 40 --block-steps 5 --last 5` to
+precede every full-derivative block with 40 electronic-only evaluations.
+Those use `FORCE=F STRESS=F` at the same fixed geometry, retaining the complete
+electronic Hamiltonian and model derivatives needed for orbital relaxation.
+Their restart chains, energies, occupations and residuals are recorded
+separately. Only the subsequent full-force block can pass the stationarity
+gate. The strain driver also re-enables stress for that block and checks
+the basis and grid throughout both phases. This opt-in mode avoids
+unneeded geometry derivatives during relaxation without accepting missing
+forces or stress as verification results. The default remains unchanged.
+
 `--orthogonality-tolerance 1e-12` requests a tighter PAW constraint solve
 without changing the electronic residual gates. Omitting it preserves the
 historical solver tolerance of `1e-8`. The force diagnostic reports total

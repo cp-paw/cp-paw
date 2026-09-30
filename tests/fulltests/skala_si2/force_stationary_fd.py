@@ -110,7 +110,7 @@ def force_component(report, atom, axis, rigid_translation=False):
             else forces[atom - 1][axis - 1])
 
 
-def analyze(text, natom, steps, last, residual, commutator):
+def analyze(text, natom, steps, last, residual, commutator, *, electronic_only=False):
     trace = stationarity.records(text)
     stationarity.validate(trace)
     if len(trace) != steps or any(b["step"] != a["step"] + 1 for a, b in zip(trace, trace[1:])):
@@ -121,10 +121,18 @@ def analyze(text, natom, steps, last, residual, commutator):
     occupations = layout(detail[0])
     if any(layout(row) != occupations for row in detail):
         raise ValueError("Band layout or occupations changed")
-    forces = force_records(text, natom)
+    if electronic_only:
+        # This parser also checks that the omitted forces are reported as absent.
+        from force_mode_parity import energy_records
+        forces = energy_records(text)
+        if "SKALA TOTAL STRESS DIAGNOSTIC" in text:
+            raise ValueError("Unexpected stress during electronic-only relaxation")
+    else:
+        forces = force_records(text, natom)
     if [row["step"] for row in forces] != [row["step"] for row in trace]:
         raise ValueError("Force reports do not match electronic steps")
-    result = {"trace": trace, "force_trace": forces, "occupations": occupations,
+    result = {"trace": trace, "energy_trace" if electronic_only else "force_trace": forces,
+              "occupations": occupations,
               "final": forces[-1], "stationary": False}
     try:
         stationarity.validate(trace, residual=residual, commutator=commutator, last=last)
@@ -157,14 +165,16 @@ def compare(center, minus, plus, step, atom, axis, tolerance=None, *, rigid_tran
             "passed": None if tolerance is None else error <= tolerance}
 
 
-def control(args):
+def control(args, *, electronic_only=False, steps=None):
     tolerance = getattr(args, "orthogonality_tolerance", None)
     ortho = "" if tolerance is None else f" ORTHOTOL={tolerance:.16e}"
-    stress = " STRESS=T" if getattr(args, "stress", False) else ""
+    stress = (" FORCE=F STRESS=F" if electronic_only else
+              " STRESS=T" if getattr(args, "stress", False) else "")
+    steps = args.block_steps if steps is None else steps
     dual = getattr(args, "density_dual", 2.)
     dual_text = "2" if dual == 2. else f"{dual:.16e}"
     return f"""!CONTROL
- !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={args.block_steps} NWRITE=10 START=F
+ !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={steps} NWRITE=10 START=F
           RSTRTTYPE='STATIC' AUTOCONV=1000 !END
  !DFT TYPE=10
   !SKALA MODEL='model.fun' DEVICE='{args.device}'
@@ -192,34 +202,43 @@ def run_leg(name, delta, args, inputs, env):
                                 getattr(args, "rigid_translation", False))
     expected = geometry(initial)
     result = {"displacement_bohr": delta, "stationary": False, "blocks": []}
+    warmup = getattr(args, "electronic_warmup_steps", 0)
+    if warmup:
+        result["electronic_blocks"] = []
     restart = None
     try:
         for index in range(args.max_blocks):
-            block = work / f"block-{index + 1}"
-            block.mkdir()
-            (block / "si2.cntl").write_text(control(args))
-            (block / "model.fun").symlink_to(inputs["model"])
-            shutil.copy2(inputs["structure"], block / "si2.strc")
-            if restart is None:
-                (block / "si2.rstrt").write_bytes(initial)
-            else:
-                shutil.copy2(restart, block / "si2.rstrt")
-            write_json(block / "inputs.json", {key: digest(block / key)
-                       for key in ("si2.cntl", "si2.rstrt", "si2.strc", "model.fun")})
-            print(f"Running {name}, block {index + 1}: {block}", flush=True)
-            with (block / "stdout.log").open("w") as out, (block / "stderr.log").open("w") as err:
-                subprocess.run([str(inputs["executable"]), "si2.cntl"], cwd=block,
-                               env=env, stdout=out, stderr=err, check=True, timeout=args.timeout)
-            restart = block / "si2.rstrt"
-            check_geometry(expected, geometry(restart.read_bytes()))
-            data = analyze((block / "si2.prot").read_text(), expected["natom"],
-                           args.block_steps, args.last, args.residual_tolerance,
-                           args.commutator_tolerance)
-            if "occupations" in result and result["occupations"] != data["occupations"]:
-                raise ValueError("Band layout or occupations changed across restart blocks")
-            write_json(block / "results.json", data)
-            result["blocks"].append({"directory": str(block), "stationary": data["stationary"],
-                                      "final_residual": data["trace"][-1]})
+            phases = [("electronic", warmup), ("block", args.block_steps)] if warmup else [
+                ("block", args.block_steps)]
+            for phase, steps in phases:
+                electronic_only = phase == "electronic"
+                block = work / f"{phase}-{index + 1}"
+                block.mkdir()
+                (block / "si2.cntl").write_text(control(args, electronic_only=electronic_only, steps=steps))
+                (block / "model.fun").symlink_to(inputs["model"])
+                shutil.copy2(inputs["structure"], block / "si2.strc")
+                if restart is None:
+                    (block / "si2.rstrt").write_bytes(initial)
+                else:
+                    shutil.copy2(restart, block / "si2.rstrt")
+                write_json(block / "inputs.json", {key: digest(block / key)
+                           for key in ("si2.cntl", "si2.rstrt", "si2.strc", "model.fun")})
+                print(f"Running {name}, {phase} {index + 1}: {block}", flush=True)
+                with (block / "stdout.log").open("w") as out, (block / "stderr.log").open("w") as err:
+                    subprocess.run([str(inputs["executable"]), "si2.cntl"], cwd=block,
+                                   env=env, stdout=out, stderr=err, check=True, timeout=args.timeout)
+                restart = block / "si2.rstrt"
+                check_geometry(expected, geometry(restart.read_bytes()))
+                data = analyze((block / "si2.prot").read_text(), expected["natom"],
+                               steps, min(args.last, steps), args.residual_tolerance,
+                               args.commutator_tolerance, electronic_only=electronic_only)
+                if "occupations" in result and result["occupations"] != data["occupations"]:
+                    raise ValueError("Band layout or occupations changed across restart blocks")
+                result["occupations"] = data["occupations"]
+                write_json(block / "results.json", data)
+                result["electronic_blocks" if electronic_only else "blocks"].append({
+                    "directory": str(block), "stationary": data["stationary"],
+                    "final_residual": data["trace"][-1]})
             result.update({key: value for key, value in data.items()
                            if key not in ("trace", "force_trace", "stationarity_failure")})
             if data["stationary"]:
@@ -241,6 +260,8 @@ def add_relaxation_arguments(parser):
     parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
     parser.add_argument("--steps", type=float, nargs="+", default=(0.001, 0.0003))
     parser.add_argument("--block-steps", type=int, default=40)
+    parser.add_argument("--electronic-warmup-steps", type=int, default=0,
+                        help="Optional FORCE=F STRESS=F steps before every full-derivative block")
     parser.add_argument("--max-blocks", type=int, default=3)
     parser.add_argument("--last", type=int, default=5)
     parser.add_argument("--residual-tolerance", type=float, default=1e-6)
@@ -271,6 +292,7 @@ def validate_relaxation_arguments(parser, args):
         parser.error("Orthogonality tolerance must lie between 1e-14 and 1e-8")
     if (any(not math.isfinite(x) or x <= 0 for x in positive)
             or len(set(args.steps)) != len(args.steps)
+            or args.electronic_warmup_steps < 0
             or min(args.jobs, args.block_steps, args.max_blocks, args.last,
                    args.radial_points, args.lebedev_exactness) < 1 or args.last > args.block_steps):
         parser.error("Invalid indices, sizes, relaxation settings or finite-difference parameters")
