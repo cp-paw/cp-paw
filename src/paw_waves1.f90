@@ -11248,6 +11248,28 @@ RETURN
               CALL WAVES_ACC_THIS_HPSI_DELETE()
             END IF
           ELSE
+!           The host fallback must take ownership before changing PSIM.
+!           Setup can leave it resident even when cell motion disables
+!           device propagation. A later COPY would reuse that stale copy.
+            IF(THIS%PSI0_ACC_RESIDENT) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$ADD('ACC_COPY_PROP_PSI0_HOST_OUT' &
+     &            ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &            ,0_8,0.D0,16.D0*REAL(NGL,KIND=8) &
+     &            *REAL(NDIM,KIND=8)*REAL(NBH,KIND=8),0.D0)
+#ENDIF
+!$ACC UPDATE SELF(THIS%PSI0(1:NGL,1:NDIM,1:NBH))
+            END IF
+            IF(THIS%PSIM_ACC_RESIDENT) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$ADD('ACC_COPY_PROP_PSIM_HOST_OUT' &
+     &            ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &            ,0_8,0.D0,16.D0*REAL(NGL,KIND=8) &
+     &            *REAL(NDIM,KIND=8)*REAL(NBH,KIND=8),0.D0)
+#ENDIF
+!$ACC UPDATE SELF(THIS%PSIM(1:NGL,1:NDIM,1:NBH))
+              CALL WAVES_ACC_THIS_PSIM_DELETE()
+            END IF
             IF(THIS%HPSI_ACC_RESIDENT) THEN
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
               CALL ACCELPROFILE$ADD('ACC_COPY_PROP_HPSI_HOST_OUT' &

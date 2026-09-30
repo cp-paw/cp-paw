@@ -23,3 +23,12 @@ with `FORCE=T`, with identical step/time metadata. This is an implementation
 regression, not a physical force or
 stress convergence test. QM/MM also forces nuclear-force work on in the
 production selector, but is not exercised by this Si2 fixture.
+
+`cell_residency.py /path/to/profile/paw.x --output /path/to/new-directory`
+requires a GPU-enabled profile build. It compares four moving-cell steps
+with GPU mode off, transfer and resident from one conventional Si2 restart.
+The cell must move measurably. Cell histories, wave/Lambda payloads, energies
+and forces must agree within `1e-8` (electronic cell metadata within `1e-9`).
+Profile counters must prove that setup left PSIM resident and host propagation
+explicitly retrieved it. This catches a stale device copy masking the host
+update when cell motion selects CPU propagation. Use `--mpi-ranks` for MPI.
