@@ -4,7 +4,9 @@ The `skala-source-forward-test` target requires an OpenACC build and a visible
 NVIDIA GPU. It checks forward fields against direct periodic-image evaluation
 for scalar and spin density matrices, value/gradient and Hessian caches, full
 and single-row host caches, changed electronic inputs and empty image support.
-The pre-existing Hamiltonian matrix must remain unchanged. Separate invocations
+The pre-existing Hamiltonian matrix must remain unchanged. Forward transfer
+accounting checks that Hessian caches pack only values and gradients, with
+separate packing events and no changes to the reverse-path cache. Separate invocations
 test full and bounded device coverage, zero budget, disabled offload, a row
 threshold above the batch size and malformed runtime parameters. The ordinary
 `skala-reconstruction-test` includes the same field oracle on CPU-only builds.

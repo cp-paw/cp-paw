@@ -178,10 +178,15 @@ from reverse coverage. Profile records `ACC_COPY_SKALA_FWD_GEOM`,
 `ACC_COPY_SKALA_FWD_INPUT`, `SKALA_SOURCE_FWD_DEVICE` and
 `ACC_COPY_SKALA_FWD_OUT` separate explicit transfers and kernel execution.
 Their dimensions are covered rows, partial-wave channels, image entries and
-cached wave components. Geometry is transferred per call, not retained across
-electronic steps. The extra host field buffer holds ten doubles per atom-grid
-point, plus the current source's covered-row output. Neither source device
-budget caps total host memory or the inference workspace.
+transferred wave components. The forward path transfers only four components
+(value and gradient). If the host cache also holds Hessians for force or stress
+evaluation, a temporary contiguous buffer packs those four components without
+changing the original cache. `SKALA_SOURCE_FWD_PACK` records this host packing
+time separately. The packed host buffer is bounded by the same device payload
+limit but uses additional host memory. Geometry is transferred per call, not
+retained across electronic steps. The extra host field buffer holds ten doubles
+per atom-grid point, plus the current source's covered-row output. Neither
+source device budget caps total host memory or the inference workspace.
 
 An experimental OpenACC source reverse path is enabled explicitly with
 `CPPAW_SKALA_SOURCE_BACK_ACC=1`. It batches complete cached rows for the
