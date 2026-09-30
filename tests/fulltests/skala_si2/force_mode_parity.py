@@ -62,10 +62,18 @@ def wave_records(data):
     return records[start + 1:start + count + 1]
 
 
-def wave_difference(a, b):
+def wave_difference(a, b, *, cell_tolerance=0.):
     """Compare numeric wave/Lambda payloads, requiring identical binary metadata."""
-    if len(a) != len(b) or not a or a[0] != b[0] or len(a[0]) != 84:
+    if not math.isfinite(cell_tolerance) or cell_tolerance < 0:
+        raise ValueError("Cell tolerance must be finite and nonnegative")
+    if (len(a) != len(b) or not a or len(a[0]) != 84 or len(b[0]) != 84
+            or a[0][:8] != b[0][:8] or a[0][80:] != b[0][80:]):
         raise ValueError("Changed electronic restart metadata")
+    cells = [struct.unpack_from("<9d", header, 8) for header in (a[0], b[0])]
+    if not all(math.isfinite(x) for cell in cells for x in cell):
+        raise ValueError("Nonfinite electronic restart cell")
+    if max(abs(x-y) for x, y in zip(*cells)) > cell_tolerance:
+        raise ValueError("Changed electronic restart cell")
     nk, ns = struct.unpack_from("<2i", a[0])
     nw, = struct.unpack_from("<i", a[0], 80)
     if min(nk, ns, nw) < 1:

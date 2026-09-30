@@ -67,6 +67,16 @@ class ForceModeTest(unittest.TestCase):
         values = [header, psi, grid, struct.pack("<2d", 1., 0.), lam, struct.pack("<2d", 2., 0.)]
         self.assertEqual(modes.wave_difference(values, values), 0.)
         changed = list(values)
+        changed[0] = struct.pack("<2i9di", 1, 1, 1e-28, *([0.] * 8), 1)
+        with self.assertRaisesRegex(ValueError, "restart cell"):
+            modes.wave_difference(values, changed)
+        self.assertEqual(modes.wave_difference(values, changed, cell_tolerance=1e-12), 0.)
+        with self.assertRaises(ValueError):
+            modes.wave_difference(values, changed, cell_tolerance=1e-30)
+        for tolerance in (-1, float("nan"), float("inf")):
+            with self.assertRaises(ValueError):
+                modes.wave_difference(values, values, cell_tolerance=tolerance)
+        changed = list(values)
         changed[-1] = struct.pack("<2d", 2.1, 0.)
         self.assertAlmostEqual(modes.wave_difference(values, changed), 0.1)
         for index, value in ((0, b"bad"), (2, b"bad"), (3, struct.pack("<2d", float("nan"), 0.))):

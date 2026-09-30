@@ -1444,6 +1444,9 @@ END MODULE WAVES_MODULE
         VAL=EXTPNTR%TIM
       ELSE IF(ID.EQ.'SAFEORTHO') THEN
         VAL=TSAFEORTHO
+      ELSE IF(ID.EQ.'STRESS') THEN
+        CALL CELL$GETL4('MOVE',TCELLMOVE)
+        VAL=TSTRESSX.OR.TCELLMOVE
       ELSE IF(ID.EQ.'FORCE') THEN
 !       Required dynamics must never use an incomplete nuclear force.
         CALL ATOMS$GETL4('MOVE',TATOMMOVE)
@@ -2056,6 +2059,7 @@ END MODULE WAVES_MODULE
       REAL(8)   ,ALLOCATABLE :: FORCET(:,:)
       REAL(8)                :: STRESS1(3,3),STRESS(3,3)
       REAL(8)                :: STRESSKIN(3,3)
+      REAL(8)                :: STRESSPROJ(3,3)
       REAL(8)                :: RBAS(3,3) ! REAL SPACE LATTICE VECTORS
       REAL(8)                :: RHOB      ! BACKGROUND DENSITY
       REAL(8)                :: POTB      ! AVERAGE ELECTROSTATIC POTENTIAL
@@ -2119,9 +2123,8 @@ END MODULE WAVES_MODULE
 !     ==========================================================================
 !     == SWITCHES FOR FORCE AND STRESS CALCULATION                            ==
 !     ==========================================================================
-      CALL CELL$GETL4('MOVE',TSTRESS)
+      CALL WAVES$GETL4('STRESS',TSTRESS)
       CALL WAVES$GETL4('FORCE',TFORCE)
-      TSTRESS=TSTRESS.OR.TSTRESSX
       CALL POTENTIAL$SETL4('STRESS',TSTRESS)
       CALL POTENTIAL$SETL4('FORCE',TFORCE)
       CALL SKALA$GETL4('ON',TTAUPOS)
@@ -2155,6 +2158,7 @@ END MODULE WAVES_MODULE
       SKALACORESTRESS=0.D0
       SKALAMODELSTRESS=0.D0
       SKALATAUSTRESS=0.D0
+      STRESSPROJ=0.D0
 !     == NUMBER OF BANDS =======================================================
       CALL DYNOCC$GETI4('NB',NBX)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -2695,6 +2699,7 @@ CALL ERROR$STOP('WAVES$ETOT')
       IF(TFORCE.OR.TSTRESS) THEN
         STRESS1(:,:)=0.D0
         CALL WAVES$FORCE(NAT,LMNXX,NDIMD,DH,FORCE,STRESS1)
+        STRESSPROJ=STRESS1
         STRESS=STRESS+STRESS1
 !WRITE(*,FMT='("PRO STRESS ",3F15.7)')STRESS1(1,:)
 !WRITE(*,FMT='("PRO STRESS ",3F15.7)')STRESS1(2,:)
@@ -2983,7 +2988,8 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     == STRESS ================================================================
       CALL CELL$GETR8A('STRESS_I',9,STRESS1)
       CALL SKALA$TOTALSTRESSREPORT(SKALAMODELSTRESS,SKALACORESTRESS &
-     &                            ,SKALATAUSTRESS,STRESS-STRESS1)
+     &                            ,SKALATAUSTRESS,STRESS-STRESS1 &
+     &                            ,STRESSKIN,STRESSPROJ,-STRESS1)
       STRESS=STRESS1-STRESS  ! IN THIS ROUTINE STRESS=+DE/DEPSILON!
       CALL CELL$SETR8A('STRESS_I',9,STRESS)
 #IF DEFINED(CPPVAR_CUBLAS_FP64_EMULATION)
@@ -3695,7 +3701,7 @@ END IF
 !     ==========================================================================
 !     ==  GET OCCUPATIONS FROM DYNOCC OBJECT                                  ==
 !     ==========================================================================
-      CALL CELL$GETL4('MOVE',TSTRESS)
+      CALL WAVES$GETL4('STRESS',TSTRESS)
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
@@ -7474,7 +7480,7 @@ RETURN
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
 #ENDIF
-      CALL CELL$GETL4('MOVE',TSTRESS)
+      CALL WAVES$GETL4('STRESS',TSTRESS)
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)

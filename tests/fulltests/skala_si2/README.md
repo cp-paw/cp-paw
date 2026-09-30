@@ -12,7 +12,7 @@ average rotated rules without increasing their polynomial exactness.
 ## Optional nuclear forces
 
 `!PSIDYN FORCE=F` omits optional nuclear-force work at fixed nuclei and cell.
-The default remains `T`. Atom/cell dynamics and QM/MM retain complete forces
+The default remains `T`. Atom/cell dynamics, explicit stress and QM/MM retain complete forces
 regardless of this setting. The energy-only diagnostic explicitly states that
 nuclear forces were not calculated, and no force-trajectory records are written.
 Restart with `FORCE=T` and recheck electronic stationarity before measuring forces.
@@ -34,6 +34,29 @@ budget recomputes sources. The comparison checks energies, electronic adjoint
 and per-band diagnostics, fixed geometry, identical electronic restart records
 and the absence of incomplete force output. It does not certify stationarity,
 physical force accuracy or performance. All inputs, hashes and outputs are retained.
+
+## Fixed-cell Stress
+
+`!PSIDYN STRESS=T` requests the full strain derivative with `!CELL MOVE=F`.
+The default is `F`. Cell motion always enables stress, and explicit stress
+also requires complete nuclear forces even if `FORCE=F` was requested.
+Cell propagation remains disabled when `MOVE=F`.
+
+```sh
+python3 tests/fulltests/skala_si2/stress_mode_parity.py \
+  --executable /path/to/paw.x --model /path/to/model.fun \
+  --restart /path/to/si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-stress-check --device CPU --source-cache-mib 4096
+```
+
+The four matched two-step runs use a fixed cell without stress, a fixed cell
+with stress and either force setting, and the moving-cell stress path with
+mass `1.E30`. The test checks unchanged geometry, energies, electronic
+diagnostics, wave/Lambda restart payloads, complete forces and agreement of
+all nine strain-derivative components. Use `--device CUDA --gpu-mode resident`
+or `--mpi-ranks 2` to exercise those paths. This verifies stress selection and
+assembly at matched states, not stationary strain finite differences or
+physical stress convergence.
 
 ## Electronic stationarity
 

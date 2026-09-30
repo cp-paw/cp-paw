@@ -1469,6 +1469,12 @@ CALL LMTO$SETL4('ON',.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'FORCE',1,TCHK)
       CALL WAVES$SETL4('FORCE',TCHK)
 !
+!     == OPTIONAL STRESS WITHOUT CELL DYNAMICS ================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'STRESS',1,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'STRESS',0,.FALSE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'STRESS',1,TCHK)
+      CALL WAVES$SETL4('STRESS',TCHK)
+!
 !     ==========================================================================
 !     ==  BEGIN WITH RANDOM VELOCITIES =========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'RANDOM',1,TCHK)

@@ -42,7 +42,9 @@ def main():
                  ("atoms-on", "FORCE=T", "!RDYN FRIC=0.0 !END"),
                  ("atoms-off", "FORCE=F", "!RDYN FRIC=0.0 !END"),
                  ("cell-on", "FORCE=T", "!CELL MOVE=T FRIC=0.0 M=1.E30 !END"),
-                 ("cell-off", "FORCE=F", "!CELL MOVE=T FRIC=0.0 M=1.E30 !END")]
+                 ("cell-off", "FORCE=F STRESS=F", "!CELL MOVE=T FRIC=0.0 M=1.E30 !END"),
+                 ("stress-on", "FORCE=T STRESS=T", "!CELL MOVE=F FRIC=0.0 M=1.E30 !END"),
+                 ("stress-off", "FORCE=F STRESS=T", "!CELL MOVE=F FRIC=0.0 M=1.E30 !END")]
         waves = {}
         for name, settings, dynamics in cases:
             work = root / name
@@ -69,8 +71,10 @@ def main():
             waves[name] = wave_records((work / "si2.rstrt").read_bytes())
             print(f"{name}: passed", flush=True)
         for a, b in (("default", "explicit"), ("explicit", "omitted"),
-                     ("atoms-on", "atoms-off"), ("cell-on", "cell-off")):
-            difference = wave_difference(waves[a], waves[b])
+                     ("atoms-on", "atoms-off"), ("cell-on", "cell-off"),
+                     ("stress-on", "stress-off"), ("explicit", "stress-on")):
+            difference = wave_difference(waves[a], waves[b],
+                                         cell_tolerance=1e-12 if a.startswith("cell") else 0.)
             if difference > 1e-10:
                 raise RuntimeError(f"{a}/{b}: electronic restart difference {difference}")
             energy = trajectory_difference((root / a / "si2_e.tra").read_bytes(),
@@ -78,7 +82,7 @@ def main():
             if energy > 1e-10:
                 raise RuntimeError(f"{a}/{b}: energy trajectory difference {energy}")
             force = 0.
-            if a.startswith(("atoms", "cell")):
+            if a.startswith(("atoms", "cell", "stress")):
                 force = trajectory_difference((root / a / "si2_f.tra").read_bytes(),
                                               (root / b / "si2_f.tra").read_bytes())
                 if force > 1e-10:

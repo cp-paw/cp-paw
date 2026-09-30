@@ -121,3 +121,17 @@ jobs:
           make -C tests/fulltests/skala_si2 clean
           make -C tests/fulltests/skala_si2 all \
             PAWX="mpirun -np 2 $GITHUB_WORKSPACE/bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x"
+      - name: Check fixed-cell Skala stress selection
+        run: |
+          python tests/fulltests/skala_si2/stress_mode_parity.py \
+            --executable bin/skala_cpu_fast/paw_skala_cpu_fast.x \
+            --model bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
+            --restart tests/fulltests/skala_si2/skala_si2.rstrt \
+            --structure tests/fulltests/skala_si2/skala_si2.strc \
+            --output "$RUNNER_TEMP/skala-stress-serial"
+          python tests/fulltests/skala_si2/stress_mode_parity.py \
+            --executable bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x \
+            --model bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
+            --restart tests/fulltests/skala_si2/skala_si2.rstrt \
+            --structure tests/fulltests/skala_si2/skala_si2.strc \
+            --output "$RUNNER_TEMP/skala-stress-mpi" --mpi-ranks 2
