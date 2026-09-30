@@ -93,6 +93,8 @@ jobs:
               exit 1
             fi
           done
+      - name: Check Skala reconstruction and adjoint kernels
+        run: bash tests/unittests/skala_reconstruction/run.sh bin/Build_skala_cpu_fast
       - name: Run serial and MPI Skala Si2 regressions
         env:
           SKALA_MODEL: ${{ github.workspace }}/bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun

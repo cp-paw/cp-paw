@@ -486,7 +486,8 @@ CONTAINS
     REAL(8),INTENT(IN),OPTIONAL :: BAR(5,2)
     REAL(8),INTENT(OUT),OPTIONAL :: DX(3),DMCONTRACTION
     REAL(8) :: C(S%LMNX),G(3,S%LMNX),H(3,3,S%LMNX)
-    REAL(8) :: FIELD(5,S%NDIMD),KB(5,S%NDIMD),KERNEL(5),JAC(5,3)
+    REAL(8) :: FIELD(5,S%NDIMD),KB(5,S%NDIMD),KERNEL(5),JAC(5)
+    REAL(8) :: DC(S%LMNX),DG(3,S%LMNX)
     REAL(8) :: SGN,SPIN,DM
     INTEGER :: Q,I,J,D,K
     LOGICAL :: BACK,GEOMETRY
@@ -504,27 +505,42 @@ CONTAINS
       C=WAVE(1,:,Q)
       G=WAVE(2:4,:,Q)
       IF(GEOMETRY) H=RESHAPE(WAVE(5:13,:,Q),SHAPE(H))
-      DO J=1,S%LMNX
-        DO I=1,S%LMNX
-          KERNEL(1)=C(I)*C(J)
-          KERNEL(2:4)=G(:,I)*C(J)+C(I)*G(:,J)
-          KERNEL(5)=0.5D0*SUM(G(:,I)*G(:,J))
-          DO D=1,S%NDIMD
-            DM=SGN*REAL(S%DM(I,J,D),KIND=8)
-            FIELD(:,D)=FIELD(:,D)+DM*KERNEL
-            IF(BACK) S%DH(I,J,D)=S%DH(I,J,D)+SGN*SUM(KB(:,D)*KERNEL)
-            IF(GEOMETRY) THEN
-              JAC(1,:)=KERNEL(2:4)
-              DO K=1,3
-                JAC(2:4,K)=H(:,K,I)*C(J)+G(:,I)*G(K,J) &
- &                         +G(K,I)*G(:,J)+C(I)*H(:,K,J)
-                JAC(5,K)=0.5D0*SUM(H(:,K,I)*G(:,J)+G(:,I)*H(:,K,J))
-                DX(K)=DX(K)+DM*SUM(KB(:,D)*JAC(:,K))
-              END DO
-            END IF
+      DO D=1,S%NDIMD
+        DC=0.D0
+        DG=0.D0
+        ! Only the real symmetric part contributes to these quadratic fields.
+        ! Contract it once, so Hessian work is linear in the partial-wave count.
+        DO J=1,S%LMNX
+          DO I=1,S%LMNX
+            DM=0.5D0*SGN*REAL(S%DM(I,J,D)+S%DM(J,I,D),KIND=8)
+            DC(I)=DC(I)+DM*C(J)
+            DG(:,I)=DG(:,I)+DM*G(:,J)
           END DO
         END DO
+        FIELD(1,D)=FIELD(1,D)+DOT_PRODUCT(C,DC)
+        FIELD(2:4,D)=FIELD(2:4,D)+2.D0*MATMUL(G,DC)
+        FIELD(5,D)=FIELD(5,D)+0.5D0*SUM(G*DG)
+        IF(GEOMETRY) THEN
+          DO K=1,3
+            JAC(1)=2.D0*DOT_PRODUCT(G(K,:),DC)
+            JAC(2:4)=2.D0*(MATMUL(H(:,K,:),DC)+MATMUL(G,DG(K,:)))
+            JAC(5)=SUM(H(:,K,:)*DG)
+            DX(K)=DX(K)+SUM(KB(:,D)*JAC)
+          END DO
+        END IF
       END DO
+      IF(BACK) THEN
+        DO J=1,S%LMNX
+          DO I=1,S%LMNX
+            KERNEL(1)=C(I)*C(J)
+            KERNEL(2:4)=G(:,I)*C(J)+C(I)*G(:,J)
+            KERNEL(5)=0.5D0*SUM(G(:,I)*G(:,J))
+            DO D=1,S%NDIMD
+              S%DH(I,J,D)=S%DH(I,J,D)+SGN*SUM(KB(:,D)*KERNEL)
+            END DO
+          END DO
+        END DO
+      END IF
     END DO
     IF(PRESENT(DMCONTRACTION)) DMCONTRACTION=SUM(KB*FIELD)
     FIELD(:,1)=FIELD(:,1)+CORE
@@ -1194,7 +1210,112 @@ CONTAINS
       END DO
     END DO
     CALL PAW_SKALA_ONECENTER_TEST(MAXERROR)
+    CALL SOURCE_CONTRACT_TEST(MAXERROR)
   END SUBROUTINE PAW_SKALA_PRIMITIVES_TEST
+
+  SUBROUTINE SOURCE_CONTRACT_TEST(MAXERROR)
+    REAL(8),INTENT(INOUT) :: MAXERROR
+    TYPE(PAW_SKALA_SOURCE) :: S
+    REAL(8),ALLOCATABLE :: WAVE(:,:,:),C(:),G(:,:),H(:,:,:)
+    COMPLEX(8),ALLOCATABLE :: DH(:,:,:),INITIAL(:,:,:)
+    REAL(8) :: CORE(5),COREJAC(5,3),BAR(5,2),KB(5,2),FIELD(5,2)
+    REAL(8) :: VALUE(5,2),REFERENCE(5,2),DX(3),DR(3),CONTRACTION,CR
+    REAL(8) :: KERNEL(5),JAC(5,3),SGN,DM,E
+    INTEGER :: N,NSPIN,MODE,Q,I,J,D,K
+    E=0.D0
+    DO N=1,11,5
+      S%LMNX=N
+      ALLOCATE(WAVE(13,N,2),C(N),G(3,N),H(3,3,N))
+      ALLOCATE(S%DM(N,N,2),S%DH(N,N,2),DH(N,N,2),INITIAL(N,N,2))
+      DO D=1,2
+        DO I=1,5
+          CORE(I)=SIN(REAL(I,KIND=8))*0.1D0
+          BAR(I,D)=COS(REAL(I+2*D,KIND=8))
+          DO K=1,3
+            COREJAC(I,K)=COS(REAL(I+K,KIND=8))*0.1D0
+          END DO
+        END DO
+        DO J=1,N
+          DO I=1,13
+            WAVE(I,J,D)=SIN(REAL(I+3*J+2*D,KIND=8))*0.1D0
+          END DO
+          DO I=1,N
+            ! Deliberately nonsymmetric and complex to test the exact contraction.
+            S%DM(I,J,D)=CMPLX(SIN(REAL(I+2*J+D,KIND=8)),0.03D0*(I-J),KIND=8)
+            INITIAL(I,J,D)=CMPLX(0.01D0*(I+J),0.02D0*(I-J),KIND=8)
+          END DO
+        END DO
+      END DO
+      DO NSPIN=1,2
+        S%NDIMD=NSPIN
+        KB(:,1)=0.5D0*(BAR(:,1)+BAR(:,2))
+        KB(:,2)=0.5D0*(BAR(:,1)-BAR(:,2))
+        FIELD=0.D0
+        DR=0.D0
+        DH=INITIAL
+        DO Q=1,2
+          SGN=MERGE(1.D0,-1.D0,Q.EQ.1)
+          C=WAVE(1,:,Q)
+          G=WAVE(2:4,:,Q)
+          H=RESHAPE(WAVE(5:13,:,Q),SHAPE(H))
+          DO J=1,N
+            DO I=1,N
+              KERNEL(1)=C(I)*C(J)
+              KERNEL(2:4)=G(:,I)*C(J)+C(I)*G(:,J)
+              KERNEL(5)=0.5D0*SUM(G(:,I)*G(:,J))
+              JAC(1,:)=KERNEL(2:4)
+              DO K=1,3
+                JAC(2:4,K)=H(:,K,I)*C(J)+G(:,I)*G(K,J) &
+ &                         +G(K,I)*G(:,J)+C(I)*H(:,K,J)
+                JAC(5,K)=0.5D0*SUM(H(:,K,I)*G(:,J)+G(:,I)*H(:,K,J))
+              END DO
+              DO D=1,NSPIN
+                DM=SGN*REAL(S%DM(I,J,D),KIND=8)
+                FIELD(:,D)=FIELD(:,D)+DM*KERNEL
+                DH(I,J,D)=DH(I,J,D)+SGN*SUM(KB(:,D)*KERNEL)
+                DO K=1,3
+                  DR(K)=DR(K)+DM*SUM(KB(:,D)*JAC(:,K))
+                END DO
+              END DO
+            END DO
+          END DO
+        END DO
+        CR=SUM(KB(:,1:NSPIN)*FIELD(:,1:NSPIN))
+        FIELD(:,1)=FIELD(:,1)+CORE
+        DO K=1,3
+          DR(K)=DR(K)+SUM(KB(:,1)*COREJAC(:,K))
+        END DO
+        REFERENCE(:,1)=0.5D0*FIELD(:,1)
+        REFERENCE(:,2)=REFERENCE(:,1)
+        IF(NSPIN.EQ.2) THEN
+          REFERENCE(:,1)=REFERENCE(:,1)+0.5D0*FIELD(:,2)
+          REFERENCE(:,2)=REFERENCE(:,2)-0.5D0*FIELD(:,2)
+        END IF
+        DO MODE=1,3
+          S%DH=INITIAL
+          IF(MODE.EQ.1) THEN
+            CALL SOURCE_CONTRACT(S,WAVE,CORE,COREJAC,VALUE,DX=DX)
+            E=MAX(E,MAXVAL(ABS(DX)),MAXVAL(ABS(S%DH-INITIAL)))
+          ELSE IF(MODE.EQ.2) THEN
+            CALL SOURCE_CONTRACT(S,WAVE(1:4,:,:),CORE,COREJAC,VALUE,BAR &
+ &                              ,DMCONTRACTION=CONTRACTION)
+            E=MAX(E,ABS(CONTRACTION-CR),MAXVAL(ABS(S%DH-DH)))
+          ELSE
+            CALL SOURCE_CONTRACT(S,WAVE,CORE,COREJAC,VALUE,BAR,DX,CONTRACTION)
+            E=MAX(E,ABS(CONTRACTION-CR),MAXVAL(ABS(DX-DR)),MAXVAL(ABS(S%DH-DH)))
+          END IF
+          E=MAX(E,MAXVAL(ABS(VALUE-REFERENCE)))
+        END DO
+      END DO
+      DEALLOCATE(WAVE,C,G,H,S%DM,S%DH,DH,INITIAL)
+    END DO
+    WRITE(*,'(A,ES24.14)') 'SOURCE FACTORIZED CONTRACTION ERROR ',E
+    IF(.NOT.(E.LE.1.D-12)) THEN
+      CALL ERROR$MSG('FACTORIZED SOURCE CONTRACTION DISAGREES WITH DIRECT PAIR SUM')
+      CALL ERROR$STOP('SOURCE_CONTRACT_TEST')
+    END IF
+    MAXERROR=MAX(MAXERROR,E)
+  END SUBROUTINE SOURCE_CONTRACT_TEST
 
   SUBROUTINE PAW_SKALA_ONECENTER_TEST(MAXERROR)
     IMPLICIT NONE

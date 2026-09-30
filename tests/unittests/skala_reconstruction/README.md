@@ -34,6 +34,16 @@ geometry, row count, setup arrays and derivative mode must invalidate it.
 Tests include empty source support, full and partial row coverage, exact and
 insufficient budgets, disabled caching and invalid environment settings.
 
+The source contractions first form density-matrix products with the partial
+waves and their three gradients. This moves the Hessian contraction out of
+the partial-wave pair loop without changing the forward fields or reverse
+map. An independent direct-pair reference checks 1, 6 and 11 partial waves,
+both collinear spin modes, nonsymmetric complex density matrices, and
+accumulation into existing complex adjoints. It compares fields, coordinate
+derivatives and density-matrix contractions to an absolute bound of 1e-12,
+including calls that do not request Hessians. The complete reconstruction
+suite also runs in the CPU-only Skala CI job.
+
 ## Periodized Becke weights
 
 The previous common finite cluster gave its edge images inequivalent
