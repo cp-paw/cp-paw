@@ -140,10 +140,12 @@ def compare(center, minus, plus, step, atom, axis, tolerance=None, *, rigid_tran
     if not math.isfinite(step) or step <= 0 or (tolerance is not None and
                                               (not math.isfinite(tolerance) or tolerance <= 0)):
         raise ValueError("Step and optional tolerance must be positive and finite")
+    # JSON reloads convert occupation tuples to lists without changing values.
+    occupations = [tuple(band) for band in center["occupations"]]
     for row in (center, minus, plus):
         if not row["stationary"]:
             raise ValueError("A geometry has not reached electronic stationarity")
-        if row["occupations"] != center["occupations"]:
+        if [tuple(band) for band in row["occupations"]] != occupations:
             raise ValueError("Changed band layout or occupations across geometries")
     analytic = force_component(center, atom, axis, rigid_translation)
     numeric = -(plus["final"]["energy"] - minus["final"]["energy"]) / (2 * step)

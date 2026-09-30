@@ -236,6 +236,18 @@ class StationaryForceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "occupations"):
             force_fd.compare(center, minus, plus, 0.001, 2, 1)
 
+    def test_comparison_accepts_json_roundtrip_but_rejects_changed_occupations(self):
+        center = force_fd.analyze(protocol(), 2, 1, 1, 1e-6, 1e-6)
+        saved = json.loads(json.dumps(center))
+        expected = force_fd.compare(center, center, center, 0.001, 2, 1)
+        self.assertEqual(force_fd.compare(saved, center, saved, 0.001, 2, 1), expected)
+        self.assertEqual(force_fd.compare(center, saved, center, 0.001, 2, 1), expected)
+        for field in range(4):
+            changed = copy.deepcopy(saved)
+            changed["occupations"][0][field] += 1
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "occupations"):
+                force_fd.compare(saved, center, changed, 0.001, 2, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
