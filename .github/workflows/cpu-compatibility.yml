@@ -51,6 +51,12 @@ jobs:
             TEST=si2 PAWX="$GITHUB_WORKSPACE/bin/fast/paw_fast.x"
           make -C tests/fulltests/si2 all TEST=si2 \
             PAWX="mpirun -np 2 $GITHUB_WORKSPACE/bin/fast_parallel/ppaw_fast.x"
+      - name: Check real and complex PAW constraint tolerances
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/orthogonality_tolerance/driver.mk orthogonality-tolerance-test
+          python3 tests/unittests/orthogonality_tolerance/input_checks.py bin/Build_fast/paw.x
+          python3 tests/unittests/orthogonality_tolerance/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
 
   skala-cpu:
     runs-on: ubuntu-latest

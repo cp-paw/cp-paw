@@ -1329,6 +1329,19 @@ to estimate the frequency from
   \vdefault{T}
 }
 
+\mbax{\key{ORTHOTOL}
+  \vdescr{Maximum absolute PAW-overlap defect used to stop the iterative
+    occupation-weighted constraint solve. Applies to both real and complex
+    wave functions with SAFEORTHO=T. A tighter value, such as 1.E-12, can
+    be useful for energy-difference verification. It does not set the
+    electronic residual tolerance or establish force accuracy. The
+    historical default is unchanged. An explicit value with SAFEORTHO=F
+    is rejected rather than silently ignored.}
+  \vformat{real}
+  \vrules{optional, from 1.E-14 to 1.E-8 inclusive, requires SAFEORTHO=T}
+  \vdefault{1.E-8}
+}
+
 \mbax{\key{STRAIGHTEN} \vdescr{Transform the wave functions onto
     energy eigenstates.  A unitary transform among the wave function
     is performed. The transform is performed only in the first

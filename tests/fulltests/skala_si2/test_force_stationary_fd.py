@@ -1,7 +1,10 @@
 import copy
+from contextlib import redirect_stderr
+import io
 import json
 from pathlib import Path
 import struct
+import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -77,6 +80,20 @@ class StationaryForceTest(unittest.TestCase):
         self.assertNotIn("!RDYN", text)
         self.assertNotIn("!MERMIN", text)
         self.assertIn("SAFEORTHO=T", text)
+        self.assertNotIn("ORTHOTOL", text)
+        args.orthogonality_tolerance = 1e-12
+        self.assertIn("ORTHOTOL=9.9999999999999998e-13", force_fd.control(args))
+
+    def test_invalid_orthogonality_tolerances_fail_before_creating_output(self):
+        arguments = ["force_stationary_fd.py"]
+        for key in ("executable", "model", "restart", "structure", "output"):
+            arguments.extend(["--" + key, "unused"])
+        for value in ("0", "1e-15", "1e-7", "nan", "inf"):
+            with self.subTest(value=value), redirect_stderr(io.StringIO()), \
+                    patch.object(sys, "argv", arguments + ["--orthogonality-tolerance", value]), \
+                    self.assertRaises(SystemExit) as error:
+                force_fd.main()
+            self.assertEqual(error.exception.code, 2)
 
     def test_displacement_preserves_other_records_and_both_time_levels(self):
         initial = restart()

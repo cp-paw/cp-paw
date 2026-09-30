@@ -139,6 +139,8 @@ def compare(center, minus, plus, step, atom, axis, tolerance=None):
 
 
 def control(args):
+    tolerance = getattr(args, "orthogonality_tolerance", None)
+    ortho = "" if tolerance is None else f" ORTHOTOL={tolerance:.16e}"
     return f"""!CONTROL
  !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={args.block_steps} NWRITE=10 START=F
           RSTRTTYPE='STATIC' AUTOCONV=1000 !END
@@ -150,7 +152,7 @@ def control(args):
  !END
  !FOURIER EPWPSI={args.cutoff:.16e} CDUAL=2 !END
  !CELL MOVE=F FRIC=0.0 M=1.E30 !END
- !PSIDYN SAFEORTHO=T MPSI={args.mass:.16e} MPSICG2={args.mass_g2:.16e}
+ !PSIDYN SAFEORTHO=T{ortho} MPSI={args.mass:.16e} MPSICG2={args.mass_g2:.16e}
          FRIC={args.friction:.16e} !END
 !END
 !EOB
@@ -233,6 +235,8 @@ def main():
     parser.add_argument("--mass", type=float, default=25)
     parser.add_argument("--mass-g2", type=float, default=0.3166286988823056)
     parser.add_argument("--friction", type=float, default=0.05)
+    parser.add_argument("--orthogonality-tolerance", type=float,
+                        help="Optional tighter PAW constraint solve, from 1e-14 to 1e-8")
     parser.add_argument("--jobs", type=int, default=1, help="Independent serial processes, not MPI ranks")
     parser.add_argument("--timeout", type=float, default=3600, help="Seconds per relaxation block")
     args = parser.parse_args()
@@ -240,6 +244,8 @@ def main():
                 args.dt, args.mass, args.mass_g2, args.friction, args.timeout, *args.steps]
     if args.absolute_tolerance is not None:
         positive.append(args.absolute_tolerance)
+    if args.orthogonality_tolerance is not None and not 1e-14 <= args.orthogonality_tolerance <= 1e-8:
+        parser.error("Orthogonality tolerance must lie between 1e-14 and 1e-8")
     if (any(not math.isfinite(x) or x <= 0 for x in positive)
             or not math.isfinite(args.center_displacement)
             or len(set(args.steps)) != len(args.steps)
