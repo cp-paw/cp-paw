@@ -486,8 +486,9 @@ CONTAINS
     REAL(8),INTENT(IN),OPTIONAL :: BAR(5,2)
     REAL(8),INTENT(OUT),OPTIONAL :: DX(3),DMCONTRACTION
     REAL(8) :: C(S%LMNX),G(3,S%LMNX),H(3,3,S%LMNX)
-    REAL(8) :: FIELD(5,S%NDIMD),KB(5,S%NDIMD),KERNEL(5),JAC(5)
+    REAL(8) :: FIELD(5,S%NDIMD),KB(5,S%NDIMD),KERNEL(5)
     REAL(8) :: DC(S%LMNX),DG(3,S%LMNX)
+    REAL(8) :: BC(S%LMNX),BG(3,S%LMNX)
     REAL(8) :: SGN,SPIN,DM,ADJOINT
     INTEGER :: Q,I,J,D,K
     LOGICAL :: BACK,GEOMETRY
@@ -521,11 +522,14 @@ CONTAINS
         FIELD(2:4,D)=FIELD(2:4,D)+2.D0*MATMUL(G,DC)
         FIELD(5,D)=FIELD(5,D)+0.5D0*SUM(G*DG)
         IF(GEOMETRY) THEN
+          ! Pull the model adjoints back to partial-wave values/gradients first.
+          ! Only their scalar contraction with spatial derivatives is needed.
+          BC=2.D0*(KB(1,D)*DC+MATMUL(TRANSPOSE(DG),KB(2:4,D)))
+          DO I=1,S%LMNX
+            BG(:,I)=2.D0*KB(2:4,D)*DC(I)+KB(5,D)*DG(:,I)
+          END DO
           DO K=1,3
-            JAC(1)=2.D0*DOT_PRODUCT(G(K,:),DC)
-            JAC(2:4)=2.D0*(MATMUL(H(:,K,:),DC)+MATMUL(G,DG(K,:)))
-            JAC(5)=SUM(H(:,K,:)*DG)
-            DX(K)=DX(K)+SUM(KB(:,D)*JAC)
+            DX(K)=DX(K)+DOT_PRODUCT(BC,G(K,:))+SUM(BG*H(:,K,:))
           END DO
         END IF
       END DO
