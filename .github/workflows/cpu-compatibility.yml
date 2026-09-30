@@ -59,6 +59,10 @@ jobs:
           python3 tests/unittests/orthogonality_tolerance/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
       - name: Check incremental rebuild relinks the executable
         run: python3 tests/buildtools/check_incremental_link.py bin/Build_fast
+      - name: Check cuBLAS workspace test without CUDA
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/cublas_workspace/driver.mk cublas-workspace-test
       - name: Check optional and required nuclear forces
         run: |
           python3 tests/unittests/force_selection/input_checks.py bin/Build_fast/paw.x

@@ -763,7 +763,6 @@ function enable_nvhpc_cublas_acc {
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUBLAS_ACC"
   if nvhpc_cublas_fp64_emulation_works ; then
     CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUBLAS_FP64_EMULATION"
-    FCFLAGS="${FCFLAGS} -cuda"
     LDFLAGS="${LDFLAGS} -cuda"
   fi
   LDFLAGS="${LDFLAGS} -cudalib=cublas"
