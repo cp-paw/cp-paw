@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import math
 import struct
 from pathlib import Path
 
@@ -59,61 +60,79 @@ def pack_fortran_matrix(record, offset, matrix):
     struct.pack_into("<9d", record, offset, *values)
 
 
+def deform(data, components):
+    """Strain all cell/coordinate time levels, preserving electronic records."""
+    if len(components) != 9 or not all(math.isfinite(x) for x in components):
+        raise ValueError("Need nine finite row-major strain components")
+    strain = [components[3 * i : 3 * i + 3] for i in range(3)]
+    deformation = [
+        [strain[i][j] + (1.0 if i == j else 0.0) for j in range(3)]
+        for i in range(3)
+    ]
+    a, b, c = deformation
+    determinant = (a[0]*(b[1]*c[2]-b[2]*c[1]) - a[1]*(b[0]*c[2]-b[2]*c[0])
+                   + a[2]*(b[0]*c[1]-b[1]*c[0]))
+    if not math.isfinite(determinant) or determinant <= 0:
+        raise ValueError("Deformation must preserve positive volume")
+    records = read_records(data)
+    for name in ("CELL", "ATOMS"):
+        if sum(record_name(row) == name for row in records) != 1:
+            raise ValueError(f"Missing or duplicate {name} section")
+
+    cell_header = next(
+        (index for index, record in enumerate(records) if record_name(record) == "CELL"),
+        None,
+    )
+    if cell_header + 1 >= len(records) or len(records[cell_header + 1]) != 27 * 8:
+        raise ValueError("unexpected or missing CELL section")
+    cell_record = records[cell_header + 1]
+    for offset in (0, 9 * 8, 18 * 8):
+        cell = unpack_fortran_matrix(cell_record, offset)
+        if not all(math.isfinite(x) for row in cell for x in row):
+            raise ValueError("Nonfinite starting cell")
+        transformed = matrix_product(deformation, cell)
+        if not all(math.isfinite(x) for row in transformed for x in row):
+            raise ValueError("Nonfinite deformed cell")
+        pack_fortran_matrix(cell_record, offset, transformed)
+
+    atom_header = next(
+        (index for index, record in enumerate(records) if record_name(record) == "ATOMS"),
+        None,
+    )
+    if atom_header + 4 >= len(records) or len(records[atom_header + 1]) != 4:
+        raise ValueError("Truncated ATOMS section")
+    natom = struct.unpack("<i", records[atom_header + 1])[0]
+    if natom < 1:
+        raise ValueError("Invalid atom count")
+    expected_size = 3 * natom * 8
+    for index in (atom_header + 3, atom_header + 4):
+        if len(records[index]) != expected_size:
+            raise ValueError("unexpected ATOMS coordinate record size")
+        coordinates = list(struct.unpack(f"<{3 * natom}d", records[index]))
+        if not all(math.isfinite(x) for x in coordinates):
+            raise ValueError("Nonfinite starting coordinate")
+        for atom in range(natom):
+            begin = 3 * atom
+            coordinates[begin : begin + 3] = transform_vector(
+                deformation, coordinates[begin : begin + 3]
+            )
+        if not all(math.isfinite(x) for x in coordinates):
+            raise ValueError("Nonfinite deformed coordinate")
+        struct.pack_into(f"<{3 * natom}d", records[index], 0, *coordinates)
+
+    return write_records(records)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Apply an affine strain to a CP-PAW restart cell and atoms."
     )
     parser.add_argument("input", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument(
-        "strain",
-        nargs=9,
-        type=float,
-        metavar=(
-            "E11", "E12", "E13", "E21", "E22", "E23", "E31", "E32", "E33"
-        ),
-        help="row-major displacement-gradient components; F = I + strain",
-    )
+    parser.add_argument("strain", nargs=9, type=float,
+                        help="row-major displacement-gradient components; F = I + strain")
     args = parser.parse_args()
-
-    strain = [args.strain[3 * i : 3 * i + 3] for i in range(3)]
-    deformation = [
-        [strain[i][j] + (1.0 if i == j else 0.0) for j in range(3)]
-        for i in range(3)
-    ]
-    records = read_records(args.input.read_bytes())
-
-    cell_header = next(
-        (index for index, record in enumerate(records) if record_name(record) == "CELL"),
-        None,
-    )
-    if cell_header is None or len(records[cell_header + 1]) != 27 * 8:
-        raise ValueError("unexpected or missing CELL section")
-    cell_record = records[cell_header + 1]
-    for offset in (0, 9 * 8, 18 * 8):
-        cell = unpack_fortran_matrix(cell_record, offset)
-        pack_fortran_matrix(cell_record, offset, matrix_product(deformation, cell))
-
-    atom_header = next(
-        (index for index, record in enumerate(records) if record_name(record) == "ATOMS"),
-        None,
-    )
-    if atom_header is None:
-        raise ValueError("ATOMS section not found")
-    natom = struct.unpack("<i", records[atom_header + 1])[0]
-    expected_size = 3 * natom * 8
-    for index in (atom_header + 3, atom_header + 4):
-        if len(records[index]) != expected_size:
-            raise ValueError("unexpected ATOMS coordinate record size")
-        coordinates = list(struct.unpack(f"<{3 * natom}d", records[index]))
-        for atom in range(natom):
-            begin = 3 * atom
-            coordinates[begin : begin + 3] = transform_vector(
-                deformation, coordinates[begin : begin + 3]
-            )
-        struct.pack_into(f"<{3 * natom}d", records[index], 0, *coordinates)
-
-    args.output.write_bytes(write_records(records))
+    args.output.write_bytes(deform(args.input.read_bytes(), args.strain))
 
 
 if __name__ == "__main__":

@@ -170,6 +170,48 @@ The older `force_fd.sh` and `stress_fd.sh` are single-step restart probes.
 They do not reconverge displaced orbitals and do not certify stationary
 forces or stress, even if their loose diagnostic tolerances are met.
 
+## Stationary Strain Derivatives
+
+`stress_stationary_fd.py` independently relaxes each strained cell with
+`!CELL MOVE=F` and `!PSIDYN STRESS=T`. Nuclear fractional coordinates stay
+fixed. All three cell time levels and both atomic coordinate time levels
+receive the affine map `F = I + strain`; the initial electronic records
+are preserved and subsequently reorthogonalized/relaxed by CP-PAW.
+The unmodified structure file supplies the common reference basis.
+
+```sh
+CPPAW_SKALA_SOURCE_CACHE_MB=4096 CPPAW_SKALA_PARTITION_CACHE_MB=256 \
+python3 tests/fulltests/skala_si2/stress_stationary_fd.py \
+  --executable /path/to/paw.x --model /path/to/model.fun \
+  --restart /path/to/stationary.rstrt --structure /path/to/matching.strc \
+  --output /path/to/new-strain-check --directions isotropic xx xy \
+  --steps 3e-5 1e-5 --jobs 4
+```
+
+The two centers and every signed strain must satisfy both electronic
+residual limits of `1e-7` Ha for five consecutive evaluations. The default
+constraint tolerance is `1e-12`. Relaxation settings are shared with the
+ionic-force driver and can be changed explicitly. Failed blocks remain in
+the output. `--jobs` counts independent serial processes, not MPI ranks.
+Cache budgets apply separately to each process.
+
+`xx`, `yy` and `zz` select normal components. `xy`, `xz` and `yz` use half
+the step in each symmetric off-diagonal entry, so the analytic comparison
+is the corresponding symmetric tensor component. `isotropic` compares
+the trace. The numerical derivative is `(E_plus-E_minus)/(2*h)`, with no
+force minus sign or division by volume. Its unit is Ha per unit strain.
+
+Checks require identical band occupations and exact wave-basis metadata
+(integer G vectors, k points and band/spin layout), as well as unchanged
+reported density-basis and native-grid sizes. The cell metric itself is
+allowed to change. Stress, total energy and electronic diagnostics must
+refer to the same evaluated step. Input hashes, deformed initial states,
+raw protocols and repeated-center differences are retained. Without an
+explicit `--absolute-tolerance`, output is a measurement, not a passed
+physical-stress test. An optional bound also applies to repeated-center
+stress and energy-difference sensitivity. Grid and step-size convergence
+remain separate requirements.
+
 ## PAW setup grid
 
 The partial-wave setup grid is independent of the Skala atom-grid quadrature.

@@ -160,6 +160,7 @@ def compare(center, minus, plus, step, atom, axis, tolerance=None, *, rigid_tran
 def control(args):
     tolerance = getattr(args, "orthogonality_tolerance", None)
     ortho = "" if tolerance is None else f" ORTHOTOL={tolerance:.16e}"
+    stress = " STRESS=T" if getattr(args, "stress", False) else ""
     dual = getattr(args, "density_dual", 2.)
     dual_text = "2" if dual == 2. else f"{dual:.16e}"
     return f"""!CONTROL
@@ -173,7 +174,7 @@ def control(args):
  !END
  !FOURIER EPWPSI={args.cutoff:.16e} CDUAL={dual_text} !END
  !CELL MOVE=F FRIC=0.0 M=1.E30 !END
- !PSIDYN SAFEORTHO=T{ortho} MPSI={args.mass:.16e} MPSICG2={args.mass_g2:.16e}
+ !PSIDYN SAFEORTHO=T{ortho}{stress} MPSI={args.mass:.16e} MPSICG2={args.mass_g2:.16e}
          FRIC={args.friction:.16e} !END
 !END
 !EOB
@@ -233,17 +234,11 @@ def run_leg(name, delta, args, inputs, env):
     return name, result
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+def add_relaxation_arguments(parser):
     for name in ("executable", "model", "restart", "structure", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
     parser.add_argument("--device", choices=("CPU", "CUDA"), default="CPU")
     parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
-    parser.add_argument("--atom", type=int, default=2)
-    parser.add_argument("--axis", type=int, choices=(1, 2, 3), default=1)
-    parser.add_argument("--rigid-translation", action="store_true",
-                        help="Displace every atom along --axis and test the total force; --atom is unused")
-    parser.add_argument("--center-displacement", type=float, default=0)
     parser.add_argument("--steps", type=float, nargs="+", default=(0.001, 0.0003))
     parser.add_argument("--block-steps", type=int, default=40)
     parser.add_argument("--max-blocks", type=int, default=3)
@@ -251,7 +246,7 @@ def main():
     parser.add_argument("--residual-tolerance", type=float, default=1e-6)
     parser.add_argument("--commutator-tolerance", type=float, default=1e-6)
     parser.add_argument("--absolute-tolerance", type=float,
-                        help="Omit to measure without claiming a passed force test")
+                        help="Omit to measure without claiming passed derivative accuracy")
     parser.add_argument("--radial-points", type=int, default=96)
     parser.add_argument("--lebedev-exactness", type=int, default=17)
     parser.add_argument("--cutoff", type=float, default=20)
@@ -265,7 +260,9 @@ def main():
                         help="Optional tighter PAW constraint solve, from 1e-14 to 1e-8")
     parser.add_argument("--jobs", type=int, default=1, help="Independent serial processes, not MPI ranks")
     parser.add_argument("--timeout", type=float, default=3600, help="Seconds per relaxation block")
-    args = parser.parse_args()
+
+
+def validate_relaxation_arguments(parser, args):
     positive = [args.residual_tolerance, args.commutator_tolerance, args.cutoff, args.density_dual,
                 args.dt, args.mass, args.mass_g2, args.friction, args.timeout, *args.steps]
     if args.absolute_tolerance is not None:
@@ -273,11 +270,24 @@ def main():
     if args.orthogonality_tolerance is not None and not 1e-14 <= args.orthogonality_tolerance <= 1e-8:
         parser.error("Orthogonality tolerance must lie between 1e-14 and 1e-8")
     if (any(not math.isfinite(x) or x <= 0 for x in positive)
-            or not math.isfinite(args.center_displacement)
             or len(set(args.steps)) != len(args.steps)
-            or min(args.atom, args.jobs, args.block_steps, args.max_blocks, args.last,
+            or min(args.jobs, args.block_steps, args.max_blocks, args.last,
                    args.radial_points, args.lebedev_exactness) < 1 or args.last > args.block_steps):
         parser.error("Invalid indices, sizes, relaxation settings or finite-difference parameters")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_relaxation_arguments(parser)
+    parser.add_argument("--atom", type=int, default=2)
+    parser.add_argument("--axis", type=int, choices=(1, 2, 3), default=1)
+    parser.add_argument("--rigid-translation", action="store_true",
+                        help="Displace every atom along --axis and test the total force; --atom is unused")
+    parser.add_argument("--center-displacement", type=float, default=0)
+    args = parser.parse_args()
+    validate_relaxation_arguments(parser, args)
+    if args.atom < 1 or not math.isfinite(args.center_displacement):
+        parser.error("Need a positive atom index and finite displacement")
     inputs = {key: getattr(args, key).resolve(strict=True)
               for key in ("executable", "model", "restart", "structure")}
     geometry(displace_geometry(inputs["restart"].read_bytes(), args.atom, args.axis,
