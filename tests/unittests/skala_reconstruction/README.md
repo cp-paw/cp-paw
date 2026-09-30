@@ -44,6 +44,29 @@ derivatives and density-matrix contractions to an absolute bound of 1e-12,
 including calls that do not request Hessians. The complete reconstruction
 suite also runs in the CPU-only Skala CI job.
 
+## Smooth native-grid interpolation
+
+The native-grid interpolant blends two nine-node, degree-eight Lagrange
+stencils centered on the endpoints of each grid interval. For interval
+coordinate `t`, the blend is `s(t)=t^3 (10-15t+6t^2)` and the interpolant is
+`(1-s) P_left + s P_right`. Both polynomials reproduce degree eight.
+The blend and its first two endpoint derivatives select the same centered
+polynomial on either side of a grid node. The piecewise interpolant is C2.
+The union has ten nodes per direction with periodic wrapping.
+
+Point derivatives differentiate both the polynomials and the blend. The
+reverse map scatters with the identical tensor-product weights. CPU and
+OpenACC backprojection call the same weight routine. Tests cover polynomial
+reproduction, gradient finite differences and second-derivative continuity
+across internal and periodic faces. The grid adjoint tests include points
+on stencil boundaries as well as generic points and skew cells.
+
+The earlier single eight-node Lagrange stencil was only C0 across interval
+changes. This is a revised interpolation discretization, not a bitwise
+equivalent optimization. Electronic states and finite differences must be
+reconverged when comparing the two. Smoothness does not imply exact
+translation covariance, density-grid convergence or physical force accuracy.
+
 ## Periodized Becke weights
 
 The previous common finite cluster gave its edge images inequivalent

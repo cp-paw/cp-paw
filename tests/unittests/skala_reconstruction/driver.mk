@@ -1,4 +1,10 @@
-.PHONY: skala-reconstruction-test skala-primitives-test skala-partition-probe skala-periodic-test skala-lebedev-test skala-partition-cache-test
+.PHONY: skala-reconstruction-test skala-primitives-test skala-partition-probe skala-periodic-test skala-lebedev-test skala-partition-cache-test skala-interpolation-test
+
+skala-interpolation-test: libpaw.a
+	mkdir -p unit-tests
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/interpolation.x $(BASEDIR)/tests/unittests/skala_reconstruction/interpolation.f90 libpaw.a $(LIBS)
+	./unit-tests/interpolation.x
+
 skala-reconstruction-test: libpaw.a
 	mkdir -p unit-tests
 	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/skala_reconstruction.x $(BASEDIR)/tests/unittests/skala_reconstruction/skala_reconstruction.f90 libpaw.a $(LIBS)
