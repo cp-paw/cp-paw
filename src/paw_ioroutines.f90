@@ -1423,6 +1423,7 @@ CALL LMTO$SETL4('ON',.FALSE.)
       REAL(8)               :: AMPRE
       REAL(8)               :: EMASS
       REAL(8)               :: EMASSCG2
+      REAL(8)               :: ORTHOTOL
       REAL(8)               :: DT
       REAL(8)               :: PI
 !     **************************************************************************
@@ -1461,6 +1462,18 @@ CALL LMTO$SETL4('ON',.FALSE.)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'STOP',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'STOP',1,TSTOPE)
       CALL WAVES$SETL4('STOP',TSTOPE)
+!
+!     == OPTIONAL NUCLEAR FORCES DURING FIXED-GEOMETRY RELAXATION ==============
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'FORCE',1,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'FORCE',0,.TRUE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'FORCE',1,TCHK)
+      CALL WAVES$SETL4('FORCE',TCHK)
+!
+!     == OPTIONAL STRESS WITHOUT CELL DYNAMICS ================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'STRESS',1,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'STRESS',0,.FALSE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'STRESS',1,TCHK)
+      CALL WAVES$SETL4('STRESS',TCHK)
 !
 !     ==========================================================================
 !     ==  BEGIN WITH RANDOM VELOCITIES =========================================
@@ -1522,6 +1535,15 @@ CALL LMTO$SETL4('ON',.FALSE.)
       END IF
       CALL LINKEDLIST$GET(LL_CNTL,'SAFEORTHO',1,TCHK)
       CALL WAVES$SETL4('SAFEORTHO',TCHK)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ORTHOTOL',1,TCHK1)
+      IF(TCHK1.AND..NOT.TCHK) THEN
+        CALL ERROR$MSG('ORTHOTOL REQUIRES SAFEORTHO=T')
+        CALL ERROR$STOP('READIN_PSIDYN')
+      END IF
+      IF(.NOT.TCHK1) CALL LINKEDLIST$SET(LL_CNTL,'ORTHOTOL',0,1.D-8)
+      CALL LINKEDLIST$CONVERT(LL_CNTL,'ORTHOTOL',1,'R(8)')
+      CALL LINKEDLIST$GET(LL_CNTL,'ORTHOTOL',1,ORTHOTOL)
+      CALL WAVES$SETR8('ORTHOTOL',ORTHOTOL)
 !
 !     ==========================================================================
 !     ==  STRAIGHTEN MAKES ONCE A TRANSFORMATION TO EIGENSTATES               ==

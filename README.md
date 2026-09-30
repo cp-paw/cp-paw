@@ -152,12 +152,62 @@ same fallback. Atom/cell, point-grid, image-shell and force/stress-mode changes
 invalidate the cache. Densities, model adjoints and forces are never cached.
 `CHECK=T` reports hits, misses and the summed cache payload across ranks.
 
+A separate source-geometry cache retains AE/pseudo partial-wave values,
+Cartesian gradients and, when forces or stress are requested, Hessians at
+the relevant periodic source images. Frozen-core fields and their spatial
+derivatives are retained too. `CPPAW_SKALA_SOURCE_CACHE_MB` sets its independent
+per-rank array budget (default 256 MiB, `0` disables it). Geometry, grid,
+setup and derivative-mode changes invalidate these entries. Density-matrix
+contractions and all reverse contributions are recomputed with current inputs.
+This is a host-memory cache, not additional GPU residency. It stores complete
+rows up to the available budget. Uncached rows or allocation failure select
+direct evaluation without changing the model.
+
+An experimental OpenACC source reverse path is enabled explicitly with
+`CPPAW_SKALA_SOURCE_BACK_ACC=1`. It batches complete cached rows for the
+density-matrix, source-coordinate and source-image strain contractions.
+`CPPAW_SKALA_SOURCE_BACK_ACC_MB` bounds the geometry, adjoint and scratch
+array payload per call and rank (default 256 MiB, `0` disables offload).
+These source budgets do not cap LibTorch/model workspace, other PAW arrays or
+total memory. Leave additional headroom, especially for concurrent fine-grid
+jobs on unified-memory GPUs where host and device allocations share capacity.
+`CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS` defaults to 4096. Rows outside either
+cache or device budget follow the unchanged host path, as do CPU-only builds.
+`CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS` selects a positive tile size (default
+128). Larger tiles reduce kernel launches and host-update calls while keeping
+the original row summation order. Their larger scratch arrays count against
+the same device budget and can reduce offloaded coverage or select fallback.
+This tuning switch does not change the default or retain geometry across steps.
+With `CHECK=T`, `SOURCE GPU REVERSE ROWS` reports actual offloaded coverage.
+Profile builds separate source geometry input (`ACC_COPY_SKALA_SOURCE_GEOM`),
+changing density-matrix/adjoint input (`ACC_COPY_SKALA_SOURCE_INPUT`), device
+execution (`SKALA_SOURCE_DEVICE`), row-result transfer
+(`ACC_COPY_SKALA_SOURCE_OUT`) and ordered host accumulation
+(`SKALA_SOURCE_HOST_SUM`). Transfer records count explicit array payloads,
+not measured hardware traffic. Input times include associated device
+allocation, and these phase records exclude final deallocation. Record
+dimensions are covered rows, partial-wave channels, cached image entries and
+tile rows. They are nested inside the existing source-adjoint total and must
+not be added to it. Geometry is still transferred per call, not retained
+across electronic steps.
+The geometry is transferred once per source/block reverse call and reused
+across its tiles. It is not yet resident across electronic steps. This path
+is off by default and independent of the inference device and smooth-grid
+backprojection switch. Compiler, numerical and performance validation must
+precede any default change.
+
 `LEBEDEVEXACTNESS` requests a minimum algebraic exactness, not a point count.
 The supported rules now extend through 65: 53 uses 974 angular points, 59 uses
 1202, and 65 uses 1454 per radial shell and orientation. A request of 64 selects
 65 automatically. The default remains 53; higher resolution must be checked
 for the system of interest. Rule provenance and tests are documented in
 [`LEBEDEV.md`](tests/unittests/skala_reconstruction/LEBEDEV.md).
+
+The once-per-atom linear one-center checks under `CHECK=T` cap their requested
+angular exactness at `2*lmax+2`, sufficient for the partial-wave density and
+Cartesian-gradient products. They retain the setup radial grid and report the
+model's unchanged angular request separately. This cap never changes the
+nonlinear Skala model grid, its partition, energies, or derivatives.
 
 The CO2, NH3 and urea integration probes are described in
 [`tests/fulltests/skala_crystals/README.md`](tests/fulltests/skala_crystals/README.md).

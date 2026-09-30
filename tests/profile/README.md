@@ -203,6 +203,17 @@ same executable. `skala_grid_acc` keeps the production size threshold unless
 rows separate `SKALA_GRID_BACK_ACC_SCATTER` kernel time from the
 `ACC_COPY_SKALA_GRID_BACK_*` transfer estimates.
 
+Within `SKALA_ATOM_COMPOSITE`, `SKALA_ADJOINT_SOURCE` measures the PAW
+source adjoints, `SKALA_ADJOINT_INTERPOLATION` the smooth primitive spatial
+derivatives and their force/stress contraction, and `SKALA_ADJOINT_PARTITION`
+the partition-cache lookup or evaluation and contraction.
+`SKALA_ADJOINT_SCATTER` encloses smooth-grid back-projection on either backend
+and includes any per-block transfers. The interpolation and partition rows
+are absent when geometric derivatives are not requested. Times are accumulated
+over the quadrature rows and reported once per atom block. These nested
+diagnostics must not be added to the atom envelope or the GPU kernel rows.
+The extra timers are compiled only in profiling builds.
+
 `WAVES$ETOT` is split further by `PAW_ETOT_*` rows, and the initial
 Gram-Schmidt setup is split by `PAW_GRAM_*` rows. These are nested PAW
 diagnostic envelopes: use them to identify the next target, not as additive

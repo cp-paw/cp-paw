@@ -206,11 +206,18 @@ derivatives and the spatial derivative structure above, including the kinetic
 tensor associated with positive tau. Second derivatives of the Skala model are
 not required unless a response derivative of stress or force is requested.
 
-When `APPLY=T`, `SAFEORTHO` defaults to `F` because the robust
-orthogonalization is required by the harder PAW one-center operator. An
-explicit `SAFEORTHO` value is respected. Start electronic dynamics with a
-conservative `DT**2/MPSI`; the conventional CP-PAW default is too aggressive
-for the current experimental operator.
+When `APPLY=T`, `SAFEORTHO` currently defaults to `F`, the sequential
+orthogonalizer selected for the original experimental integration. This is
+not a mathematical requirement of Skala. An explicit value is respected.
+For fixed occupations, `SAFEORTHO=T` uses the occupation-weighted,
+energy-conserving constraint update. Equally occupied orbitals need not
+be individually canonicalized to achieve electronic stationarity. Compare
+the occupied residual and occupation commutator when selecting the update,
+not only energy changes or apparent eigenvalue convergence. `!MERMIN`
+requires `SAFEORTHO=F` under the existing dynamical-occupation implementation.
+Use conservative `DT**2/MPSI` and check the resolved `MPSICG2`, which otherwise
+changes automatically with timestep and mass. A successful warm-restart
+minimization does not establish stable parameters for arbitrary cold starts.
 
 For PAW, the caller constructs each target atom block from primary fields
 before inference:

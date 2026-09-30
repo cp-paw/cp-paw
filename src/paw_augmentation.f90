@@ -221,7 +221,7 @@ END MODULE AUGMENTATION_MODULE
 !
 !     ..................................................................
       SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT,EDENMAT &
-     &                              ,LMRX,VQLM,RHOB,POTB,DATH,DO)
+     &                              ,LMRX,VQLM,RHOB,POTB,DATH,DO,EBACKGROUND)
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
@@ -243,6 +243,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,INTENT(IN)   :: RHOB ! NEUTRALIZING BACKGROUND DENSITY
 !                               RHOB MAY BE SET TO ZERO BY ISOLATE OBJECT
       REAL(8)   ,INTENT(OUT)  :: POTB ! NEG. AV. EL. AUGM. POT.
+      REAL(8)   ,INTENT(OUT)  :: EBACKGROUND ! INCLUDED IN THE HARTREE ENERGY
       COMPLEX(8),INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,NDIMD)
       REAL(8)    ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
@@ -281,6 +282,7 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),PARAMETER    :: ITEST=1
       LOGICAL(4)              :: TBACK
       REAL(8)                 :: DETOT,PSEHARTREE,AEEHARTREE,COREEXC
+      REAL(8)                 :: AEBACKGROUND,PSBACKGROUND
       REAL(8)                 :: EKINNL,ENL,AEEXC,PSEXC
       CHARACTER(32)           :: ATOM
       REAL(8)                 :: VQLM1(LMRX)
@@ -436,9 +438,10 @@ END MODULE AUGMENTATION_MODULE
       ALLOCATE(PSHPOT(NR,LMRX))
       ALLOCATE(AEHPOT(NR,LMRX))
       CALL AUGMENTATION_PSHARTREE(GID,NR,LMRX,PSCORE,PSRHO(:,:,1) &
-     &                 ,VADD,RCSM,QLM,VQLM1,RHOB,PSHPOT,PSEHARTREE)
+     &                 ,VADD,RCSM,QLM,VQLM1,RHOB,PSHPOT,PSEHARTREE,PSBACKGROUND)
       CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AEZ,AECORE,AERHO(:,:,1) &
-     &                               ,VQLM1,RHOB,AEHPOT,AEEHARTREE)
+     &                               ,VQLM1,RHOB,AEHPOT,AEEHARTREE,AEBACKGROUND)
+      EBACKGROUND=AEBACKGROUND-PSBACKGROUND
 !
 !     ================================================================
 !     ==   ADD EXCHANGE AND CORRELATION POTENTIAL                   ==
@@ -1864,7 +1867,7 @@ STOP
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE AUGMENTATION_PSHARTREE(GID,NR,LMRX,PSRHOC,PSRHO &
-     &            ,VADD,RCSM,QLM,VQLM,RHOB,PSPOT,PSEH)
+     &            ,VADD,RCSM,QLM,VQLM,RHOB,PSPOT,PSEH,EBACKGROUND)
 !     **************************************************************************
 !     **                                                                      **
 !     ** CALCULATES HARTREE ENERGY                                            **
@@ -1891,6 +1894,7 @@ STOP
       REAL(8)    ,INTENT(IN) :: RHOB
       REAL(8)    ,INTENT(OUT):: PSPOT(NR,LMRX)
       REAL(8)    ,INTENT(OUT):: PSEH
+      REAL(8)    ,INTENT(OUT):: EBACKGROUND
       REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)                :: R(NR)
       REAL(8)                :: RHO1(NR)
@@ -1975,6 +1979,9 @@ STOP
       POT(:)=SVAR*R(:)**2
       PSPOT(:,1)=PSPOT(:,1)+POT(:) ! POTENTIAL OF THE BACKGROUND
       PSE(:)=PSE(:)+(PSRHO(:,1)+RHOHAT(:,1)+PSRHOC(:))*POT(:)
+!     Retain the already included background energy for its volume derivative.
+      RHO1(:)=(PSRHO(:,1)+RHOHAT(:,1)+PSRHOC(:))*POT(:)*R(:)**2
+      CALL RADIAL$INTEGRAL(GID,NR,RHO1,EBACKGROUND)
 !
 !     ==================================================================
 !     ==  CALCULATE TOTAL ENERGY                                      ==
@@ -1986,7 +1993,7 @@ STOP
 !
 !     ..................................................................
       SUBROUTINE AUGMENTATION_AEHARTREE(GID,NR,LMRX,AEZ,RHOC,AERHO &
-     &                                 ,VQLM,RHOB,AEPOT,AEEH)
+     &                                 ,VQLM,RHOB,AEPOT,AEEH,EBACKGROUND)
 !     ******************************************************************
 !     **  ELECTROSTATIC ENERGY OF THE ALL-ELECTRON ONE-CENTER DENSITY **
 !     **  INCLUDING THE EXTERNAL POTENTIAL AND THE POTENTIAL OF THE   **
@@ -2003,6 +2010,7 @@ STOP
       REAL(8)    ,INTENT(IN) :: RHOB       ! COMPENSATING BACKGROUND
       REAL(8)    ,INTENT(OUT):: AEPOT(NR,LMRX)
       REAL(8)    ,INTENT(OUT):: AEEH       ! ENERGY
+      REAL(8)    ,INTENT(OUT):: EBACKGROUND
       REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)    ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                :: R(NR)
@@ -2077,6 +2085,8 @@ STOP
       POT(:)=SVAR*R(:)**2
       AEPOT(:,1)=AEPOT(:,1)+POT(:) ! POTENTIAL OF THE BACKGROUND
       AEE(:)=AEE(:)+(AERHO(:,1)+RHOC(:))*POT(:)
+      AUX(:)=(AERHO(:,1)+RHOC(:))*POT(:)*R(:)**2
+      CALL RADIAL$INTEGRAL(GID,NR,AUX,EBACKGROUND)
 !CALL RADIAL$INTEGRAL(GID,NR,(AERHO(:,1)+RHOC(:))*POT(:)*R**2,SVAR)
 !PRINT*,'EL BACKGROUND',SVAR
 !

@@ -3142,8 +3142,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     **  MULTIPLICATION WITH THE OCCUPATION TO THE RIGHT.            **
 !     **                                                              **
 !     *******************************************P.E. BLOECHL, (1992)***
-!     IMPLICIT NONE
-      REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
+      USE WAVES_MODULE, ONLY: EPS=>ORTHOTOL
+      IMPLICIT NONE
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
       INTEGER(4),PARAMETER     :: ITERX    = 200
       LOGICAL(4),PARAMETER     :: TPR    = .FALSE.
@@ -3388,6 +3388,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     **    (PLENUM PUBLISHING CORPORATION,1989)                              **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1992)***********
+      USE WAVES_MODULE, ONLY: EPS=>ORTHOTOL
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &       CPPAW_CUBLAS_ACC_ORTHO_CONST_RESIDENCY_ENABLED &
@@ -3406,7 +3407,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
      &       CPPAW_CUSOLVER_ACC_DSYEVD_PRESENT
 #ENDIF
       IMPLICIT NONE
-      REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
       INTEGER(4),PARAMETER     :: MAX    = 200
       LOGICAL(4),PARAMETER     :: TPR    = .FALSE.
@@ -4785,12 +4785,17 @@ PRINT*,'CELLSCALE ',CELLSCALE
 !    &      ,'INITIAL VELOCITIES ARE RANDOMIZED WITH ENERGY',AMPRE,'H')
 !     END IF
       CALL REPORT$L4VAL(NFIL,'SAFEORTHO',TSAFEORTHO)
+      IF(.NOT.TFORCEX) THEN
+        WRITE(NFIL,'(A)')'NUCLEAR FORCES OMITTED AT FIXED GEOMETRY'
+        WRITE(NFIL,'(A)')'ATOM/CELL DYNAMICS AND QM/MM RETAIN NUCLEAR FORCES'
+      END IF
       IF(.NOT.TSAFEORTHO) THEN
         WRITE(NFIL,FMT='("I.E. ORTHOGONALIZATION CONVERGES TO EIGENSTATES."' &
      &                 //'," (NO STRICT ENERGY CONSERVATION)")')
       ELSE
         WRITE(NFIL,FMT='("I.E. ORTHOGONALIZATION CONSERVES ENERGY"' &
      &                 //'," (DO NOT USE WITH VARIABLE OCCUPATIONS)")')
+        CALL REPORT$R8VAL(NFIL,'ORTHOTOL',ORTHOTOL,' ')
       END IF
 !     
 !     ================================================================

@@ -1094,7 +1094,8 @@ END MODULE SETUP_MODULE
         CALL RADIAL$DERIVATIVE(GIDG,NG,FOFG,G,F(1))
         F(1)=G*F(1)
         DO IG=2,NG_
-          IF(ABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
+!         Only identical radii may share an interpolated value or derivative.
+          IF(G2(IG).EQ.G2(IG-1)) THEN
             F(IG) =F(IG-1)
           ELSE
             G=SQRT(G2(IG))
@@ -1108,7 +1109,7 @@ END MODULE SETUP_MODULE
         IF(G.LT.1.D-6) NGAMMA=1
         CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(1))
         DO IG=2,NG_
-          IF(ABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
+          IF(G2(IG).EQ.G2(IG-1)) THEN
             F(IG) =F(IG-1)
           ELSE
             G=SQRT(G2(IG))

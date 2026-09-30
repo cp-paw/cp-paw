@@ -51,6 +51,47 @@ jobs:
             TEST=si2 PAWX="$GITHUB_WORKSPACE/bin/fast/paw_fast.x"
           make -C tests/fulltests/si2 all TEST=si2 \
             PAWX="mpirun -np 2 $GITHUB_WORKSPACE/bin/fast_parallel/ppaw_fast.x"
+      - name: Check real and complex PAW constraint tolerances
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/orthogonality_tolerance/driver.mk orthogonality-tolerance-test
+          python3 tests/unittests/orthogonality_tolerance/input_checks.py bin/Build_fast/paw.x
+          python3 tests/unittests/orthogonality_tolerance/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
+      - name: Check incremental rebuild relinks the executable
+        run: python3 tests/buildtools/check_incremental_link.py bin/Build_fast
+      - name: Check occupation-weighted PAW force derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/force_multiplier/driver.mk force-multiplier-test
+
+      - name: Check reciprocal setup interpolation and derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/setup_reciprocal/driver.mk setup-reciprocal-test
+      - name: Check mixed-species Hartree strain derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/hartree_strain/driver.mk hartree-strain-test
+      - name: Check one-center background strain derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/background_strain/driver.mk background-strain-test
+      - name: Check angular projector strain derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/projector_strain/driver.mk projector-strain-test
+      - name: Check one-center primitive quadrature and derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/skala_reconstruction/driver.mk skala-primitives-test
+      - name: Check cuBLAS workspace test without CUDA
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/cublas_workspace/driver.mk cublas-workspace-test
+      - name: Check optional and required nuclear forces
+        run: |
+          python3 tests/unittests/force_selection/input_checks.py bin/Build_fast/paw.x
+          python3 tests/unittests/force_selection/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
 
   skala-cpu:
     runs-on: ubuntu-latest
@@ -72,6 +113,12 @@ jobs:
           FC: gfortran
           CPPAW_SKALA_PYTHON: python
         run: src/Buildtools/paw_skala_setup.sh --device cpu --download-model --jobs 2
+      - name: Check Skala validation helpers and diagnostic model precision
+        run: |
+          python -m unittest discover -s tests/fulltests/skala_si2 -p 'test_*.py'
+          python tests/fulltests/skala_si2/model_precision.py \
+            bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
+            "$RUNNER_TEMP/skala-precision-check.fun" --device cpu
       - name: Build dedicated serial and MPI Skala binaries
         run: |
           src/Buildtools/paw_build.sh -c skala_cpu_fast -j2 -z
@@ -87,6 +134,8 @@ jobs:
               exit 1
             fi
           done
+      - name: Check Skala reconstruction and adjoint kernels
+        run: bash tests/unittests/skala_reconstruction/run.sh bin/Build_skala_cpu_fast
       - name: Run serial and MPI Skala Si2 regressions
         env:
           SKALA_MODEL: ${{ github.workspace }}/bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun
@@ -97,3 +146,17 @@ jobs:
           make -C tests/fulltests/skala_si2 clean
           make -C tests/fulltests/skala_si2 all \
             PAWX="mpirun -np 2 $GITHUB_WORKSPACE/bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x"
+      - name: Check fixed-cell Skala stress selection
+        run: |
+          python tests/fulltests/skala_si2/stress_mode_parity.py \
+            --executable bin/skala_cpu_fast/paw_skala_cpu_fast.x \
+            --model bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
+            --restart tests/fulltests/skala_si2/skala_si2.rstrt \
+            --structure tests/fulltests/skala_si2/skala_si2.strc \
+            --output "$RUNNER_TEMP/skala-stress-serial"
+          python tests/fulltests/skala_si2/stress_mode_parity.py \
+            --executable bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x \
+            --model bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
+            --restart tests/fulltests/skala_si2/skala_si2.rstrt \
+            --structure tests/fulltests/skala_si2/skala_si2.strc \
+            --output "$RUNNER_TEMP/skala-stress-mpi" --mpi-ranks 2

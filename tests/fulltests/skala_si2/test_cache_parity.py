@@ -19,6 +19,33 @@ def protocol(cached=False):
 
 
 class CacheParityTests(unittest.TestCase):
+    def test_source_cache(self):
+        off = protocol().replace("PARTITION CACHE", "SOURCE CACHE")
+        off = off.replace("SOURCE CACHE MISSES 100", "SOURCE CACHE MISSES 400")
+        cached = off.replace("SOURCE CACHE HITS 0", "SOURCE CACHE HITS 400")
+        cached = cached.replace("SOURCE CACHE MISSES 400", "SOURCE CACHE MISSES 0")
+        cached = cached.replace("SOURCE CACHE BYTES ALL RANKS 0", "SOURCE CACHE BYTES ALL RANKS 10000")
+        result = cache_parity.compare(cache_parity.diagnostics(off, cache="source"),
+                                      cache_parity.diagnostics(cached, cache="source"),
+                                      1e-10, cache="source")
+        self.assertEqual(result["cache_hits_per_step"], [400, 400])
+        partial = cached.replace("SOURCE CACHE HITS 400", "SOURCE CACHE HITS 200")
+        partial = partial.replace("SOURCE CACHE MISSES 0", "SOURCE CACHE MISSES 200")
+        result = cache_parity.compare(cache_parity.diagnostics(off, cache="source"),
+                                      cache_parity.diagnostics(partial, cache="source"),
+                                      1e-10, cache="source")
+        self.assertEqual(result["cache_hits_per_step"], [200, 200])
+        changed = partial.replace("SOURCE CACHE HITS 200", "SOURCE CACHE HITS 201", 1)
+        changed = changed.replace("SOURCE CACHE MISSES 200", "SOURCE CACHE MISSES 199", 1)
+        with self.assertRaises(ValueError):
+            cache_parity.compare(cache_parity.diagnostics(off, cache="source"),
+                                 cache_parity.diagnostics(changed, cache="source"), 1e-10, cache="source")
+        for text in (off, cached.replace("SOURCE CACHE HITS 400", "SOURCE CACHE HITS 399", 1)):
+            with self.assertRaises(ValueError):
+                cache_parity.compare(cache_parity.diagnostics(off, cache="source"),
+                                     cache_parity.diagnostics(text, cache="source"),
+                                     1e-10, cache="source")
+
     def test_equal(self):
         result = cache_parity.compare(cache_parity.diagnostics(protocol()),
                                       cache_parity.diagnostics(protocol(True)), 1e-10)

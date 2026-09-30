@@ -25,6 +25,48 @@ deallocation and exact/insufficient/zero storage budgets. Invalid cache-limit
 environment values must fail explicitly. The cache stores only geometry; it
 does not validate the neural model or electronic convergence.
 
+The source-geometry cache has independent tests for AE/pseudo partial-wave
+values, gradients, Hessians and frozen-core fields at periodic source images.
+These compare cached and direct fields, density-matrix adjoints, forces and
+strain moments in both collinear spin modes. Changed density matrices and model
+adjoints must not invalidate geometry or reuse electronic outputs. Changes in
+geometry, row count, setup arrays and derivative mode must invalidate it.
+Tests include empty source support, full and partial row coverage, exact and
+insufficient budgets, disabled caching and invalid environment settings.
+
+The source contractions first form density-matrix products with the partial
+waves and their three gradients. This moves the Hessian contraction out of
+the partial-wave pair loop without changing the forward fields or reverse
+map. An independent direct-pair reference checks 1, 6 and 11 partial waves,
+both collinear spin modes, nonsymmetric complex density matrices, and
+accumulation into existing complex adjoints. It compares fields, coordinate
+derivatives and density-matrix contractions to an absolute bound of 1e-12,
+including calls that do not request Hessians. The complete reconstruction
+suite also runs in the CPU-only Skala CI job.
+
+## Smooth native-grid interpolation
+
+The native-grid interpolant blends two nine-node, degree-eight Lagrange
+stencils centered on the endpoints of each grid interval. For interval
+coordinate `t`, the blend is `s(t)=t^3 (10-15t+6t^2)` and the interpolant is
+`(1-s) P_left + s P_right`. Both polynomials reproduce degree eight.
+The blend and its first two endpoint derivatives select the same centered
+polynomial on either side of a grid node. The piecewise interpolant is C2.
+The union has ten nodes per direction with periodic wrapping.
+
+Point derivatives differentiate both the polynomials and the blend. The
+reverse map scatters with the identical tensor-product weights. CPU and
+OpenACC backprojection call the same weight routine. Tests cover polynomial
+reproduction, gradient finite differences and second-derivative continuity
+across internal and periodic faces. The grid adjoint tests include points
+on stencil boundaries as well as generic points and skew cells.
+
+The earlier single eight-node Lagrange stencil was only C0 across interval
+changes. This is a revised interpolation discretization, not a bitwise
+equivalent optimization. Electronic states and finite differences must be
+reconverged when comparing the two. Smoothness does not imply exact
+translation covariance, density-grid convergence or physical force accuracy.
+
 ## Periodized Becke weights
 
 The previous common finite cluster gave its edge images inequivalent
@@ -75,3 +117,35 @@ convergence certificate.
 Constant integration, electron-number convergence and model-energy
 convergence are distinct tests. In particular, plane-wave cutoff and native
 grid interpolation cannot affect this model-free geometry probe.
+
+## GPU Source Reverse
+
+The source reverse test compares a 257-row batch with the independent row
+path, crossing the internal tile boundary. It covers one/two spin channels,
+complex nonsymmetric input and pre-existing matrices, force omission,
+source forces and image moments, and full/partial/disabled host caches.
+CPU-only builds exercise the fallback. To require actual device coverage
+with an OpenACC build on an NVIDIA GPU, run the compiled test with
+
+```sh
+CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS=1 \
+CPPAW_SKALA_TEST_REQUIRE_SOURCE_ACC=1 ./unit-tests/skala_reconstruction.x
+```
+
+Also run without the coverage requirement and with
+`CPPAW_SKALA_SOURCE_BACK_ACC_MB=0` to exercise device-budget fallback.
+
+The additional `skala-source-tiles-test` target requires a visible NVIDIA GPU.
+It compares tile sizes 1, 7, 128, 512 and 2048 with the same CPU row oracle,
+requires actual device coverage, checks zero-budget fallback, and rejects
+invalid `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS` values. The standard
+`skala-reconstruction-test` remains usable without GPU support.
+This GPU target fixes OpenMP and OpenBLAS to one host thread, matching the
+integrated correctness protocol. It does not suppress or resolve mixed
+GNU/NVIDIA OpenMP runtime warnings and does not validate multi-threaded hosts.
+
+`skala-source-profile-test` additionally requires a profile build. It checks
+the source reverse phase records against exact row and transfer-byte counts
+for full, partial and empty caches, including incomplete output tiles. Zero
+device budget and disabled profiling must produce no source phase records.
+These are accounting checks, not speed benchmarks.

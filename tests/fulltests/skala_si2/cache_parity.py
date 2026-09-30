@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare two applied-Skala steps with partition caching disabled/enabled."""
+"""Compare two applied-Skala steps with partition or source caching off/on."""
 
 import argparse
 import hashlib
@@ -26,14 +26,21 @@ COUNTERS = ("ATOM-GRID ROWS", "PARTITION CACHE HITS", "PARTITION CACHE MISSES",
             "PARTITION CACHE BYTES ALL RANKS")
 
 
-def diagnostics(text, stress=False):
+def cache_counters(cache):
+    if cache not in ("partition", "source"):
+        raise ValueError("Unknown geometry cache")
+    return tuple(label.replace("PARTITION", cache.upper()) for label in COUNTERS)
+
+
+def diagnostics(text, stress=False, cache="partition"):
+    counters = cache_counters(cache)
     data = stationarity.records(text)
     stationarity.validate(data)
     if len(data) != 2:
         raise ValueError("Expected exactly two electronic diagnostic steps")
     layout = {label: shape for label, shape in LAYOUT.items()
               if stress or label not in ("TOTAL D E / D STRAIN", "SKALA PARTITION STRESS")}
-    result = {label: [] for label in (*layout, *COUNTERS)}
+    result = {label: [] for label in (*layout, *counters)}
     force_section = False
     for line in text.splitlines():
         if line == "SKALA TOTAL FORCE DIAGNOSTIC":
@@ -54,7 +61,7 @@ def diagnostics(text, stress=False):
             values = tuple(float(x.replace("D", "E").replace("d", "e")) for x in raw)
             if not all(math.isfinite(x) for x in values):
                 raise ValueError(f"Nonfinite {label}")
-            if label in COUNTERS and any(x < 0 or not x.is_integer() for x in values):
+            if label in counters and any(x < 0 or not x.is_integer() for x in values):
                 raise ValueError(f"Invalid integer counter {label}")
             width = LAYOUT[label][0] if label in LAYOUT else 1
             if len(values) != width:
@@ -67,36 +74,45 @@ def diagnostics(text, stress=False):
     return result
 
 
-def compare(off, cached, tolerance, require_reuse=True, total_force_tolerance=1e-8):
+def compare(off, cached, tolerance, require_reuse=True, total_force_tolerance=1e-8,
+            cache="partition"):
+    counters = cache_counters(cache)
+    _, hit_key, miss_key, bytes_key = counters
     if any(not math.isfinite(x) or x <= 0 for x in (tolerance, total_force_tolerance)):
         raise ValueError("Tolerance must be positive and finite")
     rows = cached["ATOM-GRID ROWS"]
     if rows != off["ATOM-GRID ROWS"] or rows[0] != rows[1] or rows[0][0] <= 0:
         raise ValueError("Changed or empty grid in cache parity probe")
     zero = [(0.0,), (0.0,)]
-    if off["PARTITION CACHE HITS"] != zero or off["PARTITION CACHE MISSES"] != rows:
+    # Two source atoms per Si2 row, evaluated once forward and once backward.
+    calls = [(row[0] * (4 if cache == "source" else 1),) for row in rows]
+    if off[hit_key] != zero or off[miss_key] != calls:
         raise ValueError("Disabled cache did not recompute every row")
-    if off["PARTITION CACHE BYTES ALL RANKS"] != zero:
+    if off[bytes_key] != zero:
         raise ValueError("Disabled cache allocated payload")
-    hits, misses = cached["PARTITION CACHE HITS"], cached["PARTITION CACHE MISSES"]
-    if hits[0] != (0.0,) or any(h[0] + m[0] != n[0] for h, m, n in zip(hits, misses, rows)):
+    hits, misses = cached[hit_key], cached[miss_key]
+    if any(h[0] + m[0] != n[0] for h, m, n in zip(hits, misses, calls)):
         raise ValueError("Invalid cache hit/miss accounting")
-    if require_reuse and (hits[1] != rows[1] or misses[1] != (0.0,)):
-        raise ValueError("Second step did not reuse every cached row")
-    sizes = cached["PARTITION CACHE BYTES ALL RANKS"]
+    if cache == "source":
+        if hits[0][0] <= 0 or (require_reuse and (hits[1] != hits[0] or misses[1] != misses[0])):
+            raise ValueError("Source cache did not preserve its bounded row coverage")
+    else:
+        if hits[0] != (0.0,) or (require_reuse and (hits[1] != calls[1] or misses[1] != (0.0,))):
+            raise ValueError("Second step did not reuse every cached row")
+    sizes = cached[bytes_key]
     if sizes[0] != sizes[1] or sizes[0][0] <= 0:
         raise ValueError("Invalid cache allocation diagnostic")
     differences = {}
     if set(off) != set(cached):
         raise ValueError("Diagnostic layouts differ")
-    for label in sorted(off.keys() - set(COUNTERS)):
+    for label in sorted(off.keys() - set(counters)):
         delta = max(abs(a - b) for ra, rb in zip(off[label], cached[label])
                     for a, b in zip(ra, rb))
         limit = total_force_tolerance if label == "TOTAL FORCE ATOM" else tolerance
         if delta > limit:
             raise ValueError(f"{label}: cache difference {delta:.6e} > {limit:.6e}")
         differences[label] = delta
-    return {"scope": "partition cache parity, not scientific convergence",
+    return {"scope": f"{cache} cache parity, not scientific convergence",
             "tolerance": tolerance, "total_force_tolerance": total_force_tolerance,
             "max_abs_difference": differences, "rows_per_step": int(rows[0][0]),
             "cache_hits_per_step": [int(x[0]) for x in hits],
@@ -117,6 +133,8 @@ def main():
     for name in ("executable", "model", "restart", "structure", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
     parser.add_argument("--device", choices=("CPU", "CUDA"), default="CPU")
+    parser.add_argument("--cache", choices=("partition", "source"), default="partition")
+    parser.add_argument("--cache-mib", type=int, default=256)
     parser.add_argument("--mpi-ranks", type=int, default=1)
     parser.add_argument("--mpiexec", default="mpirun")
     parser.add_argument("--radial-points", type=int, default=96)
@@ -129,6 +147,8 @@ def main():
     args = parser.parse_args()
     if min(args.mpi_ranks, args.radial_points, args.lebedev_exactness) < 1:
         parser.error("Ranks and grid sizes must be positive")
+    if not 1 <= args.cache_mib <= (2**63 - 1) // 1048576:
+        parser.error("Cache budget must be positive and fit in signed 64-bit bytes")
     if not math.isfinite(args.timestep) or args.timestep <= 0:
         parser.error("Timestep must be positive and finite")
     inputs = {key: getattr(args, key).resolve(strict=True)
@@ -153,7 +173,7 @@ def main():
     template = template.replace("NAME='../si2/stp.cntl'", "NAME='stp.cntl'")
     results = []
     timings = {}
-    for name, budget in (("off", "0"), ("cached", "256")):
+    for name, budget in (("off", "0"), ("cached", str(args.cache_mib))):
         work = (args.output / name).resolve()
         work.mkdir()
         (work / "si2.cntl").write_text(template)
@@ -161,7 +181,8 @@ def main():
         shutil.copy2(inputs["restart"], work / "si2.rstrt")
         shutil.copy2(inputs["structure"], work / "si2.strc")
         shutil.copy2(Path(__file__).parent / "../si2/stp.cntl", work / "stp.cntl")
-        env = dict(os.environ, CPPAW_SKALA_PARTITION_CACHE_MB=budget)
+        env = dict(os.environ, CPPAW_SKALA_PARTITION_CACHE_MB="0", CPPAW_SKALA_SOURCE_CACHE_MB="0")
+        env[f"CPPAW_SKALA_{args.cache.upper()}_CACHE_MB"] = budget
         command = [str(inputs["executable"]), "si2.cntl"]
         if args.mpi_ranks > 1:
             command = [args.mpiexec, "-np", str(args.mpi_ranks), *command]
@@ -170,9 +191,9 @@ def main():
         with (work / "stdout.log").open("w") as out, (work / "stderr.log").open("w") as err:
             subprocess.run(command, cwd=work, env=env, stdout=out, stderr=err, check=True)
         timings[name] = time.monotonic() - started
-        results.append(diagnostics((work / "si2.prot").read_text(), stress=args.stress))
+        results.append(diagnostics((work / "si2.prot").read_text(), stress=args.stress, cache=args.cache))
     summary = compare(*results, args.tolerance, require_reuse=not args.stress,
-                      total_force_tolerance=args.total_force_tolerance)
+                      total_force_tolerance=args.total_force_tolerance, cache=args.cache)
     summary["wall_seconds_including_startup_and_first_fill"] = timings
     (args.output / "results.json").write_text(json.dumps(summary, indent=2, allow_nan=False) + "\n")
     print(json.dumps(summary, indent=2, allow_nan=False))
