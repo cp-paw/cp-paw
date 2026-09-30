@@ -163,6 +163,20 @@ This is a host-memory cache, not additional GPU residency. It stores complete
 rows up to the available budget. Uncached rows or allocation failure select
 direct evaluation without changing the model.
 
+An experimental OpenACC source reverse path is enabled explicitly with
+`CPPAW_SKALA_SOURCE_BACK_ACC=1`. It batches complete cached rows for the
+density-matrix, source-coordinate and source-image strain contractions.
+`CPPAW_SKALA_SOURCE_BACK_ACC_MB` bounds the geometry, adjoint and scratch
+array payload per call and rank (default 256 MiB, `0` disables offload).
+`CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS` defaults to 4096. Rows outside either
+cache or device budget follow the unchanged host path, as do CPU-only builds.
+With `CHECK=T`, `SOURCE GPU REVERSE ROWS` reports actual offloaded coverage.
+The geometry is transferred once per source/block reverse call and reused
+across its tiles. It is not yet resident across electronic steps. This path
+is off by default and independent of the inference device and smooth-grid
+backprojection switch. Compiler, numerical and performance validation must
+precede any default change.
+
 `LEBEDEVEXACTNESS` requests a minimum algebraic exactness, not a point count.
 The supported rules now extend through 65: 53 uses 974 angular points, 59 uses
 1202, and 65 uses 1454 per radial shell and orientation. A request of 64 selects

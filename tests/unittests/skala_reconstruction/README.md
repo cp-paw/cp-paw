@@ -117,3 +117,20 @@ convergence certificate.
 Constant integration, electron-number convergence and model-energy
 convergence are distinct tests. In particular, plane-wave cutoff and native
 grid interpolation cannot affect this model-free geometry probe.
+
+## GPU Source Reverse
+
+The source reverse test compares a 257-row batch with the independent row
+path, crossing the internal tile boundary. It covers one/two spin channels,
+complex nonsymmetric input and pre-existing matrices, force omission,
+source forces and image moments, and full/partial/disabled host caches.
+CPU-only builds exercise the fallback. To require actual device coverage
+with an OpenACC build on an NVIDIA GPU, run the compiled test with
+
+```sh
+CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS=1 \
+CPPAW_SKALA_TEST_REQUIRE_SOURCE_ACC=1 ./unit-tests/skala_reconstruction.x
+```
+
+Also run without the coverage requirement and with
+`CPPAW_SKALA_SOURCE_BACK_ACC_MB=0` to exercise device-budget fallback.

@@ -389,3 +389,33 @@ Total forces have a separate default bound of 1e-8 H/bohr, adjustable with
 `--total-force-tolerance`. The stricter common bound still applies to the
 Skala and partition force contributions and all other diagnostics. Independent
 uncached repeats can distinguish propagation roundoff from cache effects.
+
+## GPU Source Reverse
+
+`source_gpu_parity.py` checks the experimental batched source reverse in an
+OpenACC Skala build. It compares disabled offloading, a 256 MiB device budget,
+a partial 1 MiB budget, zero device budget and disabled host caching. Each
+case uses the same initial state for two electronic steps. Electronic-only,
+force and fixed-cell stress modes are all checked by default. The test requires
+positive full and partial GPU row counts, so it cannot pass by silently using
+the CPU for every case. Missing GPUs should instead be tested with the
+model-free reconstruction test's CPU fallback mode.
+
+```sh
+python3 tests/fulltests/skala_si2/source_gpu_parity.py \
+  --executable /path/to/openacc/paw.x --model /path/to/model.fun \
+  --restart /path/to/si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-source-gpu-check
+```
+
+The driver compares model and total energies, orbital diagnostics, adjoint
+norms, forces, strain derivatives, and electronic restart payloads. It checks
+input hashes and preserves raw protocols and per-case runtime settings.
+`--modes stress` selects only the stress-inclusive comparison.
+`--mpi-ranks 2 --mpiexec /path/to/mpirun` also tests rank-local offloading and
+global diagnostic reduction. Model placement (`--device CPU|CUDA`) and
+electronic-library selection (`--gpu-mode off|transfer|resident`) are separate
+from the source-kernel switch exercised here. The default numerical bound is
+`1e-10`; use an explicit model-appropriate bound for float32 CUDA inference.
+These matched-state checks do not certify physical force or grid convergence
+and do not measure acceleration.
