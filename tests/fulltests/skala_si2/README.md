@@ -429,6 +429,17 @@ and strain against the unchanged `1e-10` bound. This is backend verification,
 not independent stationary-state or performance validation. The driver uses
 the diagnostic relaxation timestep of 5, fixed nuclei and fixed cell.
 
+With `--residency`, the driver instead compares eight variants in each mode,
+including a 4 GiB resident pool, a deliberately limited 256 MiB pool,
+transfer-only execution, a 1 MiB per-call budget, zero offload budget,
+disabled host caching and resident forward combined with reverse offload.
+It requires a cold first evaluation and full or partial warm hits in the
+second, without changing forward row coverage. Per-rank CSV profiles must
+account for every geometry upload and every fresh density-matrix/kernel/output
+call. Reported transfer payloads must match array shapes. This test therefore
+cannot pass solely by relabeling transient transfers as residency. The small
+fixed-cell trajectory remains a backend check, not physical force convergence.
+
 `source_gpu_parity.py` checks the experimental batched source reverse in an
 OpenACC Skala build. It compares disabled offloading, a 256 MiB device budget,
 a partial 1 MiB budget, zero device budget and disabled host caching. Each
