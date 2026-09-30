@@ -184,6 +184,12 @@ The supported rules now extend through 65: 53 uses 974 angular points, 59 uses
 for the system of interest. Rule provenance and tests are documented in
 [`LEBEDEV.md`](tests/unittests/skala_reconstruction/LEBEDEV.md).
 
+The once-per-atom linear one-center checks under `CHECK=T` cap their requested
+angular exactness at `2*lmax+2`, sufficient for the partial-wave density and
+Cartesian-gradient products. They retain the setup radial grid and report the
+model's unchanged angular request separately. This cap never changes the
+nonlinear Skala model grid, its partition, energies, or derivatives.
+
 The CO2, NH3 and urea integration probes are described in
 [`tests/fulltests/skala_crystals/README.md`](tests/fulltests/skala_crystals/README.md).
 These probes test execution and diagnostic consistency, not scientific

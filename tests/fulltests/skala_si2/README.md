@@ -9,6 +9,12 @@ selects the minimum angular polynomial order. The maximum is 65, with 1454
 directions; a request for 64 selects 65. The default remains 53. Orientations
 average rotated rules without increasing their polynomial exactness.
 
+The auxiliary one-center charge/tau checks can use a smaller rule than the
+model grid. Their requested exactness is capped at `2*lmax+2`, with the next
+supported Lebedev rule selected as usual. `ATOM-GRID REQUESTED EXACTNESS`
+records the unchanged model setting. Deliberately underresolved requests are
+not increased by the diagnostic cap.
+
 ## Optional nuclear forces
 
 `!PSIDYN FORCE=F` omits optional nuclear-force work at fixed nuclei and cell.

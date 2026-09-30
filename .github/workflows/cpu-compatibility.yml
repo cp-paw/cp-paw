@@ -80,6 +80,10 @@ jobs:
         run: |
           make -C bin/Build_fast -f Makefile \
             -f ../../tests/unittests/projector_strain/driver.mk projector-strain-test
+      - name: Check one-center primitive quadrature and derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/skala_reconstruction/driver.mk skala-primitives-test
       - name: Check cuBLAS workspace test without CUDA
         run: |
           make -C bin/Build_fast -f Makefile \
