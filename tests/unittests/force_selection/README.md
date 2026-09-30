@@ -23,6 +23,10 @@ with `FORCE=T`, with identical step/time metadata. This is an implementation
 regression, not a physical force or
 stress convergence test. QM/MM also forces nuclear-force work on in the
 production selector, but is not exercised by this Si2 fixture.
+An additional displaced-atom control requires a nonzero force trajectory
+and verifies that its position record is the evaluated initial geometry,
+before propagation. This guards against sampling after `ATOMS$SWITCH`, which
+advances positions and clears forces. The final-step omission is unchanged.
 
 `cell_residency.py /path/to/profile/paw.x --output /path/to/new-directory`
 requires a GPU-enabled profile build. It compares four moving-cell steps
@@ -31,7 +35,7 @@ The cell must move measurably. Cell histories, wave/Lambda payloads, energies
 and forces must agree within `1e-8` (electronic cell metadata within `1e-9`).
 The second atom is displaced by `0.01` Bohr along x in each restart and atom
 dynamics is enabled. The reference must have nonzero trajectory forces,
-not symmetry-enforced zeros or zeros imposed by fixed-atom constraints.
+not symmetry-enforced zeros or zeros caused by sampling after force reset.
 The atomic position histories must also agree within `1e-8` Bohr.
 Profile counters must prove that setup left PSIM resident and host propagation
 explicitly retrieved it. This catches a stale device copy masking the host

@@ -167,21 +167,18 @@
 !     ==================================================================
                               CALL TIMING$CLOCKON('TIMESTEP')
 !     ==USE THE LINE WITH "NOT TSTOP" TO AVOID AN ADDITIONAL LAST TIME STEP
-!     IF(.NOT.TSTOP) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP)
+!     IF(.NOT.TSTOP) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,.NOT.TLAST)
       CALL DYNOCC$GETL4('DYN',TMERMN)
-      CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP)
+      CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,.NOT.TLAST)
                               CALL TIMING$CLOCKOFF('TIMESTEP')
 !
 !     ==================================================================
 !     ==   WRITE INFORMATION AND TRAJECTORIES                         ==
 !     ==================================================================
-!     __ADD TO TRAJECTORIES (TEMPORARY BUFFER)__________________________
+!     __FLUSH TRAJECTORIES SAMPLED BEFORE THE DYNAMICAL SWITCH__________
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(TACC)
 #ENDIF
-      IF(.NOT.TLAST) THEN
-        CALL WRITETRAJECTORY(NFI,DELT)
-      END IF
 !     __ WRITE TRAJECTORY FROM TEMPORARY BUFFER TO FILE_________________
       IF(TPRINT.OR.TLAST) THEN
         CALL TRAJECTORYIO$FLUSHALL
@@ -325,7 +322,7 @@
       END
 !
 !     ..................................................................
-      SUBROUTINE TIMESTEP(DELT,TPRINT,NFI,TSTOP)
+      SUBROUTINE TIMESTEP(DELT,TPRINT,NFI,TSTOP,TTRAJECTORY)
 !     ******************************************************************      
 !     ******************************************************************      
       USE TIMESTEP_MODULE ,ONLY : DELTAT,ISTEPNUMBER,TNEWTHERMOSTAT
@@ -333,6 +330,7 @@
       REAL(8)   ,INTENT(IN)   :: DELT   ! TIME STEP
       LOGICAL(4),INTENT(IN)   :: TPRINT ! FLAG FOR LONG PRINTOUT
       LOGICAL(4),INTENT(IN)   :: TSTOP  ! FLAG FOR LAST TIME STEP
+      LOGICAL(4),INTENT(IN)   :: TTRAJECTORY
       INTEGER(4),INTENT(INOUT):: NFI    ! TIME STEP COUNTER
       INTEGER(4)              :: NFILO
       LOGICAL(4)              :: TFOR   ! ON/OFF SWITCH FOR ATOMIC MOTION
@@ -658,6 +656,11 @@
       CALL PRINFO(TPRINT,TSTOP,NFI,DELT)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$PHASE('PHASE_PRINFO',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
+!     Sample one physical time level before positions advance and forces clear.
+      IF(TTRAJECTORY) CALL WRITETRAJECTORY(NFI,DELT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_TRAJECTORY_SAMPLE',TACC,0_8,0_8,0_8,0_8)
 #ENDIF
 !
 !     ==================================================================

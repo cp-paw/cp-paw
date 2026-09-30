@@ -6,12 +6,15 @@ from contextlib import nullcontext
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "fulltests/skala_si2"))
 from force_mode_parity import wave_records, wave_difference, trajectory_difference
+from force_stationary_fd import geometry, displace_geometry
+from displace_restart import read_records
 
 
 def main():
@@ -44,7 +47,8 @@ def main():
                  ("cell-on", "FORCE=T", "!CELL MOVE=T FRIC=0.0 M=1.E30 !END"),
                  ("cell-off", "FORCE=F STRESS=F", "!CELL MOVE=T FRIC=0.0 M=1.E30 !END"),
                  ("stress-on", "FORCE=T STRESS=T", "!CELL MOVE=F FRIC=0.0 M=1.E30 !END"),
-                 ("stress-off", "FORCE=F STRESS=T", "!CELL MOVE=F FRIC=0.0 M=1.E30 !END")]
+                 ("stress-off", "FORCE=F STRESS=T", "!CELL MOVE=F FRIC=0.0 M=1.E30 !END"),
+                 ("displaced", "FORCE=T", "!RDYN FRIC=0.0 !END")]
         waves = {}
         for name, settings, dynamics in cases:
             work = root / name
@@ -55,6 +59,9 @@ def main():
             if name != "seed":
                 text = text.replace("START=t", "START=f")
                 shutil.copy2(root / "seed/si2.rstrt", work / "si2.rstrt")
+                if name == "displaced":
+                    initial = displace_geometry((work / "si2.rstrt").read_bytes(), 2, 1, 0.01)
+                    (work / "si2.rstrt").write_bytes(initial)
             (work / "si2.cntl").write_text(text)
             run = subprocess.run(command, cwd=work, env=env, capture_output=True, text=True, timeout=300)
             (work / "stdout.log").write_text(run.stdout)
@@ -68,6 +75,17 @@ def main():
             has_forces = trajectory.exists() and trajectory.stat().st_size > 0
             if has_forces != (name != "omitted"):
                 raise RuntimeError(f"{name}: incorrect force-trajectory availability")
+            if name == "displaced":
+                force_rows = read_records(trajectory.read_bytes())
+                position_rows = read_records((work / "si2_r.tra").read_bytes())
+                if len(force_rows) != 1 or len(position_rows) != 1:
+                    raise RuntimeError("Wrong trajectory length for two-step run")
+                force = struct.unpack("<8d", force_rows[0][16:])[:6]
+                positions = struct.unpack("<25d", position_rows[0][16:])[9:15]
+                if max(abs(value) for value in force) < 1e-8:
+                    raise RuntimeError("Force trajectory was cleared before sampling")
+                if max(abs(a-b) for a, b in zip(positions, geometry(initial)["positions"][0])) > 1e-12:
+                    raise RuntimeError("Position trajectory does not sample the evaluated geometry")
             waves[name] = wave_records((work / "si2.rstrt").read_bytes())
             print(f"{name}: passed", flush=True)
         for a, b in (("default", "explicit"), ("explicit", "omitted"),
