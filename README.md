@@ -176,6 +176,17 @@ the original row summation order. Their larger scratch arrays count against
 the same device budget and can reduce offloaded coverage or select fallback.
 This tuning switch does not change the default or retain geometry across steps.
 With `CHECK=T`, `SOURCE GPU REVERSE ROWS` reports actual offloaded coverage.
+Profile builds separate source geometry input (`ACC_COPY_SKALA_SOURCE_GEOM`),
+changing density-matrix/adjoint input (`ACC_COPY_SKALA_SOURCE_INPUT`), device
+execution (`SKALA_SOURCE_DEVICE`), row-result transfer
+(`ACC_COPY_SKALA_SOURCE_OUT`) and ordered host accumulation
+(`SKALA_SOURCE_HOST_SUM`). Transfer records count explicit array payloads,
+not measured hardware traffic. Input times include associated device
+allocation, and these phase records exclude final deallocation. Record
+dimensions are covered rows, partial-wave channels, cached image entries and
+tile rows. They are nested inside the existing source-adjoint total and must
+not be added to it. Geometry is still transferred per call, not retained
+across electronic steps.
 The geometry is transferred once per source/block reverse call and reused
 across its tiles. It is not yet resident across electronic steps. This path
 is off by default and independent of the inference device and smooth-grid

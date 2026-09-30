@@ -143,3 +143,9 @@ invalid `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS` values. The standard
 This GPU target fixes OpenMP and OpenBLAS to one host thread, matching the
 integrated correctness protocol. It does not suppress or resolve mixed
 GNU/NVIDIA OpenMP runtime warnings and does not validate multi-threaded hosts.
+
+`skala-source-profile-test` additionally requires a profile build. It checks
+the source reverse phase records against exact row and transfer-byte counts
+for full, partial and empty caches, including incomplete output tiles. Zero
+device budget and disabled profiling must produce no source phase records.
+These are accounting checks, not speed benchmarks.

@@ -1,4 +1,15 @@
 .PHONY: skala-reconstruction-test skala-source-tiles-test skala-primitives-test skala-partition-probe skala-periodic-test skala-lebedev-test skala-partition-cache-test skala-interpolation-test
+.PHONY: skala-source-profile-test
+
+skala-source-profile-test: export OMP_NUM_THREADS := 1
+skala-source-profile-test: export OPENBLAS_NUM_THREADS := 1
+skala-source-profile-test: libpaw.a
+	mkdir -p unit-tests
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/source_profile.x $(BASEDIR)/tests/unittests/skala_reconstruction/source_profile.f90 libpaw.a $(LIBS)
+	CPPAW_ACCEL_PROFILE=1 CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_BACK_ACC_MB=256 ./unit-tests/source_profile.x
+	CPPAW_ACCEL_PROFILE=1 CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_BACK_ACC_MB=256 CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS=3 ./unit-tests/source_profile.x
+	CPPAW_ACCEL_PROFILE=1 CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MB=0 ./unit-tests/source_profile.x off
+	CPPAW_ACCEL_PROFILE=0 CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_BACK_ACC_MB=256 ./unit-tests/source_profile.x disabled
 
 skala-interpolation-test: libpaw.a
 	mkdir -p unit-tests
