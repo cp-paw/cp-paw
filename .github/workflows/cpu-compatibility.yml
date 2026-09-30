@@ -68,6 +68,10 @@ jobs:
         run: |
           make -C bin/Build_fast -f Makefile \
             -f ../../tests/unittests/setup_reciprocal/driver.mk setup-reciprocal-test
+      - name: Check mixed-species Hartree strain derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/hartree_strain/driver.mk hartree-strain-test
       - name: Check cuBLAS workspace test without CUDA
         run: |
           make -C bin/Build_fast -f Makefile \

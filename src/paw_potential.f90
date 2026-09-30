@@ -1343,6 +1343,7 @@
       FORCE(:,:)=0.D0
       PT(:,:)=0.D0
       DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
         IF(TSTRESS) THEN
           P0(:,:,:)=0.D0
           PM(:,:,:)=0.D0
@@ -1360,7 +1361,6 @@
           ENDDO
         END IF
 
-        ISP=ISPECIES(IAT)
         CALL PLANEWAVE$STRUCTUREFACTOR(TAU0(1,IAT),NGL,EIGR)
         DO IG=1,NGL
           IF(IG.EQ.NGAMMA) THEN
