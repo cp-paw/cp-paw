@@ -81,6 +81,13 @@ Failed blocks, logs, input hashes, and residual/force traces are retained.
 An unconverged geometry prevents a successful force comparison. No input,
 model, or executable is modified, and existing output directories are refused.
 
+`--orthogonality-tolerance 1e-12` requests a tighter PAW constraint solve
+without changing the electronic residual gates. Omitting it preserves the
+historical solver tolerance of `1e-8`. The force diagnostic reports total
+energies with 17 significant digits so finite differences do not discard
+binary64 information merely through output formatting. This does not remove
+floating-point cancellation, electronic relaxation error or grid error.
+
 Without `--absolute-tolerance` the result is a measurement, not a passed
 force test. An explicit bound also checks repeated-center consistency.
 Tighten residuals, vary displacement widths, and refine the grid before

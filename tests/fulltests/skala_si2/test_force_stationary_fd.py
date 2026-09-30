@@ -124,6 +124,13 @@ class StationaryForceTest(unittest.TestCase):
         self.assertEqual(result["final"]["step"], 2)
         self.assertAlmostEqual(result["final_energy_span_hartree"], 0.1)
 
+    def test_force_energy_retains_binary64_roundtrip_digits(self):
+        value = -46.938882201616096
+        text = protocol(energy=f"{value:.16E}")
+        result = force_fd.force_records(text, 2)
+        self.assertEqual(result[0]["energy"], value)
+        self.assertNotEqual(float(f"{value:.14E}"), value)
+
     def test_nonstationarity_is_retained_and_blocks_comparison(self):
         text = protocol(residual="0.1") + protocol(step=2)
         failed = force_fd.analyze(text, 2, 2, 2, 1e-6, 1e-6)
