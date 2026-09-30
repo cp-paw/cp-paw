@@ -170,6 +170,11 @@ density-matrix, source-coordinate and source-image strain contractions.
 array payload per call and rank (default 256 MiB, `0` disables offload).
 `CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS` defaults to 4096. Rows outside either
 cache or device budget follow the unchanged host path, as do CPU-only builds.
+`CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS` selects a positive tile size (default
+128). Larger tiles reduce kernel launches and host-update calls while keeping
+the original row summation order. Their larger scratch arrays count against
+the same device budget and can reduce offloaded coverage or select fallback.
+This tuning switch does not change the default or retain geometry across steps.
 With `CHECK=T`, `SOURCE GPU REVERSE ROWS` reports actual offloaded coverage.
 The geometry is transferred once per source/block reverse call and reused
 across its tiles. It is not yet resident across electronic steps. This path

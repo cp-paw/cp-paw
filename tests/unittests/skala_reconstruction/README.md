@@ -134,3 +134,12 @@ CPPAW_SKALA_TEST_REQUIRE_SOURCE_ACC=1 ./unit-tests/skala_reconstruction.x
 
 Also run without the coverage requirement and with
 `CPPAW_SKALA_SOURCE_BACK_ACC_MB=0` to exercise device-budget fallback.
+
+The additional `skala-source-tiles-test` target requires a visible NVIDIA GPU.
+It compares tile sizes 1, 7, 128, 512 and 2048 with the same CPU row oracle,
+requires actual device coverage, checks zero-budget fallback, and rejects
+invalid `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS` values. The standard
+`skala-reconstruction-test` remains usable without GPU support.
+This GPU target fixes OpenMP and OpenBLAS to one host thread, matching the
+integrated correctness protocol. It does not suppress or resolve mixed
+GNU/NVIDIA OpenMP runtime warnings and does not validate multi-threaded hosts.

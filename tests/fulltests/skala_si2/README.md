@@ -445,3 +445,10 @@ from the source-kernel switch exercised here. The default numerical bound is
 `1e-10`; use an explicit model-appropriate bound for float32 CUDA inference.
 These matched-state checks do not certify physical force or grid convergence
 and do not measure acceleration.
+
+The same driver records inherited `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS` in
+its provenance and exercises that tile size in every GPU variant. For example,
+run it in a new output directory with the environment prefix
+`CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS=512` to check larger tiles. Keep the
+original numerical bound and check actual full/partial row coverage. Larger
+scratch arrays may exhaust the 1 MiB test budget for larger partial-wave spaces.
