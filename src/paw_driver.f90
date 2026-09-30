@@ -1399,7 +1399,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       REAL(8)                :: EKINFC
       REAL(8)                :: HEAT
       REAL(8)                :: OCCKIN
-      LOGICAL(4)             :: TQMMM,TCALGARYQMMM,TCHK
+      LOGICAL(4)             :: TQMMM,TCALGARYQMMM,TCHK,TFORCE
       REAL(8)                :: QMMMKIN,QMMMPOT,QMMMTHERM
       REAL(8)                :: EEXT
 !     **************************************************************************
@@ -1517,7 +1517,8 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
                               CALL TRACE$PASS('BEFORE F-TRAJECTORY')
       CALL TRAJECTORYIO$SELECT('FORCE-TRAJECTORY')
       CALL TRAJECTORYIO$GETL4('ON',TCHK)
-      IF(TCHK) THEN
+      CALL WAVES$GETL4('FORCE',TFORCE)
+      IF(TCHK.AND.TFORCE) THEN
         ALLOCATE(DWORK(4*NAT))
         CALL ATOMLIST$GETR8A('FORCE',0,3*NAT,DWORK)
         DWORK(3*NAT+1:4*NAT)=0.D0 ! SHALL CONTAIN IN FUTURE THE POTENTIALS

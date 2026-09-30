@@ -1329,6 +1329,20 @@ to estimate the frequency from
   \vdefault{T}
 }
 
+\mbax{\key{FORCE}
+  \vdescr{{\tt FORCE=F} omits optional nuclear-force work during electronic
+    relaxation at fixed atomic positions and fixed cell. The electronic
+    Hamiltonian and its Skala contributions remain active. Atomic or
+    cell dynamics and QM/MM override this request and retain complete
+    nuclear forces. No force-trajectory records are written while forces
+    are omitted. Restart with {\tt FORCE=T} for final force evaluation.
+    For Skala, source Hessians and geometric pullbacks are then unnecessary,
+    but density-matrix and smooth-field adjoints are still evaluated.}
+  \vformat{logical}
+  \vrules{optional}
+  \vdefault{T}
+}
+
 \mbax{\key{ORTHOTOL}
   \vdescr{Maximum absolute PAW-overlap defect used to stop the iterative
     occupation-weighted constraint solve. Applies to both real and complex

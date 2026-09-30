@@ -9,6 +9,32 @@ selects the minimum angular polynomial order. The maximum is 65, with 1454
 directions; a request for 64 selects 65. The default remains 53. Orientations
 average rotated rules without increasing their polynomial exactness.
 
+## Optional nuclear forces
+
+`!PSIDYN FORCE=F` omits optional nuclear-force work at fixed nuclei and cell.
+The default remains `T`. Atom/cell dynamics and QM/MM retain complete forces
+regardless of this setting. The energy-only diagnostic explicitly states that
+nuclear forces were not calculated, and no force-trajectory records are written.
+Restart with `FORCE=T` and recheck electronic stationarity before measuring forces.
+Electronic smooth-field and density-matrix adjoints are retained in either mode.
+
+`force_mode_parity.py` checks three matched electronic steps, using a shared
+eight-k-point Si2 restart, 20 Ry cutoff and the 96/17 quadrature:
+
+```sh
+python3 tests/fulltests/skala_si2/force_mode_parity.py \
+  --executable /path/to/paw.x --model /path/to/model.fun \
+  --restart /path/to/si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-results --device CPU --source-cache-mib 4096
+```
+
+Use `--device CUDA --gpu-mode resident` for a CUDA model and GPU build.
+Use `--mpi-ranks 2 --mpiexec /path/to/mpirun` for an MPI build. Zero cache
+budget recomputes sources. The comparison checks energies, electronic adjoint
+and per-band diagnostics, fixed geometry, identical electronic restart records
+and the absence of incomplete force output. It does not certify stationarity,
+physical force accuracy or performance. All inputs, hashes and outputs are retained.
+
 ## Electronic stationarity
 
 Enable `!DFT!SKALA CHECK=T` and inspect the completed protocol:
