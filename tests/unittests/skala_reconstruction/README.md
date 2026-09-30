@@ -1,5 +1,14 @@
 # Joint PAW reconstruction and periodic quadrature
 
+The `skala-source-forward-test` target requires an OpenACC build and a visible
+NVIDIA GPU. It checks forward fields against direct periodic-image evaluation
+for scalar and spin density matrices, value/gradient and Hessian caches, full
+and single-row host caches, changed electronic inputs and empty image support.
+The pre-existing Hamiltonian matrix must remain unchanged. Separate invocations
+test full and bounded device coverage, zero budget, disabled offload, a row
+threshold above the batch size and malformed runtime parameters. The ordinary
+`skala-reconstruction-test` includes the same field oracle on CPU-only builds.
+
 Run the compiler-independent source, grid and partition tests against an
 existing CP-PAW build:
 

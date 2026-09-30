@@ -163,6 +163,26 @@ This is a host-memory cache, not additional GPU residency. It stores complete
 rows up to the available budget. Uncached rows or allocation failure select
 direct evaluation without changing the model.
 
+`CPPAW_SKALA_SOURCE_FWD_ACC=1` independently enables an experimental OpenACC
+forward reconstruction. It contracts the current real-symmetric part of each
+complex density matrix with cached AE/pseudo partial-wave values and gradients,
+adds the frozen-core correction and returns density, gradient and kinetic-energy
+density for the two spin channels. Source and periodic-image accumulation order
+is preserved. `CPPAW_SKALA_SOURCE_FWD_ACC_MB` bounds the explicit device array
+payload per source/block call (default 256 MiB, `0` disables offload), and
+`CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS` defaults to 4096. Uncached or uncovered
+rows are evaluated on the CPU. CPU-only builds retain their original path.
+The forward switch can be combined with source reverse offload below. Both
+switches default to off. `CHECK=T` reports `SOURCE GPU FORWARD ROWS` separately
+from reverse coverage. Profile records `ACC_COPY_SKALA_FWD_GEOM`,
+`ACC_COPY_SKALA_FWD_INPUT`, `SKALA_SOURCE_FWD_DEVICE` and
+`ACC_COPY_SKALA_FWD_OUT` separate explicit transfers and kernel execution.
+Their dimensions are covered rows, partial-wave channels, image entries and
+cached wave components. Geometry is transferred per call, not retained across
+electronic steps. The extra host field buffer holds ten doubles per atom-grid
+point, plus the current source's covered-row output. Neither source device
+budget caps total host memory or the inference workspace.
+
 An experimental OpenACC source reverse path is enabled explicitly with
 `CPPAW_SKALA_SOURCE_BACK_ACC=1`. It batches complete cached rows for the
 density-matrix, source-coordinate and source-image strain contractions.

@@ -1,5 +1,27 @@
 .PHONY: skala-reconstruction-test skala-source-tiles-test skala-primitives-test skala-partition-probe skala-periodic-test skala-lebedev-test skala-partition-cache-test skala-interpolation-test
 .PHONY: skala-source-profile-test
+.PHONY: skala-source-forward-test
+
+skala-source-forward-test: export OMP_NUM_THREADS := 1
+skala-source-forward-test: export OPENBLAS_NUM_THREADS := 1
+skala-source-forward-test: skala-reconstruction-test
+	CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_FWD_ACC_MB=256 CPPAW_SKALA_TEST_REQUIRE_FWD_ACC=full ./unit-tests/skala_reconstruction.x
+	CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_FWD_ACC_MB=1 CPPAW_SKALA_TEST_REQUIRE_FWD_ACC=bounded ./unit-tests/skala_reconstruction.x
+	CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MB=0 CPPAW_SKALA_TEST_REQUIRE_FWD_ACC=off ./unit-tests/skala_reconstruction.x
+	CPPAW_SKALA_SOURCE_FWD_ACC=0 CPPAW_SKALA_TEST_REQUIRE_FWD_ACC=off ./unit-tests/skala_reconstruction.x
+	CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS=258 CPPAW_SKALA_TEST_REQUIRE_FWD_ACC=off ./unit-tests/skala_reconstruction.x
+	@for value in -1 invalid 99999999999999999999 ''; do \
+	  if CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MB="$$value" \
+	    ./unit-tests/skala_reconstruction.x > unit-tests/source_forward_invalid.log 2>&1; then exit 1; fi; \
+	  grep -q 'CPPAW_SKALA_SOURCE_FWD_ACC_MB MUST BE A NONNEGATIVE INTEGER' \
+	    unit-tests/source_forward_invalid.log || exit 1; \
+	done
+	@for value in 0 -1 invalid 99999999999999999999 ''; do \
+	  if CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS="$$value" \
+	    ./unit-tests/skala_reconstruction.x > unit-tests/source_forward_invalid.log 2>&1; then exit 1; fi; \
+	  grep -q 'CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS MUST BE A POSITIVE INTEGER' \
+	    unit-tests/source_forward_invalid.log || exit 1; \
+	done
 
 skala-source-profile-test: export OMP_NUM_THREADS := 1
 skala-source-profile-test: export OPENBLAS_NUM_THREADS := 1
@@ -10,6 +32,9 @@ skala-source-profile-test: libpaw.a
 	CPPAW_ACCEL_PROFILE=1 CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_BACK_ACC_MB=256 CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS=3 ./unit-tests/source_profile.x
 	CPPAW_ACCEL_PROFILE=1 CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MB=0 ./unit-tests/source_profile.x off
 	CPPAW_ACCEL_PROFILE=0 CPPAW_SKALA_SOURCE_BACK_ACC=1 CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_BACK_ACC_MB=256 ./unit-tests/source_profile.x disabled
+	CPPAW_ACCEL_PROFILE=1 CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_FWD_ACC_MB=256 ./unit-tests/source_profile.x forward
+	CPPAW_ACCEL_PROFILE=1 CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MB=0 ./unit-tests/source_profile.x forward-off
+	CPPAW_ACCEL_PROFILE=0 CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_FWD_ACC_MB=256 ./unit-tests/source_profile.x forward-disabled
 
 skala-interpolation-test: libpaw.a
 	mkdir -p unit-tests

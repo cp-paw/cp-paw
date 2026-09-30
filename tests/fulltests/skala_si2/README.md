@@ -418,6 +418,17 @@ uncached repeats can distinguish propagation roundoff from cache effects.
 
 ## GPU Source Reverse
 
+`source_forward_parity.py` checks forward offload and its combination with
+source reverse. It takes `--executable`, `--model`, `--restart`, `--structure`
+and a new `--output` directory, with optional `--device CPU|CUDA` and
+`--mpi-ranks`. For each electronic-only, force and strain mode it runs two
+matched evaluations with forward off, on, bounded, zero-budget and no-cache,
+then reverse-only and both kernels. It records both coverage counters and
+checks energy, electronic diagnostics, normalized orbitals/multipliers, forces
+and strain against the unchanged `1e-10` bound. This is backend verification,
+not independent stationary-state or performance validation. The driver uses
+the diagnostic relaxation timestep of 5, fixed nuclei and fixed cell.
+
 `source_gpu_parity.py` checks the experimental batched source reverse in an
 OpenACC Skala build. It compares disabled offloading, a 256 MiB device budget,
 a partial 1 MiB budget, zero device budget and disabled host caching. Each
