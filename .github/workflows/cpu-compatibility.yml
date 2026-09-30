@@ -63,6 +63,11 @@ jobs:
         run: |
           make -C bin/Build_fast -f Makefile \
             -f ../../tests/unittests/force_multiplier/driver.mk force-multiplier-test
+
+      - name: Check reciprocal setup interpolation and derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/setup_reciprocal/driver.mk setup-reciprocal-test
       - name: Check cuBLAS workspace test without CUDA
         run: |
           make -C bin/Build_fast -f Makefile \
