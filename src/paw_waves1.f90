@@ -2060,6 +2060,7 @@ END MODULE WAVES_MODULE
       REAL(8)                :: STRESS1(3,3),STRESS(3,3)
       REAL(8)                :: STRESSKIN(3,3)
       REAL(8)                :: STRESSPROJ(3,3)
+      REAL(8)                :: STRESSBACKGROUND(3,3),EBACKGROUND
       REAL(8)                :: RBAS(3,3) ! REAL SPACE LATTICE VECTORS
       REAL(8)                :: RHOB      ! BACKGROUND DENSITY
       REAL(8)                :: POTB      ! AVERAGE ELECTROSTATIC POTENTIAL
@@ -2472,7 +2473,16 @@ CALL ERROR$STOP('WAVES$ETOT')
       ALLOCATE(SKALAVTAU(NRL,NDIMD))
       SKALAVTAU=0.D0
       CALL WAVES$SPHERE(LMNXX,NDIMD,NAT,LMRXX,RHOB,DENMAT,EDENMAT &
-     &                 ,VQLM,DH,DO,POTB)
+     &                 ,VQLM,DH,DO,POTB,EBACKGROUND)
+!     The neutralizing background scales as inverse volume at fixed charge.
+!     Its one-center energy is already included in the Hartree energy.
+      STRESSBACKGROUND=0.D0
+      IF(TSTRESS) THEN
+        STRESSBACKGROUND(1,1)=-EBACKGROUND
+        STRESSBACKGROUND(2,2)=-EBACKGROUND
+        STRESSBACKGROUND(3,3)=-EBACKGROUND
+        STRESS=STRESS+STRESSBACKGROUND
+      END IF
       IF(TSTRESS.AND.TSKALAAPPLY) THEN
         CALL SKALA$STRESSGET(SKALAMODELSTRESS)
         STRESS=STRESS+SKALAMODELSTRESS
@@ -2989,7 +2999,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       CALL CELL$GETR8A('STRESS_I',9,STRESS1)
       CALL SKALA$TOTALSTRESSREPORT(SKALAMODELSTRESS,SKALACORESTRESS &
      &                            ,SKALATAUSTRESS,STRESS-STRESS1 &
-     &                            ,STRESSKIN,STRESSPROJ,-STRESS1)
+     &                            ,STRESSKIN,STRESSPROJ,-STRESS1+STRESSBACKGROUND)
       STRESS=STRESS1-STRESS  ! IN THIS ROUTINE STRESS=+DE/DEPSILON!
       CALL CELL$SETR8A('STRESS_I',9,STRESS)
 #IF DEFINED(CPPVAR_CUBLAS_FP64_EMULATION)
@@ -7227,7 +7237,7 @@ RETURN
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SPHERE(LMNXX,NDIMD_,NAT,LMRXX,RHOB,DENMAT,EDENMAT &
-     &                       ,VQLM,DH,DO,POTB)
+     &                       ,VQLM,DH,DO,POTB,EBACKGROUND)
 !     **************************************************************************
 !     **                                                                      **
 !     **  EVALUATES ONE-CENTER HAMILTONIAN AN OVERLAPMATRIX                   **
@@ -7256,7 +7266,9 @@ RETURN
       COMPLEX(8),INTENT(OUT) :: DH(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(OUT) :: DO(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(OUT) :: POTB 
+      REAL(8)   ,INTENT(OUT) :: EBACKGROUND
       REAL(8)                :: POTB1
+      REAL(8)                :: EBACKGROUND1
       INTEGER(4)             :: ISP   ! SPECIES INDEX
       INTEGER(4)             :: IAT   ! 
       INTEGER(4)             :: LMNX  ! 
@@ -7302,6 +7314,7 @@ RETURN
         CALL SKALA$GETL4('DISTRIBUTEGPU',TSKALADISTRIBUTEGPU)
       END IF
       POTB=0
+      EBACKGROUND=0.D0
       IF(TSKALACUDA.AND.(.NOT.TSKALADISTRIBUTEGPU)) THEN
         IATFIRST=1
         IATLAST=NAT
@@ -7332,8 +7345,9 @@ RETURN
         ALLOCATE(DH1(LMNX,LMNX,NDIMD))
         ALLOCATE(DOV1(LMNX,LMNX,NDIMD))
         CALL AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT1,EDENMAT1 &
-     &               ,LMRX,VQLM(1,IAT),RHOB,POTB1,DH1,DOV1)
+     &               ,LMRX,VQLM(1,IAT),RHOB,POTB1,DH1,DOV1,EBACKGROUND1)
         POTB=POTB+POTB1
+        EBACKGROUND=EBACKGROUND+EBACKGROUND1
         DH(1:LMNX,1:LMNX,:,IAT)=DH1(:,:,:)
         DO(1:LMNX,1:LMNX,:,IAT)=DOV1(:,:,:)
         DEALLOCATE(DH1)
@@ -7344,6 +7358,7 @@ RETURN
       CALL MPE$COMBINE('MONOMER','+',DH)
       CALL MPE$COMBINE('MONOMER','+',DO)
       CALL MPE$COMBINE('MONOMER','+',POTB)
+      CALL MPE$COMBINE('MONOMER','+',EBACKGROUND)
       IF(TSKALA) CALL SKALA$FORWARDEND
 !
 !     ==========================================================================

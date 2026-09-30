@@ -72,6 +72,10 @@ jobs:
         run: |
           make -C bin/Build_fast -f Makefile \
             -f ../../tests/unittests/hartree_strain/driver.mk hartree-strain-test
+      - name: Check one-center background strain derivatives
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/background_strain/driver.mk background-strain-test
       - name: Check cuBLAS workspace test without CUDA
         run: |
           make -C bin/Build_fast -f Makefile \
