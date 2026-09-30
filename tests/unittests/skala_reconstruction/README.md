@@ -11,6 +11,18 @@ test full and bounded device coverage, zero budget, disabled offload, a row
 threshold above the batch size and malformed runtime parameters. The ordinary
 `skala-reconstruction-test` includes the same field oracle on CPU-only builds.
 
+The `skala-source-resident-test` target additionally exercises a shared 1 MiB
+forward-geometry pool. It checks unchanged fields and Hamiltonian adjoints,
+fresh density matrices, warm hits, pool exhaustion with unchanged coverage,
+point/cell/center/setup/derivative-mode invalidation, zero host budget, cache
+copying and self-assignment, array and nested-array deallocation, scope exit
+and explicit release. Invalid pool limits must fail. Device switching is
+checked when more than one NVIDIA GPU is visible and reported as skipped
+otherwise. A zero-pool run must preserve transfer-mode results. CPU-only
+reconstruction tests compile and run the inactive pool stubs without OpenACC.
+The profile test separately checks first uploads, warm calls, fresh electronic
+input/output transfers and zero duplicate geometry-transfer accounting.
+
 Run the compiler-independent source, grid and partition tests against an
 existing CP-PAW build:
 

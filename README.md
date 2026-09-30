@@ -183,10 +183,28 @@ transferred wave components. The forward path transfers only four components
 evaluation, a temporary contiguous buffer packs those four components without
 changing the original cache. `SKALA_SOURCE_FWD_PACK` records this host packing
 time separately. The packed host buffer is bounded by the same device payload
-limit but uses additional host memory. Geometry is transferred per call, not
-retained across electronic steps. The extra host field buffer holds ten doubles
+limit but uses additional host memory. By default geometry is transferred per
+call. The extra host field buffer holds ten doubles
 per atom-grid point, plus the current source's covered-row output. Neither
 source device budget caps total host memory or the inference workspace.
+
+`CPPAW_SKALA_SOURCE_FWD_RESIDENT_MB` optionally retains this forward geometry
+across electronic steps (default `0`, disabled). It is a separate, shared
+per-rank pool for the explicit GPU payload of all resident source/block entries,
+not a budget per entry. Each entry owns an equally sized host backing copy.
+Complete covered prefixes are admitted while the pool has room. Entries that
+do not fit use the ordinary transfer path with unchanged GPU row coverage.
+Values, gradients, frozen-core fields and row/image offsets are retained,
+but Hessians, density matrices, model outputs and adjoints are not. The current
+density matrix and reconstructed fields are transferred on every call.
+Geometry, setup and derivative-mode changes or cache destruction release the
+corresponding device entry. A device change rebuilds it on the selected GPU.
+This switch requires forward offload and does not enable reverse residency.
+`SOURCE GPU REUSED ROWS` counts warm hits only. The profile event
+`ACC_PRESENT_SKALA_FWD_GEOM` includes both newly admitted and reused entries,
+whereas `ACC_COPY_SKALA_FWD_GEOM` counts actual explicit uploads, including
+initial population and transient fallbacks. CPU-only builds ignore the pool.
+Keep additional memory headroom for the model and other resident PAW arrays.
 
 An experimental OpenACC source reverse path is enabled explicitly with
 `CPPAW_SKALA_SOURCE_BACK_ACC=1`. It batches complete cached rows for the
