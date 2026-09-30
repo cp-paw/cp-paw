@@ -123,6 +123,16 @@ diagnostic only. The example 4096 MiB source-cache budget is **per process**
 and optional. CUDA models and host electronic offloading are selected
 independently with `--device` and `--gpu-mode`.
 
+`--rigid-translation` moves **all** atoms along `--axis` and compares the
+energy difference with the sum of their analytic force components. `--atom`
+is unused in this mode. Both nuclear coordinate time levels move, while
+the initial cell and electronic restart records remain unchanged. Every
+translated geometry is then independently relaxed with the same electronic
+gates. This tests the derivative of the discrete energy under translation,
+not translational invariance itself. A nonzero total force still requires
+grid refinement even when it agrees with the energy derivative.
+`--center-displacement` now translates the entire reference crystal.
+
 The older `force_fd.sh` and `stress_fd.sh` are single-step restart probes.
 They do not reconverge displaced orbitals and do not certify stationary
 forces or stress, even if their loose diagnostic tolerances are met.

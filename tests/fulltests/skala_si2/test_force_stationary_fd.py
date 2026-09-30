@@ -69,6 +69,11 @@ class StationaryForceTest(unittest.TestCase):
                 _, result = force_fd.run_leg("unconverged", 0, args, inputs, {})
             self.assertFalse(result["stationary"])
             self.assertIn("failure", result)
+            args.rigid_translation = True
+            with patch.object(force_fd.subprocess, "run", side_effect=run):
+                force_fd.run_leg("translated", 0.003, args, inputs, {})
+            translated = force_fd.geometry((root / "translated/block-1/si2.rstrt").read_bytes())
+            self.assertEqual(translated["positions"], [[0.003, 0, 0, 2.003, 3, 4]] * 2)
 
     def test_control_has_typed_real_parameters_and_fixed_geometry(self):
         args = SimpleNamespace(dt=5, block_steps=40, device="CPU", radial_points=96,
@@ -115,6 +120,45 @@ class StationaryForceTest(unittest.TestCase):
         for data in (b"", restart()[:-1]):
             with self.assertRaises(ValueError):
                 force_fd.geometry(data)
+
+    def test_rigid_translation_preserves_cell_and_electronic_records(self):
+        initial = restart()
+        for axis in (1, 2, 3):
+            with self.subTest(axis=axis):
+                changed = force_fd.displace_geometry(initial, 2, axis, -0.003, True)
+                before, after = read_records(initial), read_records(changed)
+                for index, (old, new) in enumerate(zip(before, after)):
+                    if index in (5, 6):
+                        expected = list(struct.unpack("<6d", old))
+                        for atom in (0, 1):
+                            expected[3 * atom + axis - 1] -= 0.003
+                        self.assertEqual(struct.unpack("<6d", new), tuple(expected))
+                    else:
+                        self.assertEqual(old, new)
+        self.assertEqual(force_fd.displace_geometry(initial, 2, 1, 0.003),
+                         displace(initial, 2, 1, 0.003))
+        for axis, delta in ((0, 0), (4, 0), (1, float("nan")), (1, float("inf"))):
+            with self.subTest(axis=axis, delta=delta), self.assertRaises(ValueError):
+                force_fd.displace_geometry(initial, 2, axis, delta, True)
+
+    def test_rigid_translation_compares_the_sum_of_all_forces(self):
+        center = force_fd.analyze(protocol(), 2, 1, 1, 1e-6, 1e-6)
+        center["final"]["forces"] = [[0.1, 0.2, 0.3], [-0.06, -0.1, -0.2]]
+        minus, plus = copy.deepcopy(center), copy.deepcopy(center)
+        minus["final"]["energy"] = -1.99996
+        plus["final"]["energy"] = -2.00004
+        row = force_fd.compare(center, minus, plus, 0.001, 2, 1, 1e-10,
+                               rigid_translation=True)
+        self.assertAlmostEqual(row["analytic_hartree_per_bohr"], 0.04)
+        self.assertAlmostEqual(row["finite_difference_hartree_per_bohr"], 0.04)
+        self.assertTrue(row["passed"])
+        self.assertFalse(force_fd.compare(center, minus, plus, 0.001, 2, 1, 1e-10)["passed"])
+        for atom, axis in ((0, 1), (3, 1), (1, 0), (1, 4)):
+            with self.assertRaises(ValueError):
+                force_fd.force_component(center, atom, axis)
+        plus["stationary"] = False
+        with self.assertRaisesRegex(ValueError, "stationarity"):
+            force_fd.compare(center, minus, plus, 0.001, 2, 1, rigid_translation=True)
 
     def test_parser_uses_last_force_and_energy_not_first(self):
         text = protocol() + protocol(step=2, energy="-2.1D0")

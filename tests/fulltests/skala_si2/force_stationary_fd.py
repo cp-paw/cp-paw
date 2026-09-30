@@ -93,6 +93,23 @@ def check_geometry(before, after):
             raise ValueError("Geometry moved during electronic relaxation")
 
 
+def displace_geometry(data, atom, axis, delta, rigid_translation=False):
+    """Translate all nuclei, or one nucleus, at both coordinate time levels."""
+    if not rigid_translation:
+        return displace(data, atom, axis, delta)
+    for index in range(1, geometry(data)["natom"] + 1):
+        data = displace(data, index, axis, delta)
+    return data
+
+
+def force_component(report, atom, axis, rigid_translation=False):
+    forces = report["final"]["forces"]
+    if axis not in (1, 2, 3) or (not rigid_translation and not 1 <= atom <= len(forces)):
+        raise ValueError("Invalid force component")
+    return (math.fsum(row[axis - 1] for row in forces) if rigid_translation
+            else forces[atom - 1][axis - 1])
+
+
 def analyze(text, natom, steps, last, residual, commutator):
     trace = stationarity.records(text)
     stationarity.validate(trace)
@@ -119,7 +136,7 @@ def analyze(text, natom, steps, last, residual, commutator):
     return result
 
 
-def compare(center, minus, plus, step, atom, axis, tolerance=None):
+def compare(center, minus, plus, step, atom, axis, tolerance=None, *, rigid_translation=False):
     if not math.isfinite(step) or step <= 0 or (tolerance is not None and
                                               (not math.isfinite(tolerance) or tolerance <= 0)):
         raise ValueError("Step and optional tolerance must be positive and finite")
@@ -128,7 +145,7 @@ def compare(center, minus, plus, step, atom, axis, tolerance=None):
             raise ValueError("A geometry has not reached electronic stationarity")
         if row["occupations"] != center["occupations"]:
             raise ValueError("Changed band layout or occupations across geometries")
-    analytic = center["final"]["forces"][atom - 1][axis - 1]
+    analytic = force_component(center, atom, axis, rigid_translation)
     numeric = -(plus["final"]["energy"] - minus["final"]["energy"]) / (2 * step)
     error = abs(numeric - analytic)
     return {"step_bohr": step, "analytic_hartree_per_bohr": analytic,
@@ -166,7 +183,8 @@ def write_json(path, data):
 def run_leg(name, delta, args, inputs, env):
     work = args.output / name
     work.mkdir()
-    initial = displace(inputs["restart"].read_bytes(), args.atom, args.axis, delta)
+    initial = displace_geometry(inputs["restart"].read_bytes(), args.atom, args.axis, delta,
+                                getattr(args, "rigid_translation", False))
     expected = geometry(initial)
     result = {"displacement_bohr": delta, "stationary": False, "blocks": []}
     restart = None
@@ -219,6 +237,8 @@ def main():
     parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
     parser.add_argument("--atom", type=int, default=2)
     parser.add_argument("--axis", type=int, choices=(1, 2, 3), default=1)
+    parser.add_argument("--rigid-translation", action="store_true",
+                        help="Displace every atom along --axis and test the total force; --atom is unused")
     parser.add_argument("--center-displacement", type=float, default=0)
     parser.add_argument("--steps", type=float, nargs="+", default=(0.001, 0.0003))
     parser.add_argument("--block-steps", type=int, default=40)
@@ -254,7 +274,8 @@ def main():
         parser.error("Invalid indices, sizes, relaxation settings or finite-difference parameters")
     inputs = {key: getattr(args, key).resolve(strict=True)
               for key in ("executable", "model", "restart", "structure")}
-    geometry(displace(inputs["restart"].read_bytes(), args.atom, args.axis, args.center_displacement))
+    geometry(displace_geometry(inputs["restart"].read_bytes(), args.atom, args.axis,
+                               args.center_displacement, args.rigid_translation))
     args.output = args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
     env = dict(os.environ, CPPAW_GPU_MODE=args.gpu_mode, CPPAW_SKALA_SCF_DETAIL="1",
@@ -276,7 +297,9 @@ def main():
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         futures = [pool.submit(run_leg, name, delta, args, inputs, env) for name, delta in tasks]
         legs = dict(future.result() for future in futures)
-    summary = {"scope": "stationary fixed-occupation ionic force differences at the specified grid",
+    summary = {"scope": ("stationary rigid-translation total-force differences at the specified grid"
+                         if args.rigid_translation else
+                         "stationary fixed-occupation ionic force differences at the specified grid"),
                "quadrature_convergence_certified": False, "legs": legs, "comparisons": [],
                "passed": False, "stationary": all(row["stationary"] for row in legs.values())}
     if summary["stationary"]:
@@ -284,13 +307,14 @@ def main():
             if legs["center-repeat"]["occupations"] != legs["center"]["occupations"]:
                 raise ValueError("Changed band layout or occupations in repeated center")
             summary["comparisons"] = [compare(legs["center"], legs[f"step-{i}-minus"],
-                legs[f"step-{i}-plus"], h, args.atom, args.axis, args.absolute_tolerance)
+                legs[f"step-{i}-plus"], h, args.atom, args.axis, args.absolute_tolerance,
+                rigid_translation=args.rigid_translation)
                 for i, h in enumerate(args.steps, 1)]
             summary["center_repeat_energy_difference_hartree"] = abs(
                 legs["center"]["final"]["energy"] - legs["center-repeat"]["final"]["energy"])
             summary["center_repeat_force_difference_hartree_per_bohr"] = abs(
-                legs["center"]["final"]["forces"][args.atom - 1][args.axis - 1]
-                - legs["center-repeat"]["final"]["forces"][args.atom - 1][args.axis - 1])
+                force_component(legs["center"], args.atom, args.axis, args.rigid_translation)
+                - force_component(legs["center-repeat"], args.atom, args.axis, args.rigid_translation))
             repeat_consistent = (args.absolute_tolerance is None or (
                 summary["center_repeat_force_difference_hartree_per_bohr"] <= args.absolute_tolerance
                 and summary["center_repeat_energy_difference_hartree"] / (2 * min(args.steps))
