@@ -18,9 +18,15 @@ LABELS = {
 }
 NUMBER = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[EeDd][-+]?\d+)?")
 BAND_HEADER = "SKALA BAND RESIDUAL"
+MULTIPLIER_LABELS = {
+    "SKALA FORCE MULTIPLIER MISMATCH": "force",
+    "SKALA LEGACY MULTIPLIER MISMATCH": "legacy",
+    "SKALA WEIGHTED MULTIPLIER MISMATCH": "weighted",
+    "SKALA WEIGHTED MULTIPLIER HERMITICITY": "hermiticity",
+}
 
 
-def records(text):
+def _records(text, labels):
     if "PROGRAM FINISHED" not in text:
         raise ValueError("Calculation has not finished normally")
     result = []
@@ -32,7 +38,7 @@ def records(text):
                 raise ValueError("Invalid electronic diagnostic step")
             current = {"step": int(step)}
             result.append(current)
-        for label, key in LABELS.items():
+        for label, key in labels.items():
             if not line.startswith(label):
                 continue
             raw = line[len(label):].strip()
@@ -45,11 +51,38 @@ def records(text):
     if not result:
         raise ValueError("No electronic stationarity diagnostics; enable CHECK=T")
     for record in result:
-        if set(record) != {"step", *LABELS.values()}:
+        if set(record) != {"step", *labels.values()}:
             raise ValueError(f"Incomplete electronic diagnostics at step {record['step']}")
+    return result
+
+
+def records(text):
+    result = _records(text, LABELS)
+    for record in result:
         if record["rms"] > record["maximum"] + 1e-12 * max(1.0, record["maximum"]):
             raise ValueError("Occupied RMS exceeds the maximum residual")
     return result
+
+
+def multiplier_records(text):
+    """Read force-multiplier checks separately from orbital stationarity."""
+    records(text)
+    return _records(text, MULTIPLIER_LABELS)
+
+
+def validate_multipliers(data, *, tolerance, hermiticity=1e-10, last=1):
+    if not data or not 1 <= last <= len(data):
+        raise ValueError("Not enough multiplier steps for the requested final window")
+    if any(not math.isfinite(x) or x <= 0 for x in (tolerance, hermiticity)):
+        raise ValueError("Multiplier tolerances must be positive and finite")
+    for record in data:
+        if record["hermiticity"] > hermiticity:
+            raise ValueError(f"Step {record['step']}: weighted multiplier is not Hermitian")
+    for record in data[-last:]:
+        for key in ("force", "weighted"):
+            if record[key] > tolerance:
+                raise ValueError(f"Step {record['step']}: {key} multiplier mismatch exceeds tolerance")
+    return {"scope": "force-multiplier consistency", "steps": len(data), "final": data[-1]}
 
 
 def band_records(text):
@@ -137,6 +170,8 @@ def main():
     parser.add_argument("--commutator-tolerance", type=float)
     parser.add_argument("--overlap-tolerance", type=float, default=1e-8)
     parser.add_argument("--hermiticity-tolerance", type=float, default=1e-10)
+    parser.add_argument("--multiplier-tolerance", type=float,
+                        help="Also require occupation-weighted force-multiplier convergence")
     parser.add_argument("--last", type=int, default=1)
     parser.add_argument("--bands", action="store_true", help="Include and validate per-band diagnostics")
     args = parser.parse_args()
@@ -148,6 +183,11 @@ def main():
                            commutator=args.commutator_tolerance, last=args.last)
         if args.bands:
             summary["band_diagnostics"] = band_records(args.protocol.read_text())
+        if args.multiplier_tolerance is not None:
+            summary["multipliers"] = validate_multipliers(
+                multiplier_records(args.protocol.read_text()),
+                tolerance=args.multiplier_tolerance,
+                hermiticity=args.hermiticity_tolerance, last=args.last)
     except (OSError, ValueError) as error:
         parser.exit(1, f"TEST FAILED: {error}\n")
     print(json.dumps(summary, indent=2, allow_nan=False))

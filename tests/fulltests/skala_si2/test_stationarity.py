@@ -15,6 +15,41 @@ PROGRAM FINISHED
 
 
 class StationarityTest(unittest.TestCase):
+    def test_multiplier_checks_are_separate_and_required_when_requested(self):
+        base = protocol()
+        self.assertEqual(len(stationarity.records(base)), 1)
+        with self.assertRaises(ValueError):
+            stationarity.multiplier_records(base)
+        extra = """SKALA FORCE MULTIPLIER MISMATCH 2e-11
+SKALA LEGACY MULTIPLIER MISMATCH 9e-6
+SKALA WEIGHTED MULTIPLIER MISMATCH 3e-11
+SKALA WEIGHTED MULTIPLIER HERMITICITY 7e-17
+"""
+        text = base + extra
+        data = stationarity.multiplier_records(text)
+        stationarity.validate_multipliers(data, tolerance=1e-10)
+        self.assertEqual(stationarity.records(text), stationarity.records(base))
+        for raw in ("NaN", "Inf", "1e999", "-1", "***"):
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                stationarity.multiplier_records(text.replace("2e-11", raw))
+        for bad in (extra + base, text + extra,
+                    text.replace("SKALA WEIGHTED MULTIPLIER MISMATCH 3e-11\n", ""),
+                    text + protocol(step=301)):
+            with self.assertRaises(ValueError):
+                stationarity.multiplier_records(bad)
+        for value in (0., float("nan"), float("inf")):
+            with self.assertRaises(ValueError):
+                stationarity.validate_multipliers(data, tolerance=value)
+        for key in ("force", "weighted", "hermiticity"):
+            bad = [dict(data[0], **{key: 1.})]
+            with self.assertRaises(ValueError):
+                stationarity.validate_multipliers(bad, tolerance=1e-10)
+        warmup = [dict(data[0], force=1., weighted=1.), data[0]]
+        stationarity.validate_multipliers(warmup, tolerance=1e-10, last=1)
+        for count in (0, 2, 3):
+            with self.assertRaises(ValueError):
+                stationarity.validate_multipliers(warmup, tolerance=1e-10, last=count)
+
     def test_band_details_reconstruct_weighted_summary(self):
         text = protocol(rms="0.2", maximum="0.2", commutator="0.03")
         text += "SKALA BAND RESIDUAL 1 1 1 0.25 0.2 -1.0 0.03\n"

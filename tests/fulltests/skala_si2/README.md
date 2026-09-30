@@ -82,6 +82,15 @@ The example tolerances are not universal force/stress accuracy guarantees.
 Neither mode certifies the global electronic minimum or grid convergence.
 `APPLY=F` measures the conventional-XC Hamiltonian; `APPLY=T` measures Skala.
 
+For force or stress checks, additionally pass `--multiplier-tolerance 1e-6`.
+This requires the current multiplier diagnostics and checks the weighted
+equation-of-motion matrix against the projected Hamiltonian over the same
+final window. Its Hermiticity is checked at every step. The force contraction
+uses `-HermitianPart(RLAM0 * diag(OCC))`. Unweighted `RLAM0` is not generally
+Hermitian, and averaging occupations before multiplying by `RLAM0` is not
+equivalent. The reported legacy mismatch is diagnostic only and is not used
+as a convergence gate. Older protocols remain readable without this option.
+
 `CPPAW_SKALA_SCF_DETAIL=1` additionally reports each global k-point, spin and
 band, its weighted occupation, residual norm, Hamiltonian expectation and
 maximum occupation-commutator element. Use `stationarity.py --bands` to read

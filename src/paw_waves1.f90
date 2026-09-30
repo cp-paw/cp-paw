@@ -6465,9 +6465,10 @@ END IF
       IMPLICIT NONE
       REAL(8),ALLOCATABLE :: OCC(:,:,:),R0(:,:)
       REAL(8),ALLOCATABLE :: DETAIL(:,:,:,:)
-      COMPLEX(8),ALLOCATABLE :: H(:,:),GRAM(:,:),RGRAM(:,:)
+      COMPLEX(8),ALLOCATABLE :: H(:,:),GRAM(:,:),RGRAM(:,:),FLAMBDA(:,:)
       COMPLEX(8),ALLOCATABLE :: SPSI(:,:,:),RESIDUAL(:,:,:)
       REAL(8) :: R2,NOCC,RMAX,COMMUTATOR,ORTHO,HERMITIAN,FMAX,NORM2
+      REAL(8) :: FORCE_LMAX,LEGACY_FORCE_LMAX,WEIGHTED_LMAX,LHERMITIAN
       INTEGER :: IK,IS,NB,NBH,NFULL,NGL,NBMAX,NPRO,I,J,NFIL,ISTEP
       INTEGER :: NTASKS,THISTASK,NK,KROOT
       INTEGER :: ROTK,ROTS,ROTI,ROTJ,ROTKG
@@ -6513,6 +6514,10 @@ END IF
       COMMUTATOR=0.D0
       ORTHO=0.D0
       HERMITIAN=0.D0
+      FORCE_LMAX=0.D0
+      LEGACY_FORCE_LMAX=0.D0
+      WEIGHTED_LMAX=0.D0
+      LHERMITIAN=0.D0
       DO IK=1,NKPTL
         IKG=0
         IF(TDETAIL.AND.KROOT.EQ.1) THEN
@@ -6541,7 +6546,7 @@ END IF
           ! PROJ is already current on the host after projection and its MPI
           ! sum. Its optional device copy need not survive to this diagnostic.
 #ENDIF
-          ALLOCATE(H(NFULL,NFULL),GRAM(NFULL,NFULL),RGRAM(NFULL,NFULL))
+          ALLOCATE(H(NFULL,NFULL),GRAM(NFULL,NFULL),RGRAM(NFULL,NFULL),FLAMBDA(NB,NB))
           ALLOCATE(SPSI(NGL,NDIM,NBH),RESIDUAL(NGL,NDIM,NBH))
           SPSI=THIS%PSI0
           CALL WAVES_OPSI(NB,NBH,NPRO,MAP%NAT,NGL,R0,THIS%PROJ,SPSI)
@@ -6549,11 +6554,14 @@ END IF
      &         ,THIS%PSI0,THIS%HPSI,H,'SKALA_SCF_H')
           CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NFULL &
      &         ,THIS%PSI0,SPSI,GRAM,'SKALA_SCF_S')
+          CALL WAVES_FORCE_MULTIPLIER(NB,OCC(1:NB,IK,IS),THIS%RLAM0,FLAMBDA)
           IF(ANY(.NOT.IEEE_IS_FINITE(REAL(H,KIND=8))).OR. &
      &       ANY(.NOT.IEEE_IS_FINITE(AIMAG(H))).OR. &
      &       ANY(.NOT.IEEE_IS_FINITE(REAL(GRAM,KIND=8))).OR. &
-     &       ANY(.NOT.IEEE_IS_FINITE(AIMAG(GRAM)))) THEN
-            CALL ERROR$MSG('NONFINITE SKALA STATIONARITY OVERLAP MATRIX')
+     &       ANY(.NOT.IEEE_IS_FINITE(AIMAG(GRAM))).OR. &
+     &       ANY(.NOT.IEEE_IS_FINITE(REAL(THIS%RLAM0,KIND=8))).OR. &
+     &       ANY(.NOT.IEEE_IS_FINITE(AIMAG(THIS%RLAM0)))) THEN
+            CALL ERROR$MSG('NONFINITE SKALA STATIONARITY OPERATOR OR CONSTRAINT MATRIX')
             CALL ERROR$STOP('WAVES_SKALA_STATIONARITY')
           END IF
           HERMITIAN=MAX(HERMITIAN,MAXVAL(ABS(H(1:NB,1:NB) &
@@ -6584,6 +6592,16 @@ END IF
               DO I=1,NB
                 COMMUTATOR=MAX(COMMUTATOR,ABS(H(I,J)) &
      &                    *ABS(OCC(I,IK,IS)-OCC(J,IK,IS))/FMAX)
+                ! Orbital stationarity does not test the dynamical multiplier.
+                LEGACY_FORCE_LMAX=MAX(LEGACY_FORCE_LMAX,ABS(THIS%RLAM0(I,J)-H(I,J)) &
+     &                    *0.5D0*(OCC(I,IK,IS)+OCC(J,IK,IS))/FMAX)
+                FORCE_LMAX=MAX(FORCE_LMAX,ABS(FLAMBDA(I,J) &
+     &                    +0.5D0*(H(I,J)*OCC(J,IK,IS) &
+     &                    +CONJG(H(J,I))*OCC(I,IK,IS)))/FMAX)
+                WEIGHTED_LMAX=MAX(WEIGHTED_LMAX,ABS(THIS%RLAM0(I,J)-H(I,J)) &
+     &                    *OCC(J,IK,IS)/FMAX)
+                LHERMITIAN=MAX(LHERMITIAN,ABS(THIS%RLAM0(I,J)*OCC(J,IK,IS) &
+     &                    -CONJG(THIS%RLAM0(J,I))*OCC(I,IK,IS))/FMAX)
               END DO
             END DO
           END IF
@@ -6613,7 +6631,7 @@ END IF
             IF(TDETAIL.AND.KROOT.EQ.1) &
      &        DETAIL(2,I,IKG,IS)=SQRT(MAX(0.D0,NORM2))
           END DO
-          DEALLOCATE(H,GRAM,RGRAM,SPSI,RESIDUAL)
+          DEALLOCATE(H,GRAM,RGRAM,FLAMBDA,SPSI,RESIDUAL)
         END DO
       END DO
       CALL PLANEWAVE$SELECT(SAVEDGSET)
@@ -6623,10 +6641,15 @@ END IF
       CALL MPE$COMBINE('MONOMER','MAX',COMMUTATOR)
       CALL MPE$COMBINE('MONOMER','MAX',ORTHO)
       CALL MPE$COMBINE('MONOMER','MAX',HERMITIAN)
+      CALL MPE$COMBINE('MONOMER','MAX',FORCE_LMAX)
+      CALL MPE$COMBINE('MONOMER','MAX',LEGACY_FORCE_LMAX)
+      CALL MPE$COMBINE('MONOMER','MAX',WEIGHTED_LMAX)
+      CALL MPE$COMBINE('MONOMER','MAX',LHERMITIAN)
       IF(TROTATION) CALL MPE$COMBINE('MONOMER','+',ROTDATA)
       IF(TDETAIL) CALL MPE$COMBINE('MONOMER','+',DETAIL)
       IF(NOCC.LE.0.D0.OR.ANY(.NOT.IEEE_IS_FINITE( &
-     &     [R2,NOCC,RMAX,COMMUTATOR,ORTHO,HERMITIAN]))) THEN
+     &     [R2,NOCC,RMAX,COMMUTATOR,ORTHO,HERMITIAN &
+     &     ,FORCE_LMAX,LEGACY_FORCE_LMAX,WEIGHTED_LMAX,LHERMITIAN]))) THEN
         CALL ERROR$MSG('INVALID SKALA STATIONARITY DIAGNOSTIC')
         CALL ERROR$STOP('WAVES_SKALA_STATIONARITY')
       END IF
@@ -6639,6 +6662,10 @@ END IF
         WRITE(NFIL,'(A,T38,ES24.14)') 'SKALA OCCUPATION COMMUTATOR MAX',COMMUTATOR
         WRITE(NFIL,'(A,T38,ES24.14)') 'SKALA SCF OVERLAP ERROR',ORTHO
         WRITE(NFIL,'(A,T38,ES24.14)') 'SKALA HAMILTONIAN HERMITICITY',HERMITIAN
+        WRITE(NFIL,'(A,T48,ES24.14)') 'SKALA FORCE MULTIPLIER MISMATCH',FORCE_LMAX
+        WRITE(NFIL,'(A,T48,ES24.14)') 'SKALA LEGACY MULTIPLIER MISMATCH',LEGACY_FORCE_LMAX
+        WRITE(NFIL,'(A,T48,ES24.14)') 'SKALA WEIGHTED MULTIPLIER MISMATCH',WEIGHTED_LMAX
+        WRITE(NFIL,'(A,T48,ES24.14)') 'SKALA WEIGHTED MULTIPLIER HERMITICITY',LHERMITIAN
         IF(TDETAIL) THEN
           DO IKG=1,NKPT
             DO IS=1,NSPIN
@@ -7438,7 +7465,6 @@ RETURN
       REAL(8)                :: FORCE1(3)
       REAL(8)                :: STRESS1(3,3)
       REAL(8)                :: SVAR
-      REAL(8)                :: F1,F2
       REAL(8)                :: R(3,NAT)
       COMPLEX(8),ALLOCATABLE :: FORCE_LAMBDA(:,:) ! (NB,NB)
       REAL(8)   ,PARAMETER   :: RSMALL=1.D-20
@@ -7546,13 +7572,7 @@ RETURN
           CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
 #ENDIF
           ALLOCATE(FORCE_LAMBDA(NB,NB))
-          DO IB1=1,NB
-            F1=OCC(IB1,IKPT,ISPIN)
-            DO IB2=1,NB
-              F2=OCC(IB2,IKPT,ISPIN)
-              FORCE_LAMBDA(IB1,IB2)=-THIS%RLAM0(IB1,IB2)*0.5D0*(F1+F2)
-            ENDDO
-          ENDDO
+          CALL WAVES_FORCE_MULTIPLIER(NB,OCC(1:NB,IKPT,ISPIN),THIS%RLAM0,FORCE_LAMBDA)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
           CALL ACCELPROFILE$ADD('PAW_FORCE_LAMBDA_SETUP' &
@@ -7817,6 +7837,22 @@ RETURN
                               CALL TRACE$POP
       RETURN
       END SUBROUTINE WAVES$FORCE
+!
+      SUBROUTINE WAVES_FORCE_MULTIPLIER(NB,OCC,RLAM,FORCE_LAMBDA)
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NB
+      REAL(8),INTENT(IN) :: OCC(NB)
+      COMPLEX(8),INTENT(IN) :: RLAM(NB,NB)
+      COMPLEX(8),INTENT(OUT) :: FORCE_LAMBDA(NB,NB)
+      INTEGER :: I,J
+      ! RLAM is the equation-of-motion matrix. RLAM*diag(OCC), not
+      ! RLAM itself, is the Hermitian multiplier in the PAW Lagrangian.
+      DO J=1,NB
+        DO I=1,NB
+          FORCE_LAMBDA(I,J)=-0.5D0*(RLAM(I,J)*OCC(J)+CONJG(RLAM(J,I))*OCC(I))
+        END DO
+      END DO
+      END SUBROUTINE WAVES_FORCE_MULTIPLIER
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC,HTBC,DEDPROJ)
@@ -9631,9 +9667,9 @@ RETURN
 !     **  CALCULATES THE DERIVATIVE OF THE ONE-CENTER                         **
 !     **  ENERGIES WITH RESPECT TO THE PROJECTOR FUNCTIONS                    **
 !     **    DEDPROJ = DE/(DPROJ)                                              **
-!     **            = DH<P|PSITILDE>F-DO<P|PSITILDE>*LAMBDA                   **
-!     **  LAMBDA IS CALCULATED FROM THIS%RLAM0 BY MULTIPLICATION WITH         **
-!     **  0.5*(FI+FJ) BEFORE THE PER-ATOM FORCE LOOP.                         **
+!     **            = DH<P|PSITILDE>F+DO<P|PSITILDE>*LAMBDA                   **
+!     **  LAMBDA IS MINUS THE HERMITIAN PART OF RLAM0*DIAG(OCC),             **
+!     **  PREPARED BEFORE THE PER-ATOM FORCE LOOP.                           **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1999)***********
       IMPLICIT NONE
@@ -9706,7 +9742,7 @@ RETURN
       END IF
 !
 !     ==========================================================================
-!     ==  ADD -DO<P|PSI>LAMBDA*(FI+FJ)/2                                      ==
+!     ==  ADD THE OCCUPATION-WEIGHTED OVERLAP CONSTRAINT CONTRIBUTION         ==
 !     ==========================================================================
       ALLOCATE(OPROJ(NDIM,NBH,LMNX))
       CALL WAVES_OPROJ(LNX,LOX,DO,NDIM,LMNX,NBH,PROJ,OPROJ)
