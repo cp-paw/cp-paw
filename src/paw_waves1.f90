@@ -11083,7 +11083,9 @@ RETURN
             DO J=I,3
               IJ=IJ+1
               DO IG=1,NGL
-                SYLM(IG,LM1,IJ)=SYLM(IG,LM1,IJ)+CC(I,J)*YLM(IG,LM2)
+!               Six-component stress uses symmetric, not one-sided, shear.
+                SYLM(IG,LM1,IJ)=SYLM(IG,LM1,IJ) &
+     &                         +0.5D0*(CC(I,J)+CC(J,I))*YLM(IG,LM2)
               ENDDO
             ENDDO
           ENDDO
@@ -11100,7 +11102,8 @@ RETURN
             DO J=I,3
               IJ=IJ+1
               DO IG=1,NGL
-                SYLM(IG,LM1,IJ)=SYLM(IG,LM1,IJ)+CC(I,J)*YLM(IG,LM2)
+                SYLM(IG,LM1,IJ)=SYLM(IG,LM1,IJ) &
+     &                         +0.5D0*(CC(I,J)+CC(J,I))*YLM(IG,LM2)
               ENDDO
             ENDDO
           ENDDO
