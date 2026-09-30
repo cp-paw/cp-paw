@@ -168,6 +168,9 @@ An experimental OpenACC source reverse path is enabled explicitly with
 density-matrix, source-coordinate and source-image strain contractions.
 `CPPAW_SKALA_SOURCE_BACK_ACC_MB` bounds the geometry, adjoint and scratch
 array payload per call and rank (default 256 MiB, `0` disables offload).
+These source budgets do not cap LibTorch/model workspace, other PAW arrays or
+total memory. Leave additional headroom, especially for concurrent fine-grid
+jobs on unified-memory GPUs where host and device allocations share capacity.
 `CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS` defaults to 4096. Rows outside either
 cache or device budget follow the unchanged host path, as do CPU-only builds.
 `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS` selects a positive tile size (default
