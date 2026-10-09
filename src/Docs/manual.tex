@@ -1332,12 +1332,11 @@ to estimate the frequency from
 \mbax{\key{FORCE}
   \vdescr{{\tt FORCE=F} omits optional nuclear-force work during electronic
     relaxation at fixed atomic positions and fixed cell. The electronic
-    Hamiltonian and its Skala contributions remain active. Atomic or
+    Hamiltonian remains active. Atomic or
     cell dynamics, explicit stress evaluation and QM/MM override this request and retain complete
     nuclear forces. No force-trajectory records are written while forces
     are omitted. Restart with {\tt FORCE=T} for final force evaluation.
-    For Skala, source Hessians and geometric pullbacks are then unnecessary,
-    but density-matrix and smooth-field adjoints are still evaluated.}
+}
   \vformat{logical}
   \vrules{optional}
   \vdefault{T}
@@ -1346,7 +1345,7 @@ to estimate the frequency from
 \mbax{\key{STRESS}
   \vdescr{{\tt STRESS=T} evaluates the electronic energy derivative with
     respect to homogeneous strain without enabling cell dynamics.
-    Kinetic, projector, potential and Skala contributions use the same
+    Kinetic, projector and potential contributions use the same
     stress selector. This request also retains complete nuclear forces,
     even with {\tt FORCE=F}. Cell dynamics always requires stress,
     regardless of this setting. Evaluation at a fixed geometry does not

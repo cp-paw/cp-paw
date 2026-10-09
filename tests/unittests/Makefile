@@ -1,4 +1,4 @@
-TOBETESTED=specialfunction_bessel skala_primitives
+TOBETESTED=specialfunction_bessel
 #
 SHELL=/bin/sh
 #

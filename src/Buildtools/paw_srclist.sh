@@ -37,10 +37,6 @@ export LIBLIST=" \
         paw_dftaddendum \
         paw_constants \
         paw_spherical \
-        paw_lebedev \
-        paw_skala_grid \
-        paw_skala_partition \
-        paw_skala_primitives \
         paw_generalpurpose \
         paw_report \
         paw_periodictable \
@@ -95,7 +91,6 @@ export PAWLIST=" \
         paw_warmup \
         paw_optfric \
         paw_setups \
-        paw_skala \
         paw_potential \
         paw_occupations \
         paw_pairpotential \
