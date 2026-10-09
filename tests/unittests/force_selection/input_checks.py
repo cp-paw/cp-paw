@@ -8,13 +8,10 @@ from pathlib import Path
 import shutil
 import struct
 import subprocess
-import sys
 import tempfile
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "fulltests/skala_si2"))
-from force_mode_parity import wave_records, wave_difference, trajectory_difference
-from force_stationary_fd import geometry, displace_geometry
-from displace_restart import read_records
+from paw_records import (wave_records, wave_difference, trajectory_difference,
+                         geometry, displace_geometry, read_records)
 
 
 def main():
