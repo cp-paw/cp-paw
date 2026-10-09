@@ -531,5 +531,4 @@ The supported rules now extend through 65: 53 uses 974 angular points, 59 uses
 1202, and 65 uses 1454 per radial shell and orientation. A request of 64 selects
 65 automatically. The default remains 53; higher resolution must be checked
 for the system of interest. Rule provenance and tests are documented in
-[`LEBEDEV.md`](tests/unittests/skala_reconstruction/LEBEDEV.md).
-
+[`LEBEDEV.md`](../../tests/unittests/skala_reconstruction/LEBEDEV.md).

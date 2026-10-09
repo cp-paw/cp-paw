@@ -77,6 +77,7 @@ jobs:
             -f ../../tests/unittests/skala_reconstruction/driver.mk skala-primitives-test
       - name: Check optional and required nuclear forces
         run: |
+          python3 tests/unittests/force_selection/test_paw_records.py
           python3 tests/unittests/force_selection/input_checks.py bin/Build_fast/paw.x
           python3 tests/unittests/force_selection/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
 

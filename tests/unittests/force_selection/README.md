@@ -1,5 +1,9 @@
 # Nuclear-force selection
 
+`paw_records.py` provides self-contained restart and trajectory helpers using
+only the Python standard library. Run their regression checks with
+`python3 tests/unittests/force_selection/test_paw_records.py`.
+
 Run `python3 tests/unittests/force_selection/input_checks.py /path/to/paw.x`.
 Use `--mpi-ranks 2 --mpiexec /path/to/mpirun` for an MPI build and
 `--output /path/to/new-directory` to retain raw results.
