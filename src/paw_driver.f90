@@ -131,18 +131,15 @@
 !     ==================================================================
                               CALL TIMING$CLOCKON('TIMESTEP')
 !     ==USE THE LINE WITH "NOT TSTOP" TO AVOID AN ADDITIONAL LAST TIME STEP
-!     IF(.NOT.TSTOP) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP)
+!     IF(.NOT.TSTOP) CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,.NOT.TLAST)
       CALL DYNOCC$GETL4('DYN',TMERMN)
-      CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP)
+      CALL TIMESTEP(DELT,TPRINT,NFI,TSTOP,.NOT.TLAST)
                               CALL TIMING$CLOCKOFF('TIMESTEP')
 !
 !     ==================================================================
 !     ==   WRITE INFORMATION AND TRAJECTORIES                         ==
 !     ==================================================================
-!     __ADD TO TRAJECTORIES (TEMPORARY BUFFER)__________________________
-      IF(.NOT.TLAST) THEN
-        CALL WRITETRAJECTORY(NFI,DELT)
-      END IF
+!     __FLUSH TRAJECTORIES SAMPLED BEFORE THE DYNAMICAL SWITCH__________
 !     __ WRITE TRAJECTORY FROM TEMPORARY BUFFER TO FILE_________________
       IF(TPRINT.OR.TLAST) THEN
         CALL TRAJECTORYIO$FLUSHALL
@@ -277,7 +274,7 @@
       END
 !
 !     ..................................................................
-      SUBROUTINE TIMESTEP(DELT,TPRINT,NFI,TSTOP)
+      SUBROUTINE TIMESTEP(DELT,TPRINT,NFI,TSTOP,TTRAJECTORY)
 !     ******************************************************************      
 !     ******************************************************************      
       USE TIMESTEP_MODULE ,ONLY : DELTAT,ISTEPNUMBER,TNEWTHERMOSTAT
@@ -285,6 +282,7 @@
       REAL(8)   ,INTENT(IN)   :: DELT   ! TIME STEP
       LOGICAL(4),INTENT(IN)   :: TPRINT ! FLAG FOR LONG PRINTOUT
       LOGICAL(4),INTENT(IN)   :: TSTOP  ! FLAG FOR LAST TIME STEP
+      LOGICAL(4),INTENT(IN)   :: TTRAJECTORY
       INTEGER(4),INTENT(INOUT):: NFI    ! TIME STEP COUNTER
       INTEGER(4)              :: NFILO
       LOGICAL(4)              :: TFOR   ! ON/OFF SWITCH FOR ATOMIC MOTION
@@ -551,6 +549,8 @@
 !     ==================================================================
 !     __WRITE PROTOCOL__________________________________________________
       CALL PRINFO(TPRINT,TSTOP,NFI,DELT)
+!     Sample one physical time level before positions advance and forces clear.
+      IF(TTRAJECTORY) CALL WRITETRAJECTORY(NFI,DELT)
 !
 !     ==================================================================
 !     ==================================================================
@@ -1285,7 +1285,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       REAL(8)                :: EKINFC
       REAL(8)                :: HEAT
       REAL(8)                :: OCCKIN
-      LOGICAL(4)             :: TQMMM,TCALGARYQMMM,TCHK
+      LOGICAL(4)             :: TQMMM,TCALGARYQMMM,TCHK,TFORCE
       REAL(8)                :: QMMMKIN,QMMMPOT,QMMMTHERM
       REAL(8)                :: EEXT
 !     **************************************************************************
@@ -1403,7 +1403,8 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
                               CALL TRACE$PASS('BEFORE F-TRAJECTORY')
       CALL TRAJECTORYIO$SELECT('FORCE-TRAJECTORY')
       CALL TRAJECTORYIO$GETL4('ON',TCHK)
-      IF(TCHK) THEN
+      CALL WAVES$GETL4('FORCE',TFORCE)
+      IF(TCHK.AND.TFORCE) THEN
         ALLOCATE(DWORK(4*NAT))
         CALL ATOMLIST$GETR8A('FORCE',0,3*NAT,DWORK)
         DWORK(3*NAT+1:4*NAT)=0.D0 ! SHALL CONTAIN IN FUTURE THE POTENTIALS
@@ -1438,5 +1439,3 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       RETURN
       END
 !#END IF
-
-

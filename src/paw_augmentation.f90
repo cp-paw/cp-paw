@@ -221,7 +221,7 @@ END MODULE AUGMENTATION_MODULE
 !
 !     ..................................................................
       SUBROUTINE AUGMENTATION$SPHERE(ISP,IAT,LMNX,NDIMD,DENMAT,EDENMAT &
-     &                              ,LMRX,VQLM,RHOB,POTB,DATH,DO)
+     &                              ,LMRX,VQLM,RHOB,POTB,DATH,DO,EBACKGROUND)
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
@@ -243,6 +243,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,INTENT(IN)   :: RHOB ! NEUTRALIZING BACKGROUND DENSITY
 !                               RHOB MAY BE SET TO ZERO BY ISOLATE OBJECT
       REAL(8)   ,INTENT(OUT)  :: POTB ! NEG. AV. EL. AUGM. POT.
+      REAL(8)   ,INTENT(OUT)  :: EBACKGROUND ! INCLUDED IN THE HARTREE ENERGY
       COMPLEX(8),INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,NDIMD)
       REAL(8)    ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
@@ -251,12 +252,15 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)                 :: AEZ
       INTEGER(4)              :: NR
       INTEGER(4)              :: LNX
+      INTEGER(4)              :: LX
       INTEGER(4),ALLOCATABLE  :: LOX(:)
       REAL(8)   ,ALLOCATABLE  :: AEPHI(:,:)
       REAL(8)   ,ALLOCATABLE  :: PSPHI(:,:)
       REAL(8)   ,ALLOCATABLE  :: AECORE(:)
       REAL(8)   ,ALLOCATABLE  :: PSCORE(:)
       REAL(8)                 :: RCSM
+      REAL(8)                 :: RCUT
+      REAL(8)   ,ALLOCATABLE  :: RCL(:)
       REAL(8)   ,ALLOCATABLE  :: VADD(:)
       REAL(8)   ,ALLOCATABLE  :: DOVER(:,:)
       REAL(8)   ,ALLOCATABLE  :: DTKIN(:,:,:)
@@ -268,6 +272,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: AERHO(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: PSRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DATP(:,:,:)
+      COMPLEX(8),ALLOCATABLE  :: SKALADH(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DWORK1(:)
       INTEGER(4)              :: IDIM,IR
       INTEGER(4)              :: LM,LMN1
@@ -277,6 +282,7 @@ END MODULE AUGMENTATION_MODULE
       INTEGER(4),PARAMETER    :: ITEST=1
       LOGICAL(4)              :: TBACK
       REAL(8)                 :: DETOT,PSEHARTREE,AEEHARTREE,COREEXC
+      REAL(8)                 :: AEBACKGROUND,PSBACKGROUND
       REAL(8)                 :: EKINNL,ENL,AEEXC,PSEXC
       CHARACTER(32)           :: ATOM
       REAL(8)                 :: VQLM1(LMRX)
@@ -289,6 +295,10 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: PSTOTPOT(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: RHO(:,:,:)
       CHARACTER(32)           :: SOFTCORETYPE
+      LOGICAL(4)              :: TSKALA
+      LOGICAL(4)              :: TSKALAAPPLY
+      LOGICAL(4)              :: TSKALAAPPLYONECENTER
+      LOGICAL(4)              :: TSKALACHECK
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
 !
@@ -302,8 +312,12 @@ END MODULE AUGMENTATION_MODULE
       CALL RADIAL$R(GID,NR,R)
       CALL SETUP$GETR8('AEZ',AEZ)
       CALL SETUP$GETI4('LNX',LNX)
+      CALL SETUP$GETI4('LX',LX)
       ALLOCATE(LOX(LNX))
       CALL SETUP$GETI4A('LOX',LNX,LOX)
+      ALLOCATE(RCL(LX+1))
+      CALL SETUP$GETR8A('RCL',SIZE(RCL),RCL)
+      RCUT=MAXVAL(RCL(1:MAXVAL(LOX)+1))
       ALLOCATE(AEPHI(NR,LNX))
       CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
       ALLOCATE(PSPHI(NR,LNX))
@@ -373,6 +387,20 @@ END MODULE AUGMENTATION_MODULE
         CALL AUGMENTATION_RHO(NR,LNX,LOX,PSPHI &
      &                  ,LMNX,DENMAT(1,1,IDIM),LMRX,PSRHO(1,1,IDIM))
       ENDDO
+      CALL SKALA$GETL4('ON',TSKALA)
+      CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
+      CALL SKALA$GETL4('APPLYONECENTER',TSKALAAPPLYONECENTER)
+      CALL SKALA$GETL4('CHECK',TSKALACHECK)
+      IF(TSKALA) THEN
+        IF(TSKALACHECK) THEN
+          CALL SKALA$ONECENTERVALIDATE(IAT,ISP,GID,NR,LNX,LOX,LMNX,LMRX &
+     &                                ,NDIMD,DENMAT,AEPHI,PSPHI &
+     &                                ,AECORE,PSCORE,AERHO,PSRHO &
+     &                                ,RCUT,EKINNL)
+        END IF
+        ALLOCATE(SKALADH(LMNX,LMNX,NDIMD))
+        CALL SKALA$SOURCEDH(IAT,LMNX,NDIMD,SKALADH)
+      END IF
 !     
 !     ================================================================
 !     ==  EVALUATE MULTIPOLE MOMENTS                                ==
@@ -410,9 +438,10 @@ END MODULE AUGMENTATION_MODULE
       ALLOCATE(PSHPOT(NR,LMRX))
       ALLOCATE(AEHPOT(NR,LMRX))
       CALL AUGMENTATION_PSHARTREE(GID,NR,LMRX,PSCORE,PSRHO(:,:,1) &
-     &                 ,VADD,RCSM,QLM,VQLM1,RHOB,PSHPOT,PSEHARTREE)
+     &                 ,VADD,RCSM,QLM,VQLM1,RHOB,PSHPOT,PSEHARTREE,PSBACKGROUND)
       CALL AUGMENTATION_AEHARTREE(GID,NR,LMRX,AEZ,AECORE,AERHO(:,:,1) &
-     &                               ,VQLM1,RHOB,AEHPOT,AEEHARTREE)
+     &                               ,VQLM1,RHOB,AEHPOT,AEEHARTREE,AEBACKGROUND)
+      EBACKGROUND=AEBACKGROUND-PSBACKGROUND
 !
 !     ================================================================
 !     ==   ADD EXCHANGE AND CORRELATION POTENTIAL                   ==
@@ -420,18 +449,26 @@ END MODULE AUGMENTATION_MODULE
       ALLOCATE(AEXCPOT(NR,LMRX,NDIMD))
       ALLOCATE(PSXCPOT(NR,LMRX,NDIMD))
       ALLOCATE(RHO(NR,LMRX,NDIMD))
-!     == CORE ONLY EXCHANGE ENERGY ===================================
-      CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,COREEXC,AEXCPOT(:,1,1))
-      AEXCPOT(:,:,:)=0.D0
-!     == AE-EXCHANGE ENERGY AND POTENTIAL ============================
-      RHO(:,:,:)=AERHO(:,:,:)
-      RHO(:,1,1)=RHO(:,1,1)+AECORE(:)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,AEEXC,AEXCPOT)
-      AEEXC=AEEXC-COREEXC
-!     == PS-EXCHANGE ENERGY AND POTENTIAL ============================
-      RHO(:,:,:)=PSRHO(:,:,:)
-      RHO(:,1,1)=RHO(:,1,1)+PSCORE(:)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,PSEXC,PSXCPOT)
+      IF(TSKALA.AND.TSKALAAPPLY) THEN
+        COREEXC=0.D0
+        AEEXC=0.D0
+        PSEXC=0.D0
+        AEXCPOT=0.D0
+        PSXCPOT=0.D0
+      ELSE
+!       == CORE ONLY EXCHANGE ENERGY ===================================
+        CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,COREEXC,AEXCPOT(:,1,1))
+        AEXCPOT(:,:,:)=0.D0
+!       == AE-EXCHANGE ENERGY AND POTENTIAL ============================
+        RHO(:,:,:)=AERHO(:,:,:)
+        RHO(:,1,1)=RHO(:,1,1)+AECORE(:)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,AEEXC,AEXCPOT)
+        AEEXC=AEEXC-COREEXC
+!       == PS-EXCHANGE ENERGY AND POTENTIAL ============================
+        RHO(:,:,:)=PSRHO(:,:,:)
+        RHO(:,1,1)=RHO(:,1,1)+PSCORE(:)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,PSEXC,PSXCPOT)
+      END IF
       DEALLOCATE(RHO)
 !
 !     ================================================================
@@ -538,6 +575,10 @@ END MODULE AUGMENTATION_MODULE
      &                        ,AETOTPOT,PSTOTPOT,AEPHI,PSPHI,DATP)
       DATH(:,:,:)=DATH(:,:,:)+CMPLX(DATP(:,:,:),0.D0,KIND=8)
       DEALLOCATE(DATP)
+      IF(TSKALA) THEN
+        IF(TSKALAAPPLY.AND.TSKALAAPPLYONECENTER) DATH=DATH+SKALADH
+        DEALLOCATE(SKALADH)
+      END IF
 !     WRITE(TESTSTRING,FMT='("R8DATH",I2,12(" "))')IAT
 !     CALL STOREIT(TESTSTRING,8*LMNX*LMNX*NSPIN,DATH)
 !
@@ -588,6 +629,7 @@ STOP
       DEALLOCATE(AERHO)
       DEALLOCATE(PSRHO)
       DEALLOCATE(LOX)
+      DEALLOCATE(RCL)
       DEALLOCATE(AEPHI)
       DEALLOCATE(PSPHI)
       DEALLOCATE(AECORE)
@@ -1825,7 +1867,7 @@ STOP
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE AUGMENTATION_PSHARTREE(GID,NR,LMRX,PSRHOC,PSRHO &
-     &            ,VADD,RCSM,QLM,VQLM,RHOB,PSPOT,PSEH)
+     &            ,VADD,RCSM,QLM,VQLM,RHOB,PSPOT,PSEH,EBACKGROUND)
 !     **************************************************************************
 !     **                                                                      **
 !     ** CALCULATES HARTREE ENERGY                                            **
@@ -1852,6 +1894,7 @@ STOP
       REAL(8)    ,INTENT(IN) :: RHOB
       REAL(8)    ,INTENT(OUT):: PSPOT(NR,LMRX)
       REAL(8)    ,INTENT(OUT):: PSEH
+      REAL(8)    ,INTENT(OUT):: EBACKGROUND
       REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)                :: R(NR)
       REAL(8)                :: RHO1(NR)
@@ -1936,6 +1979,9 @@ STOP
       POT(:)=SVAR*R(:)**2
       PSPOT(:,1)=PSPOT(:,1)+POT(:) ! POTENTIAL OF THE BACKGROUND
       PSE(:)=PSE(:)+(PSRHO(:,1)+RHOHAT(:,1)+PSRHOC(:))*POT(:)
+!     Retain the already included background energy for its volume derivative.
+      RHO1(:)=(PSRHO(:,1)+RHOHAT(:,1)+PSRHOC(:))*POT(:)*R(:)**2
+      CALL RADIAL$INTEGRAL(GID,NR,RHO1,EBACKGROUND)
 !
 !     ==================================================================
 !     ==  CALCULATE TOTAL ENERGY                                      ==
@@ -1947,7 +1993,7 @@ STOP
 !
 !     ..................................................................
       SUBROUTINE AUGMENTATION_AEHARTREE(GID,NR,LMRX,AEZ,RHOC,AERHO &
-     &                                 ,VQLM,RHOB,AEPOT,AEEH)
+     &                                 ,VQLM,RHOB,AEPOT,AEEH,EBACKGROUND)
 !     ******************************************************************
 !     **  ELECTROSTATIC ENERGY OF THE ALL-ELECTRON ONE-CENTER DENSITY **
 !     **  INCLUDING THE EXTERNAL POTENTIAL AND THE POTENTIAL OF THE   **
@@ -1964,6 +2010,7 @@ STOP
       REAL(8)    ,INTENT(IN) :: RHOB       ! COMPENSATING BACKGROUND
       REAL(8)    ,INTENT(OUT):: AEPOT(NR,LMRX)
       REAL(8)    ,INTENT(OUT):: AEEH       ! ENERGY
+      REAL(8)    ,INTENT(OUT):: EBACKGROUND
       REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)    ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                :: R(NR)
@@ -2038,6 +2085,8 @@ STOP
       POT(:)=SVAR*R(:)**2
       AEPOT(:,1)=AEPOT(:,1)+POT(:) ! POTENTIAL OF THE BACKGROUND
       AEE(:)=AEE(:)+(AERHO(:,1)+RHOC(:))*POT(:)
+      AUX(:)=(AERHO(:,1)+RHOC(:))*POT(:)*R(:)**2
+      CALL RADIAL$INTEGRAL(GID,NR,AUX,EBACKGROUND)
 !CALL RADIAL$INTEGRAL(GID,NR,(AERHO(:,1)+RHOC(:))*POT(:)*R**2,SVAR)
 !PRINT*,'EL BACKGROUND',SVAR
 !
@@ -3097,6 +3146,3 @@ END IF
       CLOSE(100)
       RETURN
       END
-
-
-

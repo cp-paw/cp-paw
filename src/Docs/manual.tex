@@ -1329,6 +1329,46 @@ to estimate the frequency from
   \vdefault{T}
 }
 
+\mbax{\key{FORCE}
+  \vdescr{{\tt FORCE=F} omits optional nuclear-force work during electronic
+    relaxation at fixed atomic positions and fixed cell. The electronic
+    Hamiltonian and its Skala contributions remain active. Atomic or
+    cell dynamics, explicit stress evaluation and QM/MM override this request and retain complete
+    nuclear forces. No force-trajectory records are written while forces
+    are omitted. Restart with {\tt FORCE=T} for final force evaluation.
+    For Skala, source Hessians and geometric pullbacks are then unnecessary,
+    but density-matrix and smooth-field adjoints are still evaluated.}
+  \vformat{logical}
+  \vrules{optional}
+  \vdefault{T}
+}
+
+\mbax{\key{STRESS}
+  \vdescr{{\tt STRESS=T} evaluates the electronic energy derivative with
+    respect to homogeneous strain without enabling cell dynamics.
+    Kinetic, projector, potential and Skala contributions use the same
+    stress selector. This request also retains complete nuclear forces,
+    even with {\tt FORCE=F}. Cell dynamics always requires stress,
+    regardless of this setting. Evaluation at a fixed geometry does not
+    establish electronic stationarity or basis-set convergence.}
+  \vformat{logical}
+  \vrules{optional}
+  \vdefault{F}
+}
+
+\mbax{\key{ORTHOTOL}
+  \vdescr{Maximum absolute PAW-overlap defect used to stop the iterative
+    occupation-weighted constraint solve. Applies to both real and complex
+    wave functions with SAFEORTHO=T. A tighter value, such as 1.E-12, can
+    be useful for energy-difference verification. It does not set the
+    electronic residual tolerance or establish force accuracy. The
+    historical default is unchanged. An explicit value with SAFEORTHO=F
+    is rejected rather than silently ignored.}
+  \vformat{real}
+  \vrules{optional, from 1.E-14 to 1.E-8 inclusive, requires SAFEORTHO=T}
+  \vdefault{1.E-8}
+}
+
 \mbax{\key{STRAIGHTEN} \vdescr{Transform the wave functions onto
     energy eigenstates.  A unitary transform among the wave function
     is performed. The transform is performed only in the first

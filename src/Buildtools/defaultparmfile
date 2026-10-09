@@ -70,6 +70,8 @@ export BINDIR=
 #___________________________installation directory for the documentation________
 #___________________________default ./doc_______________________________________
 export DOCDIR=
+export CPPAW_USE_SKALA_FTORCH="${CPPAW_USE_SKALA_FTORCH:-no}"
+export CPPAW_SKALA_FTORCH_ROOT="${CPPAW_SKALA_FTORCH_ROOT:-}"
 
 ################################################################################
 ## generic definitions
@@ -99,6 +101,13 @@ BINDIR="$(pwd)/bin/${SELECT}"
 
 DOCDIR="$(pwd)/doc"
 
+case ${SELECT} in
+  skala_cpu_*)
+    CPPAW_USE_SKALA_FTORCH=yes
+    CPPAW_SKALA_FTORCH_ROOT="${CPPAW_SKALA_FTORCH_ROOT:-${BASEDIR}/bin/skala_ftorch_cpu}"
+    ;;
+esac
+
 #-------------------------------------------------------------------------------
 #  select compiler, respectively the mpi compiler wrapper
 #  PARALLEL is true, when $SELECT contains substring "parallel"
@@ -117,7 +126,12 @@ DOCDIR="$(pwd)/doc"
 #   mpifort  is identical to mpif90 
 #   mpiifort is the compiler wrapper for the intel compiler with intel's mpi
 #-------------------------------------------------------------------------------
-case $SELECT in 
+case $SELECT in
+  skala_cpu_fast)
+     FC=$(which gfortran)
+     LD=${FC}
+     PARALLEL=false
+     ;;
   *parallel*)
      PARALLEL=true
      CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
@@ -167,6 +181,14 @@ if [[ -z $COMPILER ]] ; then
   echo "FC=${FC}"
   exit 1
 fi
+case ${SELECT} in
+  skala_cpu_*)
+    if [[ ${COMPILER} != gfortran ]]; then
+      echo "error in $0: CPU Skala profiles require GNU Fortran and a GNU MPI wrapper"
+      exit 1
+    fi
+    ;;
+esac
 
 #-------------------------------------------------------------------------------
 #  Autoconf archive: https://www.gnu.org/software/autoconf-archive/index.html
@@ -177,6 +199,113 @@ fi
 #  MPI: ompi mpich
 #  BLAS: openblas atlas Intel-mkl IBM-ESSL PhiPack
 #-------------------------------------------------------------------------------
+function fortran_module_works {
+  local MODULE=$1
+  local CFLAGS=$2
+  local TMPDIR_
+  local RC
+
+  TMPDIR_=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-modtest.XXXXXX") || return 1
+  printf "program module_test\n  use %s\nend program module_test\n" \
+         "${MODULE}" > "${TMPDIR_}/module_test.f90"
+  ${FC} ${FCFLAGS} ${CFLAGS} -c "${TMPDIR_}/module_test.f90" \
+        -o "${TMPDIR_}/module_test.o" >/dev/null 2>&1
+  RC=$?
+  rm -rf "${TMPDIR_}"
+  return ${RC}
+}
+
+function enable_skala_ftorch {
+  local ROOT="${CPPAW_SKALA_FTORCH_ROOT}"
+  local LIBDIR=""
+  local MODFILE=""
+  local FTORCH_MODFILE=""
+  local OPENBLAS_ARCHIVE=""
+  local OPENBLAS_PRIVATE=""
+  local SKALA_LIBS=""
+  local X
+  local D
+
+  if [[ -z ${ROOT} ]] ; then
+    for D in "${BASEDIR}/bin/skala_ftorch_cuda" \
+             "${BASEDIR}/bin/skala_ftorch_cpu" ; do
+      if [[ -f ${D}/include/paw_skala_bridge.mod ]] ; then
+        ROOT=${D}
+        break
+      fi
+    done
+  fi
+  if [[ -z ${ROOT} || ! -d ${ROOT} ]] ; then
+    echo "error in $0: Skala/FTorch requested but CPPAW_SKALA_FTORCH_ROOT is invalid"
+    echo "run src/Buildtools/paw_skala_setup.sh first or set the root explicitly"
+    exit 1
+  fi
+  for D in "${ROOT}/lib" "${ROOT}/lib64" ; do
+    if [[ -f ${D}/libcppaw_skala_bridge.so \
+          || -f ${D}/libcppaw_skala_bridge.dylib ]] ; then
+      LIBDIR=${D}
+      break
+    fi
+  done
+  MODFILE=${ROOT}/include/paw_skala_bridge.mod
+  FTORCH_MODFILE=${ROOT}/include/ftorch/ftorch.mod
+  if [[ -z ${LIBDIR} || ! -f ${MODFILE} ]] ; then
+    echo "error in $0: incomplete Skala/FTorch installation in ${ROOT}"
+    exit 1
+  fi
+  if [[ ! -f ${LIBDIR}/libftorch.so \
+        && ! -f ${LIBDIR}/libftorch.dylib ]] ; then
+    echo "error in $0: libftorch is missing from ${LIBDIR}"
+    exit 1
+  fi
+  if ! fortran_module_works paw_skala_bridge "-I${ROOT}/include -I${ROOT}/include/ftorch" ; then
+    echo "error in $0: paw_skala_bridge.mod is incompatible with ${COMPILER}"
+    echo "rebuild the bridge with CMAKE_Fortran_COMPILER=${FC}"
+    exit 1
+  fi
+
+  CPPAW_SKALA_FTORCH_ROOT=${ROOT}
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_SKALA_FTORCH"
+  FCFLAGS="${FCFLAGS} -I${ROOT}/include -I${ROOT}/include/ftorch"
+  LDFLAGS="${LDFLAGS} -L${LIBDIR} -Wl,-rpath,${LIBDIR}"
+  if [[ ${COMPILER} = nvfortran && ${OS} = Unix ]] ; then
+    # NVHPC runtime libraries have indirect dependencies in the same directory.
+    LDFLAGS="${LDFLAGS} -Wl,--disable-new-dtags"
+  fi
+  LIBS="${LIBS} -L${LIBDIR} -lcppaw_skala_bridge -lftorch"
+  if [[ $(uname -s) = Linux && " ${LIBS} " = *" -lopenblas "* ]] ; then
+    for X in ${LIBS} ; do
+      if [[ ${X} = -L* && -f ${X#-L}/libopenblas.a ]] ; then
+        OPENBLAS_ARCHIVE=${X#-L}/libopenblas.a
+        break
+      fi
+    done
+    if [[ -z ${OPENBLAS_ARCHIVE} ]] ; then
+      echo "error in $0: Linux Skala/OpenBLAS builds require libopenblas.a"
+      echo "install the static OpenBLAS development library (including LAPACK)"
+      echo "and provide its library directory through pkg-config"
+      exit 1
+    fi
+    OPENBLAS_PRIVATE=$(pkg-config --libs-only-l --static openblas) || exit 1
+    # Private static BLAS prevents both directions of ELF symbol preemption:
+    # OpenBLAS batch BLAS is incompatible with Torch's MKL batch calls, and
+    # Torch's complex-dot return ABI is incompatible with GNU OpenBLAS LAPACK.
+    for X in ${LIBS} ; do
+      if [[ ${X} = -lopenblas ]] ; then X=-l:libopenblas.a ; fi
+      SKALA_LIBS="${SKALA_LIBS} ${X}"
+    done
+    LIBS=${SKALA_LIBS}
+    for X in ${OPENBLAS_PRIVATE} ; do
+      if [[ ${X} != -lopenblas ]] ; then LIBS="${LIBS} ${X}" ; fi
+    done
+    LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,libopenblas.a"
+  fi
+  INCLUDES="${INCLUDES} ${MODFILE}"
+  if [[ -f ${FTORCH_MODFILE} ]] ; then
+    INCLUDES="${INCLUDES} ${FTORCH_MODFILE}"
+  fi
+}
+
 if [[ -n $(which pkg-config) ]] ; then
   #-----------------------------------------------------------------------------
   #  add libraries: BLAS LAPACK FFTW LIBXC 
@@ -297,6 +426,12 @@ function add_fcflags  {
 }
 #------------------------------------------------------------------------------
 case ${SELECT} in 
+  skala_cpu_fast|skala_cpu_fast_parallel)
+    SUFFIX="skala_cpu_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
   dbg)
      SUFFIX="dbg"
      TYPE="debug"  # TYPE is used in add_fcflags and paw_fcflags respectively
@@ -363,3 +498,9 @@ fi
 # else
 #   MKL=false
 # fi
+
+if [[ ${CPPAW_USE_SKALA_FTORCH} = yes \
+      || ${CPPAW_USE_SKALA_FTORCH} = true \
+      || ${CPPAW_USE_SKALA_FTORCH} = 1 ]] ; then
+  enable_skala_ftorch
+fi

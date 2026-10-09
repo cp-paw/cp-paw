@@ -20,9 +20,28 @@ export NODOC=""  # suppress building documentation except once
 
 #  list of choices in the parmfile to be selected
 export LIST="dbg fast fast_parallel"
+export CPPAW_INSTALL_JOBS=${CPPAW_INSTALL_JOBS:-16}
+case ${CPPAW_INSTALL_JOBS} in
+  ''|*[!0-9]*|0) echo "CPPAW_INSTALL_JOBS must be a positive integer" >&2; exit 2 ;;
+esac
+case ${CPPAW_INSTALL_SKALA_CPU:-no} in
+  no|0|false) ;;
+  yes|1|true|require)
+    export CPPAW_SKALA_FTORCH_ROOT=${CPPAW_SKALA_FTORCH_ROOT:-${THISDIR}/bin/skala_ftorch_cpu}
+    if [[ -f ${CPPAW_SKALA_FTORCH_ROOT}/include/paw_skala_bridge.mod ]]; then
+      LIST="${LIST} skala_cpu_fast skala_cpu_fast_parallel"
+    elif [[ ${CPPAW_INSTALL_SKALA_CPU} == require ]]; then
+      echo "Prepare the CPU Skala bridge with src/Buildtools/paw_skala_setup.sh first" >&2
+      exit 2
+    else
+      echo "CPU Skala bridge unavailable; skipping optional Skala builds" >&2
+    fi
+    ;;
+  *) echo "CPPAW_INSTALL_SKALA_CPU must be no, yes or require" >&2; exit 2 ;;
+esac
 for X in ${LIST} ; do
   echo "======================== building $X  ================================="
-  src/Buildtools/paw_build.sh -v -j10 -c ${X} ${NODOC} 1>out_$X 2>err_${X}
+  src/Buildtools/paw_build.sh -v -j${CPPAW_INSTALL_JOBS} -c ${X} ${NODOC} 1>out_$X 2>err_${X}
   export RC=$?
   export NODOC="-z"  # suppress building documentation again
   if [[ $RC -ne 0 ]] ; then

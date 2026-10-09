@@ -64,6 +64,8 @@
 SHELL=/bin/bash
 #____switch off implicit rules__________________________________________________
 .SUFFIXES:
+# Failed preprocessing or linking must not leave apparently current output.
+.DELETE_ON_ERROR:
 #
 VERBOSE=false
 ################################################################################
@@ -293,6 +295,7 @@ export OLIST=$(addsuffix .o, $(BIGLIST))
 big.mk : $(addsuffix .mk, $(PAWLIST) $(LIBLIST) $(TOOLS))
 	echo 'export SHELL=/bin/bash   '  > $@
 	echo '.SUFFIXES:               ' >> $@
+	echo '.DELETE_ON_ERROR:        ' >> $@
 	echo 'export FC=$(FC)          ' >> $@
 	echo 'export FCFLAGS=$(FCFLAGS)  ' >> $@
 	echo '##                       ' >> $@
@@ -306,7 +309,9 @@ big.mk : $(addsuffix .mk, $(PAWLIST) $(LIBLIST) $(TOOLS))
 	echo '##                       ' >> $@
 	cat $(OLIST:.o=.mk)              >> $@
 
+# Refresh object timestamps after the recursive build before testing link targets.
 $(OLIST) : objects
+	@test -f $@
 
 .PHONY: objects
 objects :  $(addsuffix .f90pp , $(BIGLIST)) big.mk cppaw_version.info 
@@ -370,5 +375,3 @@ libpawfull.a: $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
 	$(AR) -r -c libpawfull.a $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
-
-

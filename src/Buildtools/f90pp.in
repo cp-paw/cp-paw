@@ -1,4 +1,5 @@
 #!/bin/bash
+set -eo pipefail
 #________1_________2_________3_________4_________5_________6_________7_________8
 ################################################################################
 ##                                                                            ##
@@ -10,7 +11,7 @@
 ##    -- removes directives (lines starting with @)                           ##
 ##    -- applies c-preprocessor (input option -D)                             ##
 ##    -- [paw_dollar_ok.sh] replaces dollar signs by double underscore        ##
-##       OpenMP directives !$OMP are restored                                 ##
+##       OpenMP/OpenACC directives !$OMP/!$ACC are restored                   ##
 ##    -- [f90pp.sed]                                                          ##
 ##       -- converts c-processor directives "#if defined", etc. to lowercase  ##
 ##       -- makes the include filenames fftw_f77.i, fftw3.f03, mpif.h lowercase#
@@ -111,6 +112,7 @@ fi
 #-------------------------------------------------------------------------------
 TMP=$(mktemp)
 TMP2=$(mktemp)
+trap 'rm -f "$TMP" "$TMP2"' EXIT
 cat < /dev/stdin > ${TMP2}
 etc/f90pp_tmplts.x < $TMP2 >$TMP
 sed -f etc/f90pp.sed $TMP > $TMP2

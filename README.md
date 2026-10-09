@@ -53,10 +53,47 @@ not apply to the present implementation.)
    ```
 7. Consult the manual `doc/manual.pdf` for further information.
 
+## Optional Skala functional
+
+The `skala` branch adds Skala 1.1 native-grid exchange-correlation evaluation
+with joint periodic PAW reconstruction. It is based on `main` and does not
+require the NVIDIA extensions in `cp-paw-nvhpc`. Conventional `dbg`, `fast`
+and `fast_parallel` builds do not link PyTorch, FTorch or CUDA. Skala is used
+only when explicitly selected in the input.
+
+Provide a CPU PyTorch or LibTorch installation, then prepare the optional
+Fortran bridge and hash-pinned model:
+
+```sh
+FC=gfortran src/Buildtools/paw_skala_setup.sh --device cpu --download-model
+src/Buildtools/paw_build.sh -c skala_cpu_fast -j16 -z
+src/Buildtools/paw_build.sh -c skala_cpu_fast_parallel -j16 -z
+```
+
+Set `CPPAW_SKALA_FTORCH_ROOT` for a custom bridge prefix. The installer builds
+the additional CPU Skala binaries with `CPPAW_INSTALL_SKALA_CPU=require`.
+The default is `no`.
+
+Model inference can also use CUDA through a CUDA-enabled FTorch bridge,
+independently of CP-PAW's NVIDIA linear-algebra and FFT backends. Optional
+OpenACC grid and source kernels are retained, but require an OpenACC-capable
+build. NVIDIA build profiles and conventional wave-function residency belong
+to the separate `cp-paw-nvhpc` branch.
+
+For model-free reconstruction and derivative tests after a normal build:
+
+```sh
+bash tests/unittests/skala_reconstruction/run.sh bin/Build_fast
+```
+
+See [SkalaBridge](src/SkalaBridge/README.md) for input settings, CPU and CUDA
+installation, quadrature and cache controls, and optional Si2 and crystal
+verification. Finite-difference checks establish derivative consistency,
+not agreement of the functional implementation with an independent reference.
+
 ## License
 
 The CP-PAW code is distributed under the GNU Public License Version 3.
 See the LICENSE file.
-
 
 

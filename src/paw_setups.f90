@@ -435,6 +435,18 @@ END MODULE SETUP_MODULE
         VAL=THIS%ID
       ELSE IF(ID.EQ.'SOFTCORETYPE') THEN
         VAL=THIS%SOFTCORETYPE
+      ELSE IF(ID.EQ.'TYPE') THEN
+        VAL=THIS%PARMS%TYPE
+      ELSE IF(ID.EQ.'RELTYPE') THEN
+        IF(.NOT.THIS%SETTING%TREL) THEN
+          VAL='NONREL'
+        ELSE IF(THIS%SETTING%SO) THEN
+          VAL='SPINORBIT'
+        ELSE IF(THIS%SETTING%ZORA) THEN
+          VAL='ZORA'
+        ELSE
+          VAL='SCALARREL'
+        END IF
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('SETUP$GETCH')
@@ -472,6 +484,8 @@ END MODULE SETUP_MODULE
         CALL RADIAL$GETI4(THIS%GID,'NR',VAL)
       ELSE IF(ID.EQ.'LNX') THEN
         VAL=THIS%LNX
+      ELSE IF(ID.EQ.'LX') THEN
+        VAL=THIS%LX
       ELSE IF(ID.EQ.'LMNX') THEN
         VAL=THIS%LMNX
       ELSE IF(ID.EQ.'LMRX') THEN
@@ -669,6 +683,31 @@ END MODULE SETUP_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_TAUCORE(NR,TAU)
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NR
+      REAL(8),INTENT(OUT) :: TAU(NR)
+      REAL(8) :: R(NR),DR(NR),DRSM(NR),ANG,ANGSM
+      INTEGER :: I,L,LS
+      CALL RADIAL$R(THIS%GID,NR,R)
+      TAU=0.D0
+      DO I=1,THIS%ATOM%NC
+        L=THIS%ATOM%LOFI(I)
+        ANG=REAL(L*(L+1),KIND=8)
+        LS=L+THIS%ATOM%SOFI(I)
+        ANGSM=REAL(LS*(LS+1),KIND=8)
+        IF(THIS%ATOM%SOFI(I).EQ.0) ANGSM=ANG+2.D0
+        CALL RADIAL$DERIVE(THIS%GID,NR,THIS%ATOM%AEPSI(:,I),DR)
+        CALL RADIAL$DERIVE(THIS%GID,NR,THIS%ATOM%AEPSISM(:,I),DRSM)
+        TAU=TAU+0.5D0*THIS%ATOM%FOFI(I) &
+     &      *(DR**2+ANG*THIS%ATOM%AEPSI(:,I)**2/MAX(R,1.D-30)**2 &
+     &        +DRSM**2+ANGSM*THIS%ATOM%AEPSISM(:,I)**2/MAX(R,1.D-30)**2)
+      END DO
+!     Same Y00 coefficient convention as AECORE, not a pseudo-core tau.
+      TAU=TAU/SQRT(16.D0*ATAN(1.D0))
+      END SUBROUTINE SETUP_TAUCORE
+!
       SUBROUTINE SETUP$GETR8A(ID,LEN,VAL)
 !     **************************************************************************
 !     **                                                                      **
@@ -687,9 +726,24 @@ END MODULE SETUP_MODULE
       CALL RADIAL$GETI4(THIS%GIDG,'NR',NG)
 !
 !     ==========================================================================
+!     ==  PARTIAL-WAVE CUTOFF RADII                                          ==
+!     ==========================================================================
+      IF(ID.EQ.'RCL') THEN
+        IF(.NOT.ALLOCATED(THIS%PARMS%RCL)) THEN
+          CALL ERROR$MSG('PARTIAL-WAVE CUTOFF RADII ARE NOT AVAILABLE')
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        IF(LEN.NE.SIZE(THIS%PARMS%RCL)) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=THIS%PARMS%RCL
+!
+!     ==========================================================================
 !     == PROJECTOR FUNCTIONS                                                  ==
 !     ==========================================================================
-      IF(ID.EQ.'PRO') THEN
+      ELSE IF(ID.EQ.'PRO') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -806,6 +860,12 @@ END MODULE SETUP_MODULE
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
+      ELSE IF(ID.EQ.'TAUCORE') THEN
+        IF(LEN.NE.NR) THEN
+          CALL ERROR$MSG('INCONSISTENT CORE TAU ARRAY SIZE')
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        CALL SETUP_TAUCORE(NR,VAL)
       ELSE IF(ID.EQ.'PSCORE') THEN
         IF(LEN.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -1034,7 +1094,8 @@ END MODULE SETUP_MODULE
         CALL RADIAL$DERIVATIVE(GIDG,NG,FOFG,G,F(1))
         F(1)=G*F(1)
         DO IG=2,NG_
-          IF(ABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
+!         Only identical radii may share an interpolated value or derivative.
+          IF(G2(IG).EQ.G2(IG-1)) THEN
             F(IG) =F(IG-1)
           ELSE
             G=SQRT(G2(IG))
@@ -1048,7 +1109,7 @@ END MODULE SETUP_MODULE
         IF(G.LT.1.D-6) NGAMMA=1
         CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(1))
         DO IG=2,NG_
-          IF(ABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
+          IF(G2(IG).EQ.G2(IG-1)) THEN
             F(IG) =F(IG-1)
           ELSE
             G=SQRT(G2(IG))
@@ -1241,6 +1302,7 @@ END MODULE SETUP_MODULE
         THIS%AEZ=AEZ        ! ATOMIC NUMBER
         THIS%RCSM=RCSM      ! DECAY RADIUS FOR COMPENSATION CHARGE
         THIS%RBOX=RBOX    
+        THIS%LX=LX
         THIS%ZV=ZV          ! #(VALENCE ELECTRONS)
         THIS%COREID=COREID  ! IDENTIFIER OF THE FROZEN CORE
         THIS%SETTING%SO=TSO ! SPIN-ORBIT SWITCH
@@ -10137,5 +10199,3 @@ PRINT*,'EOFPHI ',EOFPHI
 !!$ N=5 6.9208 -1.6762   7.6373     -1.7762
 !!$ N=6 9.1717 -1.9976  10.068      -2.1334 
 !!$ N=7 9.9144 -1.9896  10.03       -1.9469
-
-
