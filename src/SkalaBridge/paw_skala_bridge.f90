@@ -108,7 +108,7 @@ contains
   subroutine paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
       & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
       & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
-      & atom_coord_deriv, atomic_weight_deriv)
+      & atom_coord_deriv, atomic_weight_deriv, geometry_derivatives)
     type(paw_skala_model), intent(inout) :: model
     real(real64), intent(in) :: density(:,:), grad(:,:,:), kin(:,:)
     real(real64), intent(in), target :: grid_coords(:,:), grid_weights(:)
@@ -120,6 +120,7 @@ contains
     character(len=*), intent(out) :: message
     real(real64), intent(out), optional, target :: grid_coord_deriv(:,:), grid_weight_deriv(:)
     real(real64), intent(out), optional, target :: atom_coord_deriv(:,:), atomic_weight_deriv(:)
+    logical, intent(in), optional :: geometry_derivatives
 
     interface
       function dict_create_c() result(handle) bind(c, name="cppaw_skala_dict_create")
@@ -139,11 +140,12 @@ contains
         integer(c_int), value :: capacity
         integer(c_int) :: rc
       end function dict_insert_c
-      function evaluate_c(model_handle, dict_handle, energy_c, d_density, d_grad, &
+      function evaluate_c(model_handle, dict_handle, geometry, energy_c, d_density, d_grad, &
           d_kin, d_grid_coords, d_grid_weights, d_atom_coords, d_atomic_weights, &
-          error, capacity) result(rc) bind(c, name="cppaw_skala_model_evaluate")
+          error, capacity) result(rc) bind(c, name="cppaw_skala_model_evaluate_mode")
         import :: c_char, c_double, c_int, c_ptr
         type(c_ptr), value :: model_handle, dict_handle
+        integer(c_int), value :: geometry
         real(c_double), intent(out) :: energy_c
         type(c_ptr), intent(out) :: d_density, d_grad, d_kin, d_grid_coords
         type(c_ptr), intent(out) :: d_grid_weights, d_atom_coords, d_atomic_weights
@@ -169,6 +171,7 @@ contains
 
     integer :: i, ipoint, npoint, natom, max_grid_size
     integer(c_int) :: rc
+    logical :: need_geometry
     integer(ftorch_int), parameter :: layout1(1) = [1]
     integer(ftorch_int), parameter :: layout2(2) = [1, 2]
     integer(ftorch_int), parameter :: layout3(3) = [1, 2, 3]
@@ -190,6 +193,8 @@ contains
     if (present(atomic_weight_deriv)) atomic_weight_deriv = 0.0_real64
     status = 1
     message = ""
+    need_geometry = .true.
+    if (present(geometry_derivatives)) need_geometry = geometry_derivatives
 
     if (.not. c_associated(model%handle)) then
       message = "Skala model is not loaded"
@@ -259,7 +264,8 @@ contains
 
     derivative_handles = c_null_ptr
     error = c_null_char
-    rc = evaluate_c(model%handle, dict_handle, energy, derivative_handles(1), &
+    rc = evaluate_c(model%handle, dict_handle, merge(1_c_int, 0_c_int, need_geometry), &
+      & energy, derivative_handles(1), &
       & derivative_handles(2), derivative_handles(3), derivative_handles(4), &
       & derivative_handles(5), derivative_handles(6), derivative_handles(7), &
       & error, error_capacity)
@@ -272,17 +278,17 @@ contains
     call copy_gradient(derivative_handles(1), density_deriv, int(size(density_deriv), int64))
     if (status == 0) call copy_gradient(derivative_handles(2), grad_deriv, int(size(grad_deriv), int64))
     if (status == 0) call copy_gradient(derivative_handles(3), kin_deriv, int(size(kin_deriv), int64))
-    if (status == 0 .and. present(grid_coord_deriv)) then
+    if (status == 0 .and. need_geometry .and. present(grid_coord_deriv)) then
       call copy_gradient(derivative_handles(4), grid_coord_t_data, int(size(grid_coord_t_data), int64))
       if (status == 0) grid_coord_deriv = transpose(grid_coord_t_data)
     end if
-    if (status == 0 .and. present(grid_weight_deriv)) &
+    if (status == 0 .and. need_geometry .and. present(grid_weight_deriv)) &
       & call copy_gradient(derivative_handles(5), grid_weight_deriv, int(size(grid_weight_deriv), int64))
-    if (status == 0 .and. present(atom_coord_deriv)) then
+    if (status == 0 .and. need_geometry .and. present(atom_coord_deriv)) then
       call copy_gradient(derivative_handles(6), atom_coord_t_data, int(size(atom_coord_t_data), int64))
       if (status == 0) atom_coord_deriv = transpose(atom_coord_t_data)
     end if
-    if (status == 0 .and. present(atomic_weight_deriv)) &
+    if (status == 0 .and. need_geometry .and. present(atomic_weight_deriv)) &
       & call copy_gradient(derivative_handles(7), atomic_weight_deriv, int(size(atomic_weight_deriv), int64))
     call cleanup()
 

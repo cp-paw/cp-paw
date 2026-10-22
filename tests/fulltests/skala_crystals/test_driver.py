@@ -91,6 +91,16 @@ class CrystalDriverTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 run.launch_command(executable, "skala", ranks)
 
+    def test_fixed_geometry_omits_forces_unless_requested(self):
+        args = SimpleNamespace(skala_steps=1, pbe_steps=180, device="CPU",
+                               radial=96, angular=17, image_shells=1, orientations=1,
+                               dt=5.0, cutoff=40.0)
+        for skala in (False, True):
+            self.assertIn("FORCE=F STRESS=F", run.control(args, skala))
+            args.forces = True
+            self.assertIn("FORCE=T STRESS=F", run.control(args, skala))
+            args.forces = False
+
 
 if __name__ == "__main__":
     unittest.main()

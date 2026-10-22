@@ -5357,6 +5357,7 @@ RETURN
       REAL(8)                :: GBAS(3,3)
       REAL(8)                :: SVAR
       INTEGER(4)             :: IATFIRST,IATLAST,IATSTEP
+      INTEGER(4)             :: ISKFIRST,ISKSTEP
       LOGICAL(4)             :: TSKALA
       LOGICAL(4)             :: TSKALACUDA,TSKALADISTRIBUTEGPU
 !     **************************************************************************
@@ -5395,7 +5396,8 @@ RETURN
       END IF
       IF(TSKALA) THEN
         CALL SKALA$PREPARE(NAT,MAP%ISP,LMNXX,NDIMD,DENMAT)
-        DO IAT=IATFIRST,IATLAST,IATSTEP
+        CALL SKALA$WORKRANGE(ISKFIRST,ISKSTEP)
+        DO IAT=ISKFIRST,NAT,ISKSTEP
           CALL SKALA$ATOMFORWARD(IAT)
         END DO
         CALL SKALA$SYNCSOURCES

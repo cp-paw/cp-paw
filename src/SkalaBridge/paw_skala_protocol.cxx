@@ -73,10 +73,10 @@ void parse_features(const std::string &json, bool features[feature_count]) {
   }
 }
 
-bool is_differentiable_feature(const std::string &key) {
+bool is_differentiable_feature(const std::string &key, bool geometry) {
   return key == "density" || key == "grad" || key == "kin" ||
-         key == "grid_coords" || key == "grid_weights" ||
-         key == "coarse_0_atomic_coords" || key == "atomic_grid_weights";
+         (geometry && (key == "grid_coords" || key == "grid_weights" ||
+                       key == "coarse_0_atomic_coords" || key == "atomic_grid_weights"));
 }
 
 void require_shape(const TensorDict &features,
@@ -234,8 +234,9 @@ extern "C" int cppaw_skala_dict_insert(void *handle,
   }
 }
 
-extern "C" int cppaw_skala_model_evaluate(void *model_handle,
+extern "C" int cppaw_skala_model_evaluate_mode(void *model_handle,
                                             void *input_handle,
+                                            const int geometry_derivatives,
                                             double *energy,
                                             void **density_grad,
                                             void **spatial_grad,
@@ -257,7 +258,7 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
     for (const auto &entry : input) {
       const std::string key = entry.key();
       torch::Tensor value = entry.value().to(model.device);
-      if (is_differentiable_feature(key)) {
+      if (is_differentiable_feature(key, geometry_derivatives != 0)) {
         value = value.detach().clone().set_requires_grad(true);
         leaves.push_back(value);
         leaf_keys.push_back(key);
@@ -304,6 +305,15 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
     set_error(error, error_capacity, exception.what());
     return 1;
   }
+}
+
+extern "C" int cppaw_skala_model_evaluate(void *model_handle, void *input_handle,
+    double *energy, void **density_grad, void **spatial_grad, void **kin_grad,
+    void **grid_coord_grad, void **grid_weight_grad, void **atom_coord_grad,
+    void **atomic_weight_grad, char *error, const int error_capacity) {
+  return cppaw_skala_model_evaluate_mode(model_handle, input_handle, 1, energy,
+      density_grad, spatial_grad, kin_grad, grid_coord_grad, grid_weight_grad,
+      atom_coord_grad, atomic_weight_grad, error, error_capacity);
 }
 
 extern "C" int cppaw_skala_tensor_copy_double(void *tensor_handle,
