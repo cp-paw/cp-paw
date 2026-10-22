@@ -112,12 +112,12 @@ contains
   subroutine paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
       & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
       & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
-      & atom_coord_deriv, atomic_weight_deriv, geometry_derivatives, block_id)
+      & atom_coord_deriv, atomic_weight_deriv, geometry_derivatives, block_id, block_energies)
     type(paw_skala_model), intent(inout), target :: model
     real(real64), intent(in) :: density(:,:), grad(:,:,:), kin(:,:)
-    real(real64), intent(in), target :: grid_coords(:,:), grid_weights(:)
-    real(real64), intent(in), target :: atom_coords(:,:), atomic_grid_weights(:)
-    integer(int64), intent(in), target :: atomic_grid_sizes(:)
+    real(real64), intent(in), target, contiguous :: grid_coords(:,:), grid_weights(:)
+    real(real64), intent(in), target, contiguous :: atom_coords(:,:), atomic_grid_weights(:)
+    integer(int64), intent(in), target, contiguous :: atomic_grid_sizes(:)
     real(real64), intent(out) :: energy
     real(real64), intent(out), target :: density_deriv(:,:), grad_deriv(:,:,:), kin_deriv(:,:)
     integer, intent(out) :: status
@@ -126,6 +126,7 @@ contains
     real(real64), intent(out), optional, target :: atom_coord_deriv(:,:), atomic_weight_deriv(:)
     logical, intent(in), optional :: geometry_derivatives
     integer, intent(in), optional :: block_id
+    real(real64), intent(out), optional :: block_energies(:)
 
     interface
       subroutine model_set_block_c(handle, block) bind(c, name="cppaw_skala_model_set_block")
@@ -133,6 +134,15 @@ contains
         type(c_ptr), value :: handle
         integer(c_int), value :: block
       end subroutine model_set_block_c
+      function block_energies_c(handle, count, values, error, capacity) result(rc) &
+          bind(c, name="cppaw_skala_model_block_energies")
+        import :: c_ptr, c_int, c_double, c_char
+        type(c_ptr), value :: handle
+        integer(c_int), value :: count, capacity
+        real(c_double), intent(out) :: values(*)
+        character(kind=c_char), intent(out) :: error(*)
+        integer(c_int) :: rc
+      end function block_energies_c
       function dict_create_c() result(handle) bind(c, name="cppaw_skala_dict_create")
         import :: c_ptr
         type(c_ptr) :: handle
@@ -201,6 +211,7 @@ contains
     if (present(grid_weight_deriv)) grid_weight_deriv = 0.0_real64
     if (present(atom_coord_deriv)) atom_coord_deriv = 0.0_real64
     if (present(atomic_weight_deriv)) atomic_weight_deriv = 0.0_real64
+    if (present(block_energies)) block_energies = 0.0_real64
     status = 1
     message = ""
     need_geometry = .true.
@@ -214,6 +225,12 @@ contains
     if (present(block_id)) call model_set_block_c(model%handle, int(block_id, c_int))
     npoint = size(density, 1)
     natom = size(atom_coords, 1)
+    if (present(block_energies)) then
+      if (size(block_energies) /= natom) then
+        message = "inconsistent Skala block-energy dimensions"
+        return
+      end if
+    end if
     if (size(density, 2) /= 2 .or. size(kin, 1) /= npoint .or. size(kin, 2) /= 2 &
         .or. size(grad, 1) /= npoint .or. size(grad, 2) /= 3 .or. size(grad, 3) /= 2 &
         .or. size(grid_coords, 1) /= npoint .or. size(grid_coords, 2) /= 3 &
@@ -307,6 +324,15 @@ contains
       return
     end if
 
+    if (present(block_energies)) then
+      rc = block_energies_c(model%handle, int(natom,c_int), block_energies, error, error_capacity)
+      if (rc /= 0) then
+        status = 1
+        call copy_c_message(error, message)
+        call cleanup()
+        return
+      end if
+    end if
     call copy_gradient(derivative_handles(1), density_deriv, int(size(density_deriv), int64))
     if (status == 0) call copy_gradient(derivative_handles(2), grad_deriv, int(size(grad_deriv), int64))
     if (status == 0) call copy_gradient(derivative_handles(3), kin_deriv, int(size(kin_deriv), int64))

@@ -24,6 +24,26 @@ def counters(text, label, steps, ranks):
     return rows
 
 
+def batch_call_counts(text, steps, natom, batch, max_points):
+    rows = [line.split() for line in text.splitlines() if line.startswith("ATOM BLOCK ")]
+    if len(rows) != steps*natom:
+        raise ValueError("Incomplete atom-block row accounting")
+    expected = []
+    for step in range(steps):
+        calls, blocks, points = 0, 0, 0
+        for atom, row in enumerate(rows[step*natom:(step+1)*natom], 1):
+            size = int(row[4])
+            if int(row[2]) != atom or size < 1:
+                raise ValueError("Invalid atom-block order or row count")
+            if blocks == batch or (blocks and points+size > max_points):
+                calls += 1
+                blocks, points = 0, 0
+            blocks += 1
+            points += size
+        expected.append(calls+int(blocks > 0))
+    return expected
+
+
 def compare(reference, current, mode):
     differences = {}
     if reference["scalars"].keys() != current["scalars"].keys():
@@ -76,6 +96,8 @@ def main():
     parser.add_argument("--sample-gpu", action="store_true")
     parser.add_argument("--tensor-cache-mib", type=int, default=64)
     parser.add_argument("--legacy-uncached", action="store_true")
+    parser.add_argument("--batch-atoms", type=int, default=1)
+    parser.add_argument("--max-batch-points", type=int, default=262144)
     parser.add_argument("--ranks", type=int, nargs="+", default=[1, 2, 3, 4])
     parser.add_argument("--modes", nargs="+", choices=("electronic", "forces", "stress"),
                         default=["electronic", "forces", "stress"])
@@ -84,6 +106,10 @@ def main():
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--radial", type=int, default=64)
     parser.add_argument("--angular", type=int, default=11)
+    parser.add_argument("--cutoff", type=float, default=20.)
+    parser.add_argument("--density-dual", type=float, default=2.)
+    parser.add_argument("--dt", type=float, default=1.e-3,
+                        help="Small but not roundoff-dominated constraint timestep")
     parser.add_argument("--cache-mib", type=int, default=256)
     args = parser.parse_args()
     if not math.isfinite(args.root_weight) or not .25 <= args.root_weight <= 16.:
@@ -92,7 +118,11 @@ def main():
         parser.error("Auto balance needs central CUDA inference and at least four steps")
     if args.tensor_cache_mib < 0 or (args.sample_gpu and not args.sample_batch):
         parser.error("Need a nonnegative tensor-cache budget and batched sampling for sample GPU")
-    if min(*args.ranks, args.steps, args.repeats, args.radial, args.angular) < 1 or args.cache_mib < 0:
+    if not 1 <= args.batch_atoms <= 8 or (args.batch_atoms > 1 and args.device != "CUDA"):
+        parser.error("Complete-block batching needs CUDA and a block count in 1..8")
+    if (min(*args.ranks, args.steps, args.repeats, args.radial, args.angular, args.max_batch_points) < 1
+            or args.cache_mib < 0 or any(not math.isfinite(x) or x <= 0
+                                       for x in (args.cutoff, args.density_dual, args.dt))):
         parser.error("Need positive ranks, step and grid counts, and nonnegative cache budget")
     if args.accelerated_grid and (args.device != "CUDA" or args.gpu_mode == "off" or args.cache_mib == 0):
         parser.error("Accelerated grid checks need CUDA, enabled PAW GPU libraries and a source cache")
@@ -110,6 +140,8 @@ def main():
     env.update(CPPAW_SKALA_POINT_ROOT_WEIGHT=str(args.root_weight),
                CPPAW_SKALA_PACKED_EXCHANGE="0" if args.unpacked else "1",
                CPPAW_SKALA_TENSOR_CACHE_MB=str(args.tensor_cache_mib),
+               CPPAW_SKALA_BATCH_ATOMS=str(args.batch_atoms),
+               CPPAW_SKALA_BATCH_MAX_POINTS=str(args.max_batch_points),
                CPPAW_SKALA_SAMPLE_BATCH="1" if args.sample_batch else "0",
                CPPAW_SKALA_SAMPLE_ACC="1" if args.sample_gpu else "0")
     if args.auto_balance:
@@ -127,8 +159,9 @@ def main():
     geometry = fd.geometry(inputs["restart"].read_bytes())
     results = []
     for mode in args.modes:
-        settings = SimpleNamespace(dt=1.e-6, block_steps=args.steps, device=args.device,
-            radial_points=args.radial, lebedev_exactness=args.angular, cutoff=20., density_dual=2.,
+        settings = SimpleNamespace(dt=args.dt, block_steps=args.steps, device=args.device,
+            radial_points=args.radial, lebedev_exactness=args.angular,
+            cutoff=args.cutoff, density_dual=args.density_dual,
             mass=25., mass_g2=0.3166286988823056, friction=0.4,
             orthogonality_tolerance=1.e-12, stress=mode == "stress")
         template = fd.control(settings, electronic_only=mode == "electronic")
@@ -150,7 +183,8 @@ def main():
                     current_env = dict(env)
                     if not parallel and args.legacy_uncached:
                         current_env.update(CPPAW_SKALA_TENSOR_CACHE_MB="0", CPPAW_SKALA_SAMPLE_BATCH="0",
-                                           CPPAW_SKALA_SAMPLE_ACC="0", CPPAW_SKALA_PACKED_EXCHANGE="0")
+                                           CPPAW_SKALA_SAMPLE_ACC="0", CPPAW_SKALA_PACKED_EXCHANGE="0",
+                                           CPPAW_SKALA_COPY_INPUTS="1", CPPAW_SKALA_BATCH_ATOMS="1")
                     with (work / "stdout.log").open("w") as out, (work / "stderr.log").open("w") as err:
                         subprocess.run(command, cwd=work, env=current_env, stdout=out, stderr=err,
                                        timeout=600, check=True)
@@ -162,6 +196,7 @@ def main():
                     fd.check_geometry(geometry, fd.geometry(restart))
                     rows = counters(text, "GRID POINTS PER MPI RANK", args.steps, ranks)
                     calls = counters(text, "MODEL CALLS PER MPI RANK", args.steps, ranks)
+                    blocks = counters(text, "MODEL BLOCKS PER MPI RANK", args.steps, ranks)
                     gpu_rows = {}
                     if args.sample_batch and (parallel or not args.legacy_uncached):
                         sampled = counters(text, "SMOOTH SAMPLE BATCH ROWS", args.steps, 1)
@@ -188,8 +223,11 @@ def main():
                                     if row["op"] == "ACC_COPY_SKALA_GRID_BACK_OUT")
                         if copies < args.steps:
                             raise ValueError("No device-resident grid-backprojection output")
-                    for row, count in zip(rows, calls):
-                        if sum(count) != geometry["natom"] or sum(row) < 1:
+                    batch = args.batch_atoms if parallel or not args.legacy_uncached else 1
+                    expected = batch_call_counts(text, args.steps, geometry["natom"], batch,
+                                                 args.max_batch_points)
+                    for row, count, block, expected_calls in zip(rows, calls, blocks, expected):
+                        if sum(count) != expected_calls or sum(block) != geometry["natom"] or sum(row) < 1:
                             raise ValueError("Missing or duplicated atom-block inference")
                         if args.device == "CUDA" and count[1:] != [0]*(ranks-1):
                             raise ValueError("CUDA inference escaped the central rank")
@@ -208,7 +246,7 @@ def main():
                     if reference is None:
                         reference = current
                     results.append(dict(name=name, mode=mode, ranks=ranks, parallel=parallel,
-                        elapsed_s=elapsed, rows=rows, model_calls=calls, gpu_rows=gpu_rows,
+                        elapsed_s=elapsed, rows=rows, model_calls=calls, model_blocks=blocks, gpu_rows=gpu_rows,
                         differences=differences))
                     fd.write_json(root / "results.json", dict(passed=False, completed=results))
     if any(digest(path) != hashes[key] for key, path in inputs.items()):
