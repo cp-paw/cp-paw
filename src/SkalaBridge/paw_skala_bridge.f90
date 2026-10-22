@@ -18,6 +18,9 @@ module paw_skala_bridge
     integer(c_int) :: device_type = torch_kCPU
     integer(c_int) :: device_index = -1
     logical :: features(nfeatures) = .false.
+    real(real64), allocatable :: density_data(:,:), grad_data(:,:,:), kin_data(:,:)
+    real(real64), allocatable :: grid_gradient(:,:), atom_gradient(:,:)
+    integer(int64), allocatable :: bound_shape(:,:)
   contains
     final :: finalize_model
   end type paw_skala_model
@@ -25,6 +28,7 @@ module paw_skala_bridge
   public :: paw_skala_load, paw_skala_evaluate, paw_skala_release
   public :: paw_skala_cuda_available
   public :: paw_skala_device_cpu, paw_skala_device_cuda
+  public :: paw_skala_cache_stats
 
 contains
 
@@ -108,8 +112,8 @@ contains
   subroutine paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
       & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
       & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
-      & atom_coord_deriv, atomic_weight_deriv, geometry_derivatives)
-    type(paw_skala_model), intent(inout) :: model
+      & atom_coord_deriv, atomic_weight_deriv, geometry_derivatives, block_id)
+    type(paw_skala_model), intent(inout), target :: model
     real(real64), intent(in) :: density(:,:), grad(:,:,:), kin(:,:)
     real(real64), intent(in), target :: grid_coords(:,:), grid_weights(:)
     real(real64), intent(in), target :: atom_coords(:,:), atomic_grid_weights(:)
@@ -121,8 +125,14 @@ contains
     real(real64), intent(out), optional, target :: grid_coord_deriv(:,:), grid_weight_deriv(:)
     real(real64), intent(out), optional, target :: atom_coord_deriv(:,:), atomic_weight_deriv(:)
     logical, intent(in), optional :: geometry_derivatives
+    integer, intent(in), optional :: block_id
 
     interface
+      subroutine model_set_block_c(handle, block) bind(c, name="cppaw_skala_model_set_block")
+        import :: c_ptr, c_int
+        type(c_ptr), value :: handle
+        integer(c_int), value :: block
+      end subroutine model_set_block_c
       function dict_create_c() result(handle) bind(c, name="cppaw_skala_dict_create")
         import :: c_ptr
         type(c_ptr) :: handle
@@ -175,9 +185,9 @@ contains
     integer(ftorch_int), parameter :: layout1(1) = [1]
     integer(ftorch_int), parameter :: layout2(2) = [1, 2]
     integer(ftorch_int), parameter :: layout3(3) = [1, 2, 3]
-    real(real64), allocatable, target :: density_t_data(:,:), grad_t_data(:,:,:), kin_t_data(:,:)
-    real(real64), allocatable, target :: grid_coord_t_data(:,:), atom_coord_t_data(:,:)
-    integer(int64), allocatable, target :: bound_shape(:,:)
+    real(real64), pointer :: density_t_data(:,:), grad_t_data(:,:,:), kin_t_data(:,:)
+    real(real64), pointer :: grid_coord_t_data(:,:), atom_coord_t_data(:,:)
+    integer(int64), pointer :: bound_shape(:,:)
     type(torch_tensor) :: tensors(9)
     type(c_ptr) :: dict_handle
     type(c_ptr) :: derivative_handles(7)
@@ -200,6 +210,8 @@ contains
       message = "Skala model is not loaded"
       return
     end if
+    call model_set_block_c(model%handle, 0_c_int)
+    if (present(block_id)) call model_set_block_c(model%handle, int(block_id, c_int))
     npoint = size(density, 1)
     natom = size(atom_coords, 1)
     if (size(density, 2) /= 2 .or. size(kin, 1) /= npoint .or. size(kin, 2) /= 2 &
@@ -217,9 +229,29 @@ contains
     end if
     max_grid_size = int(maxval(atomic_grid_sizes))
 
-    allocate(density_t_data(2, npoint), grad_t_data(2, 3, npoint), &
-      & kin_t_data(2, npoint), grid_coord_t_data(3, npoint), &
-      & atom_coord_t_data(3, natom), bound_shape(max_grid_size, 0))
+    if (allocated(model%density_data)) then
+      if (size(model%density_data, 2) < npoint) then
+        deallocate(model%density_data, model%grad_data, model%kin_data, model%grid_gradient)
+      end if
+    end if
+    if (.not. allocated(model%density_data)) then
+      allocate(model%density_data(2,npoint), model%grad_data(2,3,npoint), &
+        & model%kin_data(2,npoint), model%grid_gradient(3,npoint))
+    end if
+    if (allocated(model%atom_gradient)) then
+      if (size(model%atom_gradient, 2) < natom) deallocate(model%atom_gradient)
+    end if
+    if (.not. allocated(model%atom_gradient)) allocate(model%atom_gradient(3,natom))
+    if (allocated(model%bound_shape)) then
+      if (size(model%bound_shape, 1) < max_grid_size) deallocate(model%bound_shape)
+    end if
+    if (.not. allocated(model%bound_shape)) allocate(model%bound_shape(max_grid_size,0))
+    density_t_data => model%density_data(:,1:npoint)
+    grad_t_data => model%grad_data(:,:,1:npoint)
+    kin_t_data => model%kin_data(:,1:npoint)
+    grid_coord_t_data => model%grid_gradient(:,1:npoint)
+    atom_coord_t_data => model%atom_gradient(:,1:natom)
+    bound_shape => model%bound_shape(1:max_grid_size,:)
     do ipoint = 1, npoint
       density_t_data(:, ipoint) = density(ipoint, :)
       kin_t_data(:, ipoint) = kin(ipoint, :)
@@ -235,17 +267,17 @@ contains
     call torch_tensor_from_array(tensors(3), kin_t_data, layout2, &
       & model%device_type, model%device_index)
     call torch_tensor_from_array(tensors(4), grid_coords, layout2, &
-      & model%device_type, model%device_index)
+      & torch_kCPU, -1)
     call torch_tensor_from_array(tensors(5), grid_weights, layout1, &
-      & model%device_type, model%device_index)
+      & torch_kCPU, -1)
     call torch_tensor_from_array(tensors(6), atom_coords, layout2, &
-      & model%device_type, model%device_index)
+      & torch_kCPU, -1)
     call torch_tensor_from_array(tensors(7), atomic_grid_weights, layout1, &
-      & model%device_type, model%device_index)
+      & torch_kCPU, -1)
     call torch_tensor_from_array(tensors(8), atomic_grid_sizes, layout1, &
-      & model%device_type, model%device_index)
+      & torch_kCPU, -1)
     call torch_tensor_from_array(tensors(9), bound_shape, layout2, &
-      & model%device_type, model%device_index)
+      & torch_kCPU, -1)
 
     dict_handle = dict_create_c()
     call insert_feature("density", tensors(1))
@@ -334,6 +366,20 @@ contains
 
   end subroutine paw_skala_evaluate
 
+  subroutine paw_skala_cache_stats(model, stats)
+    type(paw_skala_model), intent(in) :: model
+    integer(int64), intent(out) :: stats(3)
+    interface
+      subroutine cache_stats_c(handle, values) bind(c, name="cppaw_skala_model_cache_stats")
+        import :: c_ptr, c_int64_t
+        type(c_ptr), value :: handle
+        integer(c_int64_t), intent(out) :: values(3)
+      end subroutine cache_stats_c
+    end interface
+    stats = 0
+    if (c_associated(model%handle)) call cache_stats_c(model%handle, stats)
+  end subroutine paw_skala_cache_stats
+
   subroutine paw_skala_release(model)
     type(paw_skala_model), intent(inout) :: model
     interface
@@ -345,6 +391,11 @@ contains
     if (c_associated(model%handle)) call model_release_c(model%handle)
     model%handle = c_null_ptr
     model%features = .false.
+    if (allocated(model%density_data)) then
+      deallocate(model%density_data, model%grad_data, model%kin_data, model%grid_gradient)
+    end if
+    if (allocated(model%atom_gradient)) deallocate(model%atom_gradient)
+    if (allocated(model%bound_shape)) deallocate(model%bound_shape)
   end subroutine paw_skala_release
 
   subroutine finalize_model(model)
