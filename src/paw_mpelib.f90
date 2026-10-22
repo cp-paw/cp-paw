@@ -193,6 +193,7 @@ END MODULE MPE_MPIF_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: CID    ! COMMUNICATOR ID
 !      *************************************************************************
+#IFDEF CPPVARIABLE_PARALLEL
        IF(.NOT.TINI) THEN
          CALL ERROR$MSG('MPE$INIT MUST BE CALLED BEFORE ANY OTHER MPE ROUTINE')
          CALL ERROR$STOP('MPE$SELECT')
@@ -217,6 +218,7 @@ END MODULE MPE_MPIF_MODULE
            END IF
          END IF
        ENDDO
+#ENDIF
        RETURN
        END SUBROUTINE MPE$SELECT
 !
