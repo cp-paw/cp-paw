@@ -19,9 +19,10 @@ program skala_bridge_smoke
   integer(int64) :: cache_stats(3)
   real(real64), parameter :: fd_step = 1.0e-4_real64, fd_tolerance = 2.0e-5_real64
   real(real64), parameter :: repeat_tolerance = 2.0e-8_real64
+  real(real64), parameter :: batch_tolerance = 2.0e-7_real64
   real(real64), parameter :: nontrivial_tolerance = 1.0e-12_real64
   real(real64) :: energy, angle, radius, eplus, eminus, original, max_error
-  real(real64) :: repeat_energy, repeat_error, repeat_values(7)
+  real(real64) :: repeat_energy, repeat_error, repeat_values(7), block_energies(natom)
   real(real64) :: translation_error, translation_gradient(3)
   real(real64) :: analytic(7)
   integer :: device_index, i, iatom, ipoint, status
@@ -76,7 +77,7 @@ program skala_bridge_smoke
   call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
     & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
     & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
-    & atom_coord_deriv, atomic_weight_deriv, block_id=1)
+    & atom_coord_deriv, atomic_weight_deriv, block_id=1, block_energies=block_energies)
   if (status /= 0) then
     write (*, '(a)') "Skala evaluation failed: " // trim(message)
     stop 4
@@ -95,6 +96,11 @@ program skala_bridge_smoke
   end if
   if (abs(energy) <= nontrivial_tolerance) then
     write (*, '(a)') "Skala evaluation returned a degenerate zero energy"
+    stop 5
+  end if
+  if (any(.not. ieee_is_finite(block_energies)) &
+      .or. abs(sum(block_energies)-energy) > repeat_tolerance) then
+    write (*, '(a)') "Skala atom-block energies do not sum to the model energy"
     stop 5
   end if
   if (max(maxval(abs(density_deriv)), maxval(abs(grad_deriv)), &
@@ -165,6 +171,48 @@ program skala_bridge_smoke
       stop 9
     end if
     write (*, '(a,es12.4)') "SKALA_BRIDGE_ELECTRONIC max absolute difference=", repeat_error
+  end block
+
+  block
+    real(real64) :: saved_density(npoint, 2), saved_grad(npoint, 3, 2), saved_kin(npoint, 2)
+    real(real64) :: saved_x(npoint, 3), saved_w(npoint), saved_atoms(natom, 3), saved_aw(npoint)
+    real(real64) :: single_energy, batch_error
+    integer :: lo, hi
+    ! Compare the bridge's complete-block batch with separate model calls.
+    call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
+      & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
+      & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
+      & atom_coord_deriv, atomic_weight_deriv, block_id=1, block_energies=block_energies)
+    if (status /= 0) stop 9
+    saved_density = density_deriv
+    saved_grad = grad_deriv
+    saved_kin = kin_deriv
+    saved_x = grid_coord_deriv
+    saved_w = grid_weight_deriv
+    saved_atoms = atom_coord_deriv
+    saved_aw = atomic_weight_deriv
+    batch_error = abs(sum(block_energies)-energy)
+    do iatom = 1, natom
+      lo = (iatom-1)*points_per_atom+1
+      hi = iatom*points_per_atom
+      call paw_skala_evaluate(model, density(lo:hi,:), grad(lo:hi,:,:), kin(lo:hi,:), &
+        & grid_coords(lo:hi,:), grid_weights(lo:hi), atom_coords(iatom:iatom,:), &
+        & atomic_grid_weights(lo:hi), atomic_grid_sizes(iatom:iatom), single_energy, &
+        & density_deriv(lo:hi,:), grad_deriv(lo:hi,:,:), kin_deriv(lo:hi,:), status, message, &
+        & grid_coord_deriv(lo:hi,:), grid_weight_deriv(lo:hi), atom_coord_deriv(iatom:iatom,:), &
+        & atomic_weight_deriv(lo:hi), block_id=100+iatom)
+      if (status /= 0) stop 9
+      batch_error = max(batch_error, abs(single_energy-block_energies(iatom)), &
+        & maxval(abs(saved_density(lo:hi,:)-density_deriv(lo:hi,:))), &
+        & maxval(abs(saved_grad(lo:hi,:,:)-grad_deriv(lo:hi,:,:))), &
+        & maxval(abs(saved_kin(lo:hi,:)-kin_deriv(lo:hi,:))), &
+        & maxval(abs(saved_x(lo:hi,:)-grid_coord_deriv(lo:hi,:))), &
+        & maxval(abs(saved_w(lo:hi)-grid_weight_deriv(lo:hi))), &
+        & maxval(abs(saved_atoms(iatom:iatom,:)-atom_coord_deriv(iatom:iatom,:))), &
+        & maxval(abs(saved_aw(lo:hi)-atomic_weight_deriv(lo:hi))))
+    end do
+    write (*, '(a,es12.4)') "SKALA_BRIDGE_BATCH max absolute difference=", batch_error
+    if (.not. ieee_is_finite(batch_error) .or. batch_error > batch_tolerance) stop 9
   end block
 
   original = density(3, 2)

@@ -113,6 +113,22 @@ the corresponding entry, and least-recently-used entries are evicted as needed.
 The budget conservatively counts host/device payloads and per-entry overhead.
 Electronic density, gradient, positive tau and model adjoints are never reused
 between evaluations. Geometry derivatives still use fresh autograd leaves.
+Read-only tensor storage is borrowed until the synchronous model call returns,
+avoiding another device clone. `CPPAW_SKALA_COPY_INPUTS=1` restores explicit
+copies for diagnostic comparisons. Model inputs must not be mutated during
+evaluation.
+Coordinate, weight and block-size arguments passed to FTorch require
+contiguous storage. The Fortran interface enforces this also for array
+sections, using compiler-managed temporary storage when necessary.
+
+`CPPAW_SKALA_BATCH_ATOMS=2` optionally combines complete atom blocks into one
+central CUDA model call. Values from 1 to 8 are supported, with default 1.
+Each block keeps its own grid sizes, coordinates and descriptor normalization.
+The nonlinear model never sees an arbitrary point fragment as an atom.
+`CPPAW_SKALA_BATCH_MAX_POINTS` limits the sum of points per batch (default
+262144). An individual oversized atom remains intact and runs alone. CPU and
+distributed-GPU inference keep the single-block path. Batching increases peak
+host/device memory and is not an automatic performance recommendation.
 
 `CPPAW_SKALA_SAMPLE_BATCH=1` additionally caches interpolation stencils and
 samples smooth density, gradient and positive tau in one pass. When geometry
@@ -136,7 +152,10 @@ caches are local to each worker's point range and retain their existing
 memory limits. The `SKALA:EXCHANGE` timer separates point communication from
 reconstruction, model inference and adjoint work. With `CHECK=T`, the protocol
 also lists processed points and model calls per MPI rank. Every target atom
-must contribute exactly one model evaluation per step.
+must occur exactly once per step in the reported model-block count. With
+batching, several blocks share a call. Conventional one-center augmentation
+also remains atom-parallel when `PARALLELGRID=T`, independently of which rank
+runs the Skala model.
 
 For fixed-geometry electronic minimization and energy comparisons, explicitly
 set `!PSIDYN FORCE=F STRESS=F`. CP-PAW then omits the force/stress-only

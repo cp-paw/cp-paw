@@ -6,6 +6,16 @@ import parallel_grid as grid
 
 
 class ParallelGridTest(unittest.TestCase):
+    def test_batch_counts_respect_complete_blocks_and_point_limit(self):
+        text = "".join(f"ATOM BLOCK {i+1} ROWS {n} ENERGY -1\n"
+                       for i, n in enumerate([8, 12, 6, 30, 4]))
+        self.assertEqual(grid.batch_call_counts(text, 1, 5, 2, 100), [3])
+        self.assertEqual(grid.batch_call_counts(text, 1, 5, 8, 20), [4])
+        self.assertEqual(grid.batch_call_counts(text, 1, 5, 8, 1), [5])
+        for invalid in ("", text.replace("BLOCK 3", "BLOCK 2"), text.replace("ROWS 6", "ROWS 0")):
+            with self.assertRaises(ValueError):
+                grid.batch_call_counts(invalid, 1, 5, 2, 100)
+
     def test_rank_accounting_requires_every_rank_and_step(self):
         label = "GRID POINTS PER MPI RANK"
         self.assertEqual(grid.counters(label + " 3 2 0\n", label, 1, 3), [[3, 2, 0]])

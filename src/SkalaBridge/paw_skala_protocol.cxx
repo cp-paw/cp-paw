@@ -35,7 +35,9 @@ struct SkalaModel {
   int block = 0;
   uint64_t cache_limit = 64ULL * 1024 * 1024, cache_bytes = 0, age = 0;
   uint64_t cache_hits = 0, cache_misses = 0;
+  bool copy_inputs = false;
   std::unordered_map<std::string, Constant> constants;
+  std::vector<double> block_energies;
 };
 
 using TensorDict = c10::Dict<std::string, torch::Tensor>;
@@ -232,6 +234,9 @@ extern "C" void *cppaw_skala_model_load(const char *filename,
     configure_host_threads();
     configure_reproducibility();
     auto model = std::make_unique<SkalaModel>();
+    if (const char *value = std::getenv("CPPAW_SKALA_COPY_INPUTS")) {
+      model->copy_inputs = std::string(value) == "1";
+    }
     if (const char *value = std::getenv("CPPAW_SKALA_TENSOR_CACHE_MB")) {
       char *end = nullptr;
       errno = 0;
@@ -279,6 +284,17 @@ extern "C" void cppaw_skala_model_cache_stats(void *handle, int64_t *stats) {
   stats[0] = static_cast<int64_t>(model.cache_hits);
   stats[1] = static_cast<int64_t>(model.cache_misses);
   stats[2] = static_cast<int64_t>(model.cache_bytes);
+}
+
+extern "C" int cppaw_skala_model_block_energies(void *handle, const int count,
+    double *values, char *error, const int capacity) {
+  const auto &energies = static_cast<SkalaModel *>(handle)->block_energies;
+  if (count < 1 || static_cast<std::size_t>(count) != energies.size()) {
+    set_error(error, capacity, "Skala block-energy extent does not match the last evaluation");
+    return 1;
+  }
+  std::copy(energies.begin(), energies.end(), values);
+  return 0;
 }
 
 extern "C" void *cppaw_skala_dict_create() {
@@ -333,7 +349,10 @@ extern "C" int cppaw_skala_model_evaluate_mode(void *model_handle,
       torch::Tensor value = dynamic ? entry.value().to(model.device)
                                    : constant_value(model, key, entry.value());
       if (is_differentiable_feature(key, geometry_derivatives != 0)) {
-        value = value.detach().clone().set_requires_grad(true);
+        // Inputs remain alive and read-only until this synchronous call returns.
+        value = value.detach();
+        if (model.copy_inputs) value = value.clone();
+        value.set_requires_grad(true);
         leaves.push_back(value);
         leaf_keys.push_back(key);
       }
@@ -345,13 +364,33 @@ extern "C" int cppaw_skala_model_evaluate_mode(void *model_handle,
     kwargs["mol"] = features;
     torch::Tensor exc_density =
         model.module.get_method("get_exc_density")(args, kwargs).toTensor();
-    torch::Tensor exc = (exc_density * features.at("grid_weights")).sum();
-    *energy = exc.item<double>();
+    const auto weighted = exc_density * features.at("grid_weights");
+    torch::Tensor exc = weighted.sum();
 
     // Stationary energy, force, and stress paths need first model derivatives.
     // Keep create_graph=false; response properties require a separate contract.
     const auto gradients = torch::autograd::grad(
         {exc}, leaves, {}, false, false, true);
+    *energy = exc.item<double>();
+    const auto sizes = input.at("atomic_grid_sizes").to(torch::kCPU).contiguous();
+    model.block_energies.clear();
+    if (sizes.numel() == 1) {
+      model.block_energies.push_back(*energy);
+    } else {
+      std::vector<torch::Tensor> sums;
+      int64_t offset = 0;
+      const auto *counts = sizes.data_ptr<int64_t>();
+      for (int64_t block = 0; block < sizes.numel(); ++block) {
+        if (counts[block] < 1 || counts[block] > weighted.numel() - offset) {
+          throw std::runtime_error("invalid Skala atom-block extent");
+        }
+        sums.push_back(weighted.detach().narrow(0, offset, counts[block]).sum());
+        offset += counts[block];
+      }
+      if (offset != weighted.numel()) throw std::runtime_error("incomplete Skala atom-block coverage");
+      const auto host = torch::stack(sums).to(torch::kCPU).to(torch::kFloat64).contiguous();
+      model.block_energies.assign(host.data_ptr<double>(), host.data_ptr<double>() + host.numel());
+    }
     std::unordered_map<std::string, torch::Tensor> by_key;
     for (std::size_t i = 0; i < gradients.size(); ++i) {
       if (gradients[i].defined()) {
