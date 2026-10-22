@@ -70,6 +70,7 @@ electronic or quadrature convergence, nor end-to-end force/stress accuracy.
  APPLYONECENTER=T
  INTERPOLATEPARTITION=F
  DISTRIBUTEGPU=F
+ PARALLELGRID=T
  CHECK=F
 !END
 ```
@@ -81,6 +82,33 @@ experimental per-rank CUDA path. It can expose more GPU parallelism, but the
 Skala 1.1 float32 network produced rank-dependent adjoints when several MPI
 processes evaluated different atoms, so it is not the correctness default.
 CPU model inference remains distributed across MPI ranks.
+
+`PARALLELGRID=T` distributes reconstruction and adjoint backprojection over
+point ranges without splitting a model's atom block. For CPU inference, ranks
+first share atoms. When ranks outnumber atoms, additional ranks cooperate on
+the same atom's points. For central CUDA inference, all ranks share each atom's
+grid work and only MPI root evaluates the model. Inputs are gathered in their
+original row order and electronic adjoints are returned to their point owners.
+Empty point ranges and unequal group sizes are supported. `PARALLELGRID=F`
+retains the previous whole-atom CPU or root-only CUDA work distribution.
+`DISTRIBUTEGPU` remains independent and defaults to `F`.
+
+This does not distribute LibTorch inference within an atom or remove the
+replicated smooth global grid and complete-block model buffers. Geometry
+caches are local to each worker's point range and retain their existing
+memory limits. The `SKALA:EXCHANGE` timer separates point communication from
+reconstruction, model inference and adjoint work. With `CHECK=T`, the protocol
+also lists processed points and model calls per MPI rank. Every target atom
+must contribute exactly one model evaluation per step.
+
+For fixed-geometry electronic minimization and energy comparisons, explicitly
+set `!PSIDYN FORCE=F STRESS=F`. CP-PAW then omits the force/stress-only
+reconstruction and asks Torch only for density, gradient and positive-tau
+derivatives. Model coordinates and both weight tensors retain their physical
+values but do not require gradients. Nuclear forces and stress remain
+available through the usual controls and request all necessary model adjoints.
+The crystal comparison driver uses the electronic-only mode by default and
+accepts `--forces` to restore force evaluation.
 
 `CHECK=T` reports the one-center density-matrix/primitive contraction identity.
 The source and image-kernel unit tests separately check their finite-difference

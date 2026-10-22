@@ -135,6 +135,31 @@ program skala_bridge_smoke
     stop 7
   end if
 
+  block
+    real(real64) :: saved_density(npoint, 2), saved_grad(npoint, 3, 2), saved_kin(npoint, 2)
+    saved_density = density_deriv
+    saved_grad = grad_deriv
+    saved_kin = kin_deriv
+    call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
+      & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
+      & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
+      & atom_coord_deriv, atomic_weight_deriv, geometry_derivatives=.false.)
+    if (status /= 0) then
+      write (*, '(a)') "Skala electronic-only evaluation failed: " // trim(message)
+      stop 9
+    end if
+    repeat_error = max(abs(energy - repeat_energy), &
+      & maxval(abs(density_deriv - saved_density)), maxval(abs(grad_deriv - saved_grad)), &
+      & maxval(abs(kin_deriv - saved_kin)))
+    if (.not. ieee_is_finite(repeat_error) .or. repeat_error > repeat_tolerance &
+        .or. any(grid_coord_deriv /= 0.0_real64) .or. any(grid_weight_deriv /= 0.0_real64) &
+        .or. any(atom_coord_deriv /= 0.0_real64) .or. any(atomic_weight_deriv /= 0.0_real64)) then
+      write (*, '(a)') "Skala electronic-only derivatives changed or geometry outputs were not cleared"
+      stop 9
+    end if
+    write (*, '(a,es12.4)') "SKALA_BRIDGE_ELECTRONIC max absolute difference=", repeat_error
+  end block
+
   original = density(3, 2)
   density(3, 2) = original + fd_step
   call evaluate_energy(eplus)

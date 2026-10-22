@@ -477,3 +477,25 @@ run it in a new output directory with the environment prefix
 `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS=512` to check larger tiles. Keep the
 original numerical bound and check actual device row coverage. Larger
 scratch arrays may exhaust the 1 MiB test budget for larger partial-wave spaces.
+
+# Cooperative point-grid parity
+
+`parallel_grid.py` compares `PARALLELGRID=F` and `T` from the same fixed
+restart. It checks complete-block model call counts, work per rank, energies,
+electronic restart records, and requested forces and stress. CPU runs with
+three or four ranks exercise unequal point groups and more ranks than atoms.
+CUDA runs retain central inference while distributing host grid work.
+
+```sh
+python tests/fulltests/skala_si2/parallel_grid.py \
+  --executable /path/to/parallel-paw --model /path/to/model.fun \
+  --restart /path/to/si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-results --device CPU --ranks 1 2 3 4
+```
+
+Use `--device CUDA` for a CUDA-capable bridge. These tests disable other PAW
+GPU libraries to isolate Skala. `--repeats 2` repeats short timing probes.
+The default coarse grid and two tiny steps test implementation parity, not
+physical convergence or performance on molecular crystals. All modes start
+from the same restart and leave its source files unchanged. JSON provenance
+and results remain in the selected output directory, outside version control.

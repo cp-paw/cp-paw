@@ -50,6 +50,10 @@ jobs:
           python3 tests/unittests/orthogonality_tolerance/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
       - name: Check incremental rebuild relinks the executable
         run: python3 tests/buildtools/check_incremental_link.py bin/Build_fast
+      - name: Check MPI communicator insertion
+        run: |
+          make -C bin/Build_fast_parallel -f Makefile \
+            -f ../../tests/unittests/mpe_registry/driver.mk mpe-registry-test MPIEXEC=mpirun
       - name: Check occupation-weighted PAW force derivatives
         run: |
           make -C bin/Build_fast -f Makefile \
@@ -148,3 +152,13 @@ jobs:
             --restart tests/fulltests/skala_si2/skala_si2.rstrt \
             --structure tests/fulltests/skala_si2/skala_si2.strc \
             --output "$RUNNER_TEMP/skala-stress-mpi" --mpi-ranks 2
+      - name: Check cooperative Skala point ranges
+        env:
+          OMPI_MCA_rmaps_base_oversubscribe: "1"
+        run: |
+          python tests/fulltests/skala_si2/parallel_grid.py \
+            --executable bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x \
+            --model bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
+            --restart tests/fulltests/skala_si2/skala_si2.rstrt \
+            --structure tests/fulltests/skala_si2/skala_si2.strc \
+            --output "$RUNNER_TEMP/skala-parallel-grid" --ranks 3 4
