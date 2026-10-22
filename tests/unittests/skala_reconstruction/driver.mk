@@ -2,6 +2,15 @@
 .PHONY: skala-source-profile-test
 .PHONY: skala-source-forward-test
 .PHONY: skala-source-resident-unit skala-source-resident-test
+.PHONY: skala-sampling-test skala-sampling-gpu-test
+
+skala-sampling-test: libpaw.a
+	mkdir -p unit-tests
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/skala_sampling.x $(BASEDIR)/tests/unittests/skala_reconstruction/sampling.f90 libpaw.a $(LIBS)
+	CPPAW_SKALA_SAMPLE_BATCH=1 CPPAW_SKALA_SAMPLE_ACC=0 ./unit-tests/skala_sampling.x
+
+skala-sampling-gpu-test: skala-sampling-test
+	CPPAW_SKALA_SAMPLE_BATCH=1 CPPAW_SKALA_SAMPLE_ACC=1 ./unit-tests/skala_sampling.x gpu
 
 skala-source-resident-unit: libpaw.a
 	mkdir -p unit-tests

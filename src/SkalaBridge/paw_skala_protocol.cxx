@@ -7,6 +7,8 @@
 #include <torch/script.h>
 
 #include <algorithm>
+#include <cerrno>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -23,9 +25,19 @@ constexpr int device_cuda = 1;
 constexpr int feature_count = 9;
 
 struct SkalaModel {
+  struct Constant {
+    torch::Tensor host, device;
+    uint64_t bytes = 0, age = 0;
+  };
   torch::jit::script::Module module;
   torch::Device device = torch::Device(torch::kCPU);
   bool features[feature_count] = {};
+  int block = 0;
+  uint64_t cache_limit = 64ULL * 1024 * 1024, cache_bytes = 0, age = 0;
+  uint64_t cache_hits = 0, cache_misses = 0;
+  bool copy_inputs = false;
+  std::unordered_map<std::string, Constant> constants;
+  std::vector<double> block_energies;
 };
 
 using TensorDict = c10::Dict<std::string, torch::Tensor>;
@@ -73,10 +85,51 @@ void parse_features(const std::string &json, bool features[feature_count]) {
   }
 }
 
-bool is_differentiable_feature(const std::string &key) {
+bool is_differentiable_feature(const std::string &key, bool geometry) {
   return key == "density" || key == "grad" || key == "kin" ||
-         key == "grid_coords" || key == "grid_weights" ||
-         key == "coarse_0_atomic_coords" || key == "atomic_grid_weights";
+         (geometry && (key == "grid_coords" || key == "grid_weights" ||
+                       key == "coarse_0_atomic_coords" || key == "atomic_grid_weights"));
+}
+
+torch::Tensor constant_value(SkalaModel &model, const std::string &key,
+                             const torch::Tensor &input) {
+  if (model.block <= 0 || model.cache_limit == 0) {
+    return input.to(model.device);
+  }
+  const std::string id = std::to_string(model.block) + ":" + key;
+  auto host = input.to(torch::kCPU);
+  auto found = model.constants.find(id);
+  if (found != model.constants.end()) {
+    auto &saved = found->second;
+    if (saved.host.scalar_type() == host.scalar_type() &&
+        saved.host.sizes() == host.sizes() && saved.host.strides() == host.strides() &&
+        torch::equal(saved.host, host)) {
+      saved.age = ++model.age;
+      ++model.cache_hits;
+      return saved.device;
+    }
+    model.cache_bytes -= saved.bytes;
+    model.constants.erase(found);
+  }
+  ++model.cache_misses;
+  // Count host snapshots and device values conservatively, including CPU mode.
+  const uint64_t bytes = 256ULL + 2ULL * host.numel() * host.element_size();
+  if (bytes > model.cache_limit) return input.to(model.device);
+  while (model.cache_bytes + bytes > model.cache_limit && !model.constants.empty()) {
+    auto oldest = std::min_element(model.constants.begin(), model.constants.end(),
+        [](const auto &a, const auto &b) { return a.second.age < b.second.age; });
+    model.cache_bytes -= oldest->second.bytes;
+    model.constants.erase(oldest);
+  }
+  SkalaModel::Constant saved;
+  saved.host = host.clone();
+  saved.device = saved.host.to(model.device);
+  saved.bytes = bytes;
+  saved.age = ++model.age;
+  auto value = saved.device;
+  model.constants.emplace(id, std::move(saved));
+  model.cache_bytes += bytes;
+  return value;
 }
 
 void require_shape(const TensorDict &features,
@@ -181,6 +234,19 @@ extern "C" void *cppaw_skala_model_load(const char *filename,
     configure_host_threads();
     configure_reproducibility();
     auto model = std::make_unique<SkalaModel>();
+    if (const char *value = std::getenv("CPPAW_SKALA_COPY_INPUTS")) {
+      model->copy_inputs = std::string(value) == "1";
+    }
+    if (const char *value = std::getenv("CPPAW_SKALA_TENSOR_CACHE_MB")) {
+      char *end = nullptr;
+      errno = 0;
+      const auto mb = std::strtoull(value, &end, 10);
+      if (value[0] == '-' || end == value || *end != '\0' || errno == ERANGE ||
+          mb > UINT64_MAX / (1024ULL * 1024)) {
+        throw std::runtime_error("CPPAW_SKALA_TENSOR_CACHE_MB must be a nonnegative integer");
+      }
+      model->cache_limit = mb * 1024ULL * 1024;
+    }
     model->device = select_device(device_type, device_index);
     torch::jit::ExtraFilesMap metadata{{"features", ""}, {"protocol_version", ""}};
     model->module = torch::jit::load(filename, model->device, metadata);
@@ -209,6 +275,28 @@ extern "C" void cppaw_skala_model_release(void *handle) {
   delete static_cast<SkalaModel *>(handle);
 }
 
+extern "C" void cppaw_skala_model_set_block(void *handle, const int block) {
+  static_cast<SkalaModel *>(handle)->block = block;
+}
+
+extern "C" void cppaw_skala_model_cache_stats(void *handle, int64_t *stats) {
+  const auto &model = *static_cast<SkalaModel *>(handle);
+  stats[0] = static_cast<int64_t>(model.cache_hits);
+  stats[1] = static_cast<int64_t>(model.cache_misses);
+  stats[2] = static_cast<int64_t>(model.cache_bytes);
+}
+
+extern "C" int cppaw_skala_model_block_energies(void *handle, const int count,
+    double *values, char *error, const int capacity) {
+  const auto &energies = static_cast<SkalaModel *>(handle)->block_energies;
+  if (count < 1 || static_cast<std::size_t>(count) != energies.size()) {
+    set_error(error, capacity, "Skala block-energy extent does not match the last evaluation");
+    return 1;
+  }
+  std::copy(energies.begin(), energies.end(), values);
+  return 0;
+}
+
 extern "C" void *cppaw_skala_dict_create() {
   return new TensorDict();
 }
@@ -234,8 +322,9 @@ extern "C" int cppaw_skala_dict_insert(void *handle,
   }
 }
 
-extern "C" int cppaw_skala_model_evaluate(void *model_handle,
+extern "C" int cppaw_skala_model_evaluate_mode(void *model_handle,
                                             void *input_handle,
+                                            const int geometry_derivatives,
                                             double *energy,
                                             void **density_grad,
                                             void **spatial_grad,
@@ -256,9 +345,14 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
     std::vector<std::string> leaf_keys;
     for (const auto &entry : input) {
       const std::string key = entry.key();
-      torch::Tensor value = entry.value().to(model.device);
-      if (is_differentiable_feature(key)) {
-        value = value.detach().clone().set_requires_grad(true);
+      const bool dynamic = key == "density" || key == "grad" || key == "kin";
+      torch::Tensor value = dynamic ? entry.value().to(model.device)
+                                   : constant_value(model, key, entry.value());
+      if (is_differentiable_feature(key, geometry_derivatives != 0)) {
+        // Inputs remain alive and read-only until this synchronous call returns.
+        value = value.detach();
+        if (model.copy_inputs) value = value.clone();
+        value.set_requires_grad(true);
         leaves.push_back(value);
         leaf_keys.push_back(key);
       }
@@ -270,13 +364,33 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
     kwargs["mol"] = features;
     torch::Tensor exc_density =
         model.module.get_method("get_exc_density")(args, kwargs).toTensor();
-    torch::Tensor exc = (exc_density * features.at("grid_weights")).sum();
-    *energy = exc.item<double>();
+    const auto weighted = exc_density * features.at("grid_weights");
+    torch::Tensor exc = weighted.sum();
 
     // Stationary energy, force, and stress paths need first model derivatives.
     // Keep create_graph=false; response properties require a separate contract.
     const auto gradients = torch::autograd::grad(
         {exc}, leaves, {}, false, false, true);
+    *energy = exc.item<double>();
+    const auto sizes = input.at("atomic_grid_sizes").to(torch::kCPU).contiguous();
+    model.block_energies.clear();
+    if (sizes.numel() == 1) {
+      model.block_energies.push_back(*energy);
+    } else {
+      std::vector<torch::Tensor> sums;
+      int64_t offset = 0;
+      const auto *counts = sizes.data_ptr<int64_t>();
+      for (int64_t block = 0; block < sizes.numel(); ++block) {
+        if (counts[block] < 1 || counts[block] > weighted.numel() - offset) {
+          throw std::runtime_error("invalid Skala atom-block extent");
+        }
+        sums.push_back(weighted.detach().narrow(0, offset, counts[block]).sum());
+        offset += counts[block];
+      }
+      if (offset != weighted.numel()) throw std::runtime_error("incomplete Skala atom-block coverage");
+      const auto host = torch::stack(sums).to(torch::kCPU).to(torch::kFloat64).contiguous();
+      model.block_energies.assign(host.data_ptr<double>(), host.data_ptr<double>() + host.numel());
+    }
     std::unordered_map<std::string, torch::Tensor> by_key;
     for (std::size_t i = 0; i < gradients.size(); ++i) {
       if (gradients[i].defined()) {
@@ -304,6 +418,15 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
     set_error(error, error_capacity, exception.what());
     return 1;
   }
+}
+
+extern "C" int cppaw_skala_model_evaluate(void *model_handle, void *input_handle,
+    double *energy, void **density_grad, void **spatial_grad, void **kin_grad,
+    void **grid_coord_grad, void **grid_weight_grad, void **atom_coord_grad,
+    void **atomic_weight_grad, char *error, const int error_capacity) {
+  return cppaw_skala_model_evaluate_mode(model_handle, input_handle, 1, energy,
+      density_grad, spatial_grad, kin_grad, grid_coord_grad, grid_weight_grad,
+      atom_coord_grad, atomic_weight_grad, error, error_capacity);
 }
 
 extern "C" int cppaw_skala_tensor_copy_double(void *tensor_handle,
