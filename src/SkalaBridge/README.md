@@ -129,6 +129,11 @@ The nonlinear model never sees an arbitrary point fragment as an atom.
 262144). An individual oversized atom remains intact and runs alone. CPU and
 distributed-GPU inference keep the single-block path. Batching increases peak
 host/device memory and is not an automatic performance recommendation.
+Float32 network kernels can change with batch shape. Validate energy and all
+required adjoints for the intended system before using this experimental mode.
+The strict parity driver rejects a batch that exceeds its original bounds.
+Profiling attributes the common batch call equally to its constituent atoms
+and includes both the gathering/reconstruction and adjoint phases.
 
 `CPPAW_SKALA_SAMPLE_BATCH=1` additionally caches interpolation stencils and
 samples smooth density, gradient and positive tau in one pass. When geometry
