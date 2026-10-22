@@ -2,6 +2,7 @@
 """Compare legacy and cooperative Skala grids from one fixed Si2 restart."""
 
 import argparse
+import csv
 import math
 import os
 from pathlib import Path
@@ -66,6 +67,8 @@ def main():
     for name in ("executable", "model", "restart", "structure", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--device", choices=("CPU", "CUDA"), default="CPU")
+    parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
+    parser.add_argument("--accelerated-grid", action="store_true")
     parser.add_argument("--ranks", type=int, nargs="+", default=[1, 2, 3, 4])
     parser.add_argument("--modes", nargs="+", choices=("electronic", "forces", "stress"),
                         default=["electronic", "forces", "stress"])
@@ -78,17 +81,24 @@ def main():
     args = parser.parse_args()
     if min(*args.ranks, args.steps, args.repeats, args.radial, args.angular) < 1 or args.cache_mib < 0:
         parser.error("Need positive ranks, step and grid counts, and nonnegative cache budget")
+    if args.accelerated_grid and (args.device != "CUDA" or args.gpu_mode == "off" or args.cache_mib == 0):
+        parser.error("Accelerated grid checks need CUDA, enabled PAW GPU libraries and a source cache")
     inputs = {key: getattr(args, key).resolve(strict=True)
               for key in ("executable", "model", "restart", "structure")}
     root = args.output.resolve()
     root.mkdir(parents=True, exist_ok=False)
     hashes = {key: digest(path) for key, path in inputs.items()}
     env = {key: value for key, value in os.environ.items() if not key.startswith("CPPAW_")}
-    env.update(CPPAW_GPU_MODE="off", CPPAW_SKALA_DETERMINISTIC="1", CPPAW_SKALA_SCF_DETAIL="1",
+    env.update(CPPAW_GPU_MODE=args.gpu_mode, CPPAW_SKALA_DETERMINISTIC="1", CPPAW_SKALA_SCF_DETAIL="1",
                CPPAW_ACCEL_PROFILE="1", CPPAW_ACCEL_PROFILE_FILE="parallel",
                CPPAW_SKALA_SOURCE_CACHE_MB=str(args.cache_mib), CPPAW_SKALA_PARTITION_CACHE_MB="256",
                CPPAW_SKALA_TORCH_THREADS="1", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                VECLIB_MAXIMUM_THREADS="1")
+    if args.accelerated_grid:
+        env.update(CPPAW_SKALA_SOURCE_FWD_ACC="1", CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS="1",
+                   CPPAW_SKALA_SOURCE_BACK_ACC="1", CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS="1",
+                   CPPAW_SKALA_SOURCE_FWD_RESIDENT_MB="256",
+                   CPPAW_SKALA_GRID_BACK_ACC="1", CPPAW_SKALA_GRID_BACK_ACC_MIN_POINTS="1")
     fd.write_json(root / "provenance.json", dict(inputs={key: str(path) for key, path in inputs.items()},
         sha256=hashes, arguments={key: str(value) if isinstance(value, Path) else value
                                  for key, value in vars(args).items()},
@@ -128,6 +138,23 @@ def main():
                     fd.check_geometry(geometry, fd.geometry(restart))
                     rows = counters(text, "GRID POINTS PER MPI RANK", args.steps, ranks)
                     calls = counters(text, "MODEL CALLS PER MPI RANK", args.steps, ranks)
+                    gpu_rows = {}
+                    if args.accelerated_grid:
+                        for label in ("SOURCE GPU FORWARD ROWS", "SOURCE GPU REVERSE ROWS"):
+                            gpu_rows[label] = [row[0] for row in counters(text, label, args.steps, 1)]
+                            if min(gpu_rows[label]) == 0:
+                                raise ValueError(f"No actual GPU coverage: {label}")
+                        reused = counters(text, "SOURCE GPU REUSED ROWS", args.steps, 1)
+                        if args.steps > 1 and min(row[0] for row in reused[1:]) == 0:
+                            raise ValueError("No warm GPU geometry residency")
+                        gpu_rows["SOURCE GPU REUSED ROWS"] = [row[0] for row in reused]
+                        copies = 0
+                        for path in work.glob("parallel*.csv"):
+                            with path.open() as stream:
+                                copies += sum(int(row["calls"]) for row in csv.DictReader(stream)
+                                    if row["op"] == "ACC_COPY_SKALA_GRID_BACK_OUT")
+                        if copies < args.steps:
+                            raise ValueError("No device-resident grid-backprojection output")
                     for row, count in zip(rows, calls):
                         if sum(count) != geometry["natom"] or sum(row) < 1:
                             raise ValueError("Missing or duplicated atom-block inference")
@@ -139,7 +166,8 @@ def main():
                     current = dict(scalars=modes.scalars(text, args.steps),
                         energies=forces if forces else modes.energy_records(text),
                         forces=forces, waves=modes.wave_records(restart),
-                        stress=[tuple(map(float, line.split()[-3:])) for line in text.splitlines()
+                        stress=[tuple(fd.numbers(line[len("TOTAL D E / D STRAIN"):], 3))
+                                for line in text.splitlines()
                                 if line.startswith("TOTAL D E / D STRAIN ")])
                     if mode == "stress" and len(current["stress"]) != 3*args.steps:
                         raise ValueError("Missing stress tensor")
@@ -147,7 +175,8 @@ def main():
                     if reference is None:
                         reference = current
                     results.append(dict(name=name, mode=mode, ranks=ranks, parallel=parallel,
-                        elapsed_s=elapsed, rows=rows, model_calls=calls, differences=differences))
+                        elapsed_s=elapsed, rows=rows, model_calls=calls, gpu_rows=gpu_rows,
+                        differences=differences))
                     fd.write_json(root / "results.json", dict(passed=False, completed=results))
     if any(digest(path) != hashes[key] for key, path in inputs.items()):
         raise ValueError("An executable or scientific input changed during the test")
