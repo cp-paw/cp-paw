@@ -1,4 +1,4 @@
-program skala_point_exchange
+program skala_point_layout_test
   use mpe_module
   use paw_skala_module
   implicit none
@@ -81,4 +81,4 @@ contains
       end do
     end do
   end subroutine check
-end program skala_point_exchange
+end program skala_point_layout_test

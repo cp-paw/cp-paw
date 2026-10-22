@@ -93,6 +93,43 @@ Empty point ranges and unequal group sizes are supported. `PARALLELGRID=F`
 retains the previous whole-atom CPU or root-only CUDA work distribution.
 `DISTRIBUTEGPU` remains independent and defaults to `F`.
 
+Point fields are packed into one reusable MPI message per peer and direction.
+`CPPAW_SKALA_PACKED_EXCHANGE=0` selects the original separate messages.
+`CPPAW_SKALA_POINT_ROOT_WEIGHT` sets the point-root share relative to each
+helper, from 0.25 to 16 (default 1). For central CUDA inference,
+`CPPAW_SKALA_POINT_BALANCE=1` optionally estimates reconstruction/backprojection
+throughput during two initial steps and sets one subsequent fixed weighting.
+It excludes inference and communication wait time. The single rebalancing can
+invalidate local geometry caches once. It is not continuous adaptation and is
+off by default. The report lists current/next weights and compute time per rank.
+
+The bridge reuses its host conversion/output workspaces, growing them only
+when a larger block arrives. `CPPAW_SKALA_TENSOR_CACHE_MB` bounds a separate
+per-model cache of constant Torch inputs (default 64 MiB, 0 disables it).
+It retains coordinates, energy/descriptor weights and block metadata on the
+model device, with independent host snapshots. Shapes, strides, types and exact
+host values are checked on every call. Changed geometry or quadrature replaces
+the corresponding entry, and least-recently-used entries are evicted as needed.
+The budget conservatively counts host/device payloads and per-entry overhead.
+Electronic density, gradient, positive tau and model adjoints are never reused
+between evaluations. Geometry derivatives still use fresh autograd leaves.
+
+`CPPAW_SKALA_SAMPLE_BATCH=1` additionally caches interpolation stencils and
+samples smooth density, gradient and positive tau in one pass. When geometry
+derivatives are needed, their sampled spatial derivatives are retained for
+the same evaluation instead of traversing the stencil again. A separate
+`CPPAW_SKALA_SAMPLE_CACHE_MB` budget defaults to 256 MiB per rank for stencil
+storage. Geometry, cell, native-grid dimensions and local point ranges are
+part of its key. Unavailable cache space or workspace allocation selects the
+original pointwise path. Dynamic primitive fields are recomputed every step.
+
+In an OpenACC build, `CPPAW_SKALA_SAMPLE_ACC=1` enables its optional GPU kernel.
+The eligible point root uploads smooth input fields once per electronic step
+and retains them across atom blocks. CPU helpers keep their own point ranges.
+No sampling GPU is used in ordinary GNU builds. Both sampling switches default
+to off. This is not yet a transfer-free reconstruction/model/backprojection
+pipeline. Sampled fields and model adjoints still cross the host boundary.
+
 This does not distribute LibTorch inference within an atom or remove the
 replicated smooth global grid and complete-block model buffers. Geometry
 caches are local to each worker's point range and retain their existing
