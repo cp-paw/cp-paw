@@ -493,8 +493,13 @@ python tests/fulltests/skala_si2/parallel_grid.py \
   --output /path/to/new-results --device CPU --ranks 1 2 3 4
 ```
 
-Use `--device CUDA` for a CUDA-capable bridge. These tests disable other PAW
-GPU libraries to isolate Skala. `--repeats 2` repeats short timing probes.
+Use `--device CUDA` and the matching CUDA model export for a CUDA-capable
+bridge. By default, these tests disable other PAW GPU libraries to isolate
+Skala. `--gpu-mode resident --accelerated-grid` additionally exercises the
+combined build's GPU source reconstruction, source adjoints, geometry
+residency and grid backprojection. It forces small-grid thresholds for this
+test only and requires positive GPU source-row coverage, not silent fallback.
+`--repeats 2` repeats short timing probes.
 The default coarse grid and two tiny steps test implementation parity, not
 physical convergence or performance on molecular crystals. All modes start
 from the same restart and leave its source files unchanged. JSON provenance
