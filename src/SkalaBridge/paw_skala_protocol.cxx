@@ -7,6 +7,8 @@
 #include <torch/script.h>
 
 #include <algorithm>
+#include <cerrno>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
@@ -23,9 +25,17 @@ constexpr int device_cuda = 1;
 constexpr int feature_count = 9;
 
 struct SkalaModel {
+  struct Constant {
+    torch::Tensor host, device;
+    uint64_t bytes = 0, age = 0;
+  };
   torch::jit::script::Module module;
   torch::Device device = torch::Device(torch::kCPU);
   bool features[feature_count] = {};
+  int block = 0;
+  uint64_t cache_limit = 64ULL * 1024 * 1024, cache_bytes = 0, age = 0;
+  uint64_t cache_hits = 0, cache_misses = 0;
+  std::unordered_map<std::string, Constant> constants;
 };
 
 using TensorDict = c10::Dict<std::string, torch::Tensor>;
@@ -77,6 +87,47 @@ bool is_differentiable_feature(const std::string &key, bool geometry) {
   return key == "density" || key == "grad" || key == "kin" ||
          (geometry && (key == "grid_coords" || key == "grid_weights" ||
                        key == "coarse_0_atomic_coords" || key == "atomic_grid_weights"));
+}
+
+torch::Tensor constant_value(SkalaModel &model, const std::string &key,
+                             const torch::Tensor &input) {
+  if (model.block <= 0 || model.cache_limit == 0) {
+    return input.to(model.device);
+  }
+  const std::string id = std::to_string(model.block) + ":" + key;
+  auto host = input.to(torch::kCPU);
+  auto found = model.constants.find(id);
+  if (found != model.constants.end()) {
+    auto &saved = found->second;
+    if (saved.host.scalar_type() == host.scalar_type() &&
+        saved.host.sizes() == host.sizes() && saved.host.strides() == host.strides() &&
+        torch::equal(saved.host, host)) {
+      saved.age = ++model.age;
+      ++model.cache_hits;
+      return saved.device;
+    }
+    model.cache_bytes -= saved.bytes;
+    model.constants.erase(found);
+  }
+  ++model.cache_misses;
+  // Count host snapshots and device values conservatively, including CPU mode.
+  const uint64_t bytes = 256ULL + 2ULL * host.numel() * host.element_size();
+  if (bytes > model.cache_limit) return input.to(model.device);
+  while (model.cache_bytes + bytes > model.cache_limit && !model.constants.empty()) {
+    auto oldest = std::min_element(model.constants.begin(), model.constants.end(),
+        [](const auto &a, const auto &b) { return a.second.age < b.second.age; });
+    model.cache_bytes -= oldest->second.bytes;
+    model.constants.erase(oldest);
+  }
+  SkalaModel::Constant saved;
+  saved.host = host.clone();
+  saved.device = saved.host.to(model.device);
+  saved.bytes = bytes;
+  saved.age = ++model.age;
+  auto value = saved.device;
+  model.constants.emplace(id, std::move(saved));
+  model.cache_bytes += bytes;
+  return value;
 }
 
 void require_shape(const TensorDict &features,
@@ -181,6 +232,16 @@ extern "C" void *cppaw_skala_model_load(const char *filename,
     configure_host_threads();
     configure_reproducibility();
     auto model = std::make_unique<SkalaModel>();
+    if (const char *value = std::getenv("CPPAW_SKALA_TENSOR_CACHE_MB")) {
+      char *end = nullptr;
+      errno = 0;
+      const auto mb = std::strtoull(value, &end, 10);
+      if (value[0] == '-' || end == value || *end != '\0' || errno == ERANGE ||
+          mb > UINT64_MAX / (1024ULL * 1024)) {
+        throw std::runtime_error("CPPAW_SKALA_TENSOR_CACHE_MB must be a nonnegative integer");
+      }
+      model->cache_limit = mb * 1024ULL * 1024;
+    }
     model->device = select_device(device_type, device_index);
     torch::jit::ExtraFilesMap metadata{{"features", ""}, {"protocol_version", ""}};
     model->module = torch::jit::load(filename, model->device, metadata);
@@ -207,6 +268,17 @@ extern "C" void *cppaw_skala_model_load(const char *filename,
 
 extern "C" void cppaw_skala_model_release(void *handle) {
   delete static_cast<SkalaModel *>(handle);
+}
+
+extern "C" void cppaw_skala_model_set_block(void *handle, const int block) {
+  static_cast<SkalaModel *>(handle)->block = block;
+}
+
+extern "C" void cppaw_skala_model_cache_stats(void *handle, int64_t *stats) {
+  const auto &model = *static_cast<SkalaModel *>(handle);
+  stats[0] = static_cast<int64_t>(model.cache_hits);
+  stats[1] = static_cast<int64_t>(model.cache_misses);
+  stats[2] = static_cast<int64_t>(model.cache_bytes);
 }
 
 extern "C" void *cppaw_skala_dict_create() {
@@ -257,7 +329,9 @@ extern "C" int cppaw_skala_model_evaluate_mode(void *model_handle,
     std::vector<std::string> leaf_keys;
     for (const auto &entry : input) {
       const std::string key = entry.key();
-      torch::Tensor value = entry.value().to(model.device);
+      const bool dynamic = key == "density" || key == "grad" || key == "kin";
+      torch::Tensor value = dynamic ? entry.value().to(model.device)
+                                   : constant_value(model, key, entry.value());
       if (is_differentiable_feature(key, geometry_derivatives != 0)) {
         value = value.detach().clone().set_requires_grad(true);
         leaves.push_back(value);

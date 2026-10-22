@@ -69,6 +69,9 @@ def main():
     parser.add_argument("--device", choices=("CPU", "CUDA"), default="CPU")
     parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
     parser.add_argument("--accelerated-grid", action="store_true")
+    parser.add_argument("--root-weight", type=float, default=1.)
+    parser.add_argument("--unpacked", action="store_true")
+    parser.add_argument("--auto-balance", action="store_true")
     parser.add_argument("--ranks", type=int, nargs="+", default=[1, 2, 3, 4])
     parser.add_argument("--modes", nargs="+", choices=("electronic", "forces", "stress"),
                         default=["electronic", "forces", "stress"])
@@ -79,6 +82,10 @@ def main():
     parser.add_argument("--angular", type=int, default=11)
     parser.add_argument("--cache-mib", type=int, default=256)
     args = parser.parse_args()
+    if not math.isfinite(args.root_weight) or not .25 <= args.root_weight <= 16.:
+        parser.error("Root weight must lie in 0.25..16")
+    if args.auto_balance and (args.device != "CUDA" or args.steps < 4):
+        parser.error("Auto balance needs central CUDA inference and at least four steps")
     if min(*args.ranks, args.steps, args.repeats, args.radial, args.angular) < 1 or args.cache_mib < 0:
         parser.error("Need positive ranks, step and grid counts, and nonnegative cache budget")
     if args.accelerated_grid and (args.device != "CUDA" or args.gpu_mode == "off" or args.cache_mib == 0):
@@ -94,6 +101,10 @@ def main():
                CPPAW_SKALA_SOURCE_CACHE_MB=str(args.cache_mib), CPPAW_SKALA_PARTITION_CACHE_MB="256",
                CPPAW_SKALA_TORCH_THREADS="1", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                VECLIB_MAXIMUM_THREADS="1")
+    env.update(CPPAW_SKALA_POINT_ROOT_WEIGHT=str(args.root_weight),
+               CPPAW_SKALA_PACKED_EXCHANGE="0" if args.unpacked else "1")
+    if args.auto_balance:
+        env["CPPAW_SKALA_POINT_BALANCE"] = "1"
     if args.accelerated_grid:
         env.update(CPPAW_SKALA_SOURCE_FWD_ACC="1", CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS="1",
                    CPPAW_SKALA_SOURCE_BACK_ACC="1", CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS="1",
@@ -145,7 +156,8 @@ def main():
                             if min(gpu_rows[label]) == 0:
                                 raise ValueError(f"No actual GPU coverage: {label}")
                         reused = counters(text, "SOURCE GPU REUSED ROWS", args.steps, 1)
-                        if args.steps > 1 and min(row[0] for row in reused[1:]) == 0:
+                        warm = reused[3:] if args.auto_balance else reused[1:]
+                        if args.steps > 1 and min(row[0] for row in warm) == 0:
                             raise ValueError("No warm GPU geometry residency")
                         gpu_rows["SOURCE GPU REUSED ROWS"] = [row[0] for row in reused]
                         copies = 0

@@ -3,7 +3,7 @@
 program skala_bridge_smoke
   use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
   use, intrinsic :: iso_fortran_env, only : int64, real64
-  use paw_skala_bridge, only : paw_skala_evaluate, paw_skala_load, paw_skala_model
+  use paw_skala_bridge, only : paw_skala_evaluate, paw_skala_load, paw_skala_model, paw_skala_cache_stats
   implicit none
 
   integer, parameter :: natom = 2, points_per_atom = 8, npoint = natom * points_per_atom
@@ -16,6 +16,7 @@ program skala_bridge_smoke
   real(real64), target :: grid_coord_deriv(npoint, 3), grid_weight_deriv(npoint)
   real(real64), target :: atom_coord_deriv(natom, 3), atomic_weight_deriv(npoint)
   integer(int64), target :: atomic_grid_sizes(natom)
+  integer(int64) :: cache_stats(3)
   real(real64), parameter :: fd_step = 1.0e-4_real64, fd_tolerance = 2.0e-5_real64
   real(real64), parameter :: repeat_tolerance = 2.0e-8_real64
   real(real64), parameter :: nontrivial_tolerance = 1.0e-12_real64
@@ -75,7 +76,7 @@ program skala_bridge_smoke
   call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
     & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
     & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
-    & atom_coord_deriv, atomic_weight_deriv)
+    & atom_coord_deriv, atomic_weight_deriv, block_id=1)
   if (status /= 0) then
     write (*, '(a)') "Skala evaluation failed: " // trim(message)
     stop 4
@@ -111,7 +112,7 @@ program skala_bridge_smoke
   call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
     & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
     & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
-    & atom_coord_deriv, atomic_weight_deriv)
+    & atom_coord_deriv, atomic_weight_deriv, block_id=1)
   if (status /= 0) then
     write (*, '(a)') "Skala repeat evaluation failed: " // trim(message)
     stop 4
@@ -120,6 +121,12 @@ program skala_bridge_smoke
     & grid_coord_deriv(6, 3), grid_weight_deriv(7), atom_coord_deriv(2, 3), &
     & atomic_weight_deriv(9)]
   repeat_error = max(abs(energy - repeat_energy), maxval(abs(repeat_values - analytic)))
+  call paw_skala_cache_stats(model, cache_stats)
+  if (cache_stats(3) > 0 .and. (cache_stats(1) /= 6 .or. cache_stats(2) /= 6)) then
+    write (*, '(a)') "Skala constant tensor cache failed exact reuse"
+    stop 9
+  end if
+  write (*, '(a,3i16)') "SKALA_BRIDGE_CACHE hits misses bytes=", cache_stats
   write (*, '(a,es12.4)') "SKALA_BRIDGE_REPEAT max absolute difference=", repeat_error
   if (repeat_error > repeat_tolerance) then
     write (*, '(a)') "Skala repeated evaluation is not reproducible"
@@ -143,7 +150,7 @@ program skala_bridge_smoke
     call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
       & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
       & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
-      & atom_coord_deriv, atomic_weight_deriv, geometry_derivatives=.false.)
+      & atom_coord_deriv, atomic_weight_deriv, geometry_derivatives=.false., block_id=1)
     if (status /= 0) then
       write (*, '(a)') "Skala electronic-only evaluation failed: " // trim(message)
       stop 9
@@ -226,7 +233,7 @@ contains
     real(real64), intent(out) :: current_energy
     call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
       & atom_coords, atomic_grid_weights, atomic_grid_sizes, current_energy, density_deriv, &
-      & grad_deriv, kin_deriv, status, message)
+      & grad_deriv, kin_deriv, status, message, block_id=1)
     if (status /= 0) then
       write (*, '(a)') "Skala finite-difference evaluation failed: " // trim(message)
       stop 6

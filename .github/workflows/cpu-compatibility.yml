@@ -64,7 +64,7 @@ jobs:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
         run: |
           make -C bin/Build_fast_parallel -f Makefile \
-            -f ../../tests/unittests/mpe_registry/driver.mk mpe-registry-test MPIEXEC=mpirun
+            -f ../../tests/unittests/mpe_registry/driver.mk mpe-registry-test skala-point-exchange-test MPIEXEC=mpirun
       - name: Check occupation-weighted PAW force derivatives
         run: |
           make -C bin/Build_fast -f Makefile \
