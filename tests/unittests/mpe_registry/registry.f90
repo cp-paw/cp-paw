@@ -5,6 +5,7 @@ program mpe_registry
   integer, allocatable :: color(:)
 
   call MPE$INIT
+  call MPE$SELECT('~')
   call MPE$QUERY('~', nt, me)
   allocate(color(nt))
   color = 1
