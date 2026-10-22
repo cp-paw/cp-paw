@@ -1655,6 +1655,10 @@ END MODULE MPE_MODULE
 !     == NODES OF THE CORRESPONDING GROUP                              ==
 !     ===================================================================
       CALL MPE$BROADCAST(CID,1,ICOLOR)
+!     Keep previously created communicators when the parent is not the tail.
+      DO WHILE(ASSOCIATED(THIS%NEXT))
+        THIS=>THIS%NEXT
+      END DO
       ALLOCATE(THIS%NEXT)
       THIS=>THIS%NEXT
       THIS%ID=NEWCID
