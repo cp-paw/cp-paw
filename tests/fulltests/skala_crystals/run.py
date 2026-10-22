@@ -75,7 +75,8 @@ def control(args, skala):
             f" !GENERIC TRACE=F DT={dt:.12e} NSTEP={steps} NWRITE={steps} "
             f"START={'F' if skala else 'T'} RSTRTTYPE='STATIC' AUTOCONV=1000 !END\n"
             + functional + f" !FOURIER EPWPSI={args.cutoff} CDUAL=2 !END\n"
-            " !PSIDYN MPSI=100 FRIC=0.005\n"
+            f" !PSIDYN FORCE={'T' if getattr(args, 'forces', False) else 'F'} STRESS=F "
+            "MPSI=100 FRIC=0.005\n"
             "  !AUTO FRIC(-)=0.3 FACT(-)=0.97 FRIC(+)=0.3 FACT(+)=1. !END\n"
             " !END\n!END\n!EOB\n")
 
@@ -160,6 +161,8 @@ def main():
     parser.add_argument("--mpi-ranks", type=int, default=1)
     parser.add_argument("--mpiexec", default="mpirun")
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--forces", action="store_true",
+                        help="Also evaluate nuclear forces at the fixed geometry")
     args = parser.parse_args()
     if min(args.pbe_steps, args.skala_steps, args.radial, args.angular,
            args.kmesh, args.image_shells, args.orientations, args.mpi_ranks) < 1:

@@ -70,6 +70,7 @@ electronic or quadrature convergence, nor end-to-end force/stress accuracy.
  APPLYONECENTER=T
  INTERPOLATEPARTITION=F
  DISTRIBUTEGPU=F
+ PARALLELGRID=T
  CHECK=F
 !END
 ```
@@ -81,6 +82,94 @@ experimental per-rank CUDA path. It can expose more GPU parallelism, but the
 Skala 1.1 float32 network produced rank-dependent adjoints when several MPI
 processes evaluated different atoms, so it is not the correctness default.
 CPU model inference remains distributed across MPI ranks.
+
+`PARALLELGRID=T` distributes reconstruction and adjoint backprojection over
+point ranges without splitting a model's atom block. For CPU inference, ranks
+first share atoms. When ranks outnumber atoms, additional ranks cooperate on
+the same atom's points. For central CUDA inference, all ranks share each atom's
+grid work and only MPI root evaluates the model. Inputs are gathered in their
+original row order and electronic adjoints are returned to their point owners.
+Empty point ranges and unequal group sizes are supported. `PARALLELGRID=F`
+retains the previous whole-atom CPU or root-only CUDA work distribution.
+`DISTRIBUTEGPU` remains independent and defaults to `F`.
+
+Point fields are packed into one reusable MPI message per peer and direction.
+`CPPAW_SKALA_PACKED_EXCHANGE=0` selects the original separate messages.
+`CPPAW_SKALA_POINT_ROOT_WEIGHT` sets the point-root share relative to each
+helper, from 0.25 to 16 (default 1). For central CUDA inference,
+`CPPAW_SKALA_POINT_BALANCE=1` optionally estimates reconstruction/backprojection
+throughput during two initial steps and sets one subsequent fixed weighting.
+It excludes inference and communication wait time. The single rebalancing can
+invalidate local geometry caches once. It is not continuous adaptation and is
+off by default. The report lists current/next weights and compute time per rank.
+
+The bridge reuses its host conversion/output workspaces, growing them only
+when a larger block arrives. `CPPAW_SKALA_TENSOR_CACHE_MB` bounds a separate
+per-model cache of constant Torch inputs (default 64 MiB, 0 disables it).
+It retains coordinates, energy/descriptor weights and block metadata on the
+model device, with independent host snapshots. Shapes, strides, types and exact
+host values are checked on every call. Changed geometry or quadrature replaces
+the corresponding entry, and least-recently-used entries are evicted as needed.
+The budget conservatively counts host/device payloads and per-entry overhead.
+Electronic density, gradient, positive tau and model adjoints are never reused
+between evaluations. Geometry derivatives still use fresh autograd leaves.
+Read-only tensor storage is borrowed until the synchronous model call returns,
+avoiding another device clone. `CPPAW_SKALA_COPY_INPUTS=1` restores explicit
+copies for diagnostic comparisons. Model inputs must not be mutated during
+evaluation.
+Coordinate, weight and block-size arguments passed to FTorch require
+contiguous storage. The Fortran interface enforces this also for array
+sections, using compiler-managed temporary storage when necessary.
+
+`CPPAW_SKALA_BATCH_ATOMS=2` optionally combines complete atom blocks into one
+central CUDA model call. Values from 1 to 8 are supported, with default 1.
+Each block keeps its own grid sizes, coordinates and descriptor normalization.
+The nonlinear model never sees an arbitrary point fragment as an atom.
+`CPPAW_SKALA_BATCH_MAX_POINTS` limits the sum of points per batch (default
+262144). An individual oversized atom remains intact and runs alone. CPU and
+distributed-GPU inference keep the single-block path. Batching increases peak
+host/device memory and is not an automatic performance recommendation.
+Float32 network kernels can change with batch shape. Validate energy and all
+required adjoints for the intended system before using this experimental mode.
+The strict parity driver rejects a batch that exceeds its original bounds.
+Profiling attributes the common batch call equally to its constituent atoms
+and includes both the gathering/reconstruction and adjoint phases.
+
+`CPPAW_SKALA_SAMPLE_BATCH=1` additionally caches interpolation stencils and
+samples smooth density, gradient and positive tau in one pass. When geometry
+derivatives are needed, their sampled spatial derivatives are retained for
+the same evaluation instead of traversing the stencil again. A separate
+`CPPAW_SKALA_SAMPLE_CACHE_MB` budget defaults to 256 MiB per rank for stencil
+storage. Geometry, cell, native-grid dimensions and local point ranges are
+part of its key. Unavailable cache space or workspace allocation selects the
+original pointwise path. Dynamic primitive fields are recomputed every step.
+
+In an OpenACC build, `CPPAW_SKALA_SAMPLE_ACC=1` enables its optional GPU kernel.
+The eligible point root uploads smooth input fields once per electronic step
+and retains them across atom blocks. CPU helpers keep their own point ranges.
+No sampling GPU is used in ordinary GNU builds. Both sampling switches default
+to off. This is not yet a transfer-free reconstruction/model/backprojection
+pipeline. Sampled fields and model adjoints still cross the host boundary.
+
+This does not distribute LibTorch inference within an atom or remove the
+replicated smooth global grid and complete-block model buffers. Geometry
+caches are local to each worker's point range and retain their existing
+memory limits. The `SKALA:EXCHANGE` timer separates point communication from
+reconstruction, model inference and adjoint work. With `CHECK=T`, the protocol
+also lists processed points and model calls per MPI rank. Every target atom
+must occur exactly once per step in the reported model-block count. With
+batching, several blocks share a call. Conventional one-center augmentation
+also remains atom-parallel when `PARALLELGRID=T`, independently of which rank
+runs the Skala model.
+
+For fixed-geometry electronic minimization and energy comparisons, explicitly
+set `!PSIDYN FORCE=F STRESS=F`. CP-PAW then omits the force/stress-only
+reconstruction and asks Torch only for density, gradient and positive-tau
+derivatives. Model coordinates and both weight tensors retain their physical
+values but do not require gradients. Nuclear forces and stress remain
+available through the usual controls and request all necessary model adjoints.
+The crystal comparison driver uses the electronic-only mode by default and
+accepts `--forces` to restore force evaluation.
 
 `CHECK=T` reports the one-center density-matrix/primitive contraction identity.
 The source and image-kernel unit tests separately check their finite-difference

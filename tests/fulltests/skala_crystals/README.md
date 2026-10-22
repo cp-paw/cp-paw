@@ -1,5 +1,10 @@
 # Periodic Skala integration probes
 
+The fixed-geometry workflow defaults to `FORCE=F STRESS=F` for both PBE and
+Skala. Electronic minimization still evaluates all density, gradient and
+kinetic-energy-density derivatives. Use `--forces` to include nuclear forces.
+This option does not enable atomic dynamics or a cell optimization.
+
 The CO2, NH3 and urea cells are copied without coordinate changes from
 `native-grid-skala-benchmarks/benchmarks/X23-mini/reference`, commit
 `ed13cc452542e161a08eb698221b52a56f6c3c47` (the CP2K native-grid Skala

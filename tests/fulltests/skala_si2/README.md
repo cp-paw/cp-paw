@@ -477,3 +477,73 @@ run it in a new output directory with the environment prefix
 `CPPAW_SKALA_SOURCE_BACK_ACC_TILE_ROWS=512` to check larger tiles. Keep the
 original numerical bound and check actual device row coverage. Larger
 scratch arrays may exhaust the 1 MiB test budget for larger partial-wave spaces.
+
+# Cooperative point-grid parity
+
+`parallel_grid.py` compares `PARALLELGRID=F` and `T` from the same fixed
+restart. It checks complete-block model call counts, work per rank, energies,
+electronic restart records, and requested forces and stress. CPU runs with
+three or four ranks exercise unequal point groups and more ranks than atoms.
+CUDA runs retain central inference while distributing host grid work.
+
+```sh
+python tests/fulltests/skala_si2/parallel_grid.py \
+  --executable /path/to/parallel-paw --model /path/to/model.fun \
+  --restart /path/to/si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-results --device CPU --ranks 1 2 3 4
+```
+
+Use `--device CUDA` and the matching CUDA model export for a CUDA-capable
+bridge. By default, these tests disable other PAW GPU libraries to isolate
+Skala. `--gpu-mode resident --accelerated-grid` additionally exercises the
+combined build's GPU source reconstruction, source adjoints, geometry
+residency and grid backprojection. It forces small-grid thresholds for this
+test only and requires positive GPU source-row coverage, not silent fallback.
+`--repeats 2` repeats short timing probes.
+The default coarse grid and two tiny steps test implementation parity, not
+physical convergence or performance on molecular crystals. All modes start
+from the same restart and leave its source files unchanged. JSON provenance
+and results remain in the selected output directory, outside version control.
+The default `--dt 0.001` keeps electronic changes small without amplifying
+constraint roundoff through an extremely small `DT**2/MPSI`. Raw wavefunction
+and multiplier comparisons retain their original numerical bounds.
+
+`--legacy-uncached` disables packing, constant-tensor reuse and smooth-grid
+batching in the reference cases. Add `--sample-batch` to test the CPU stencil
+cache and single-pass value/Jacobian sampling. `--sample-gpu` additionally
+requires the central CUDA rank to perform its sampling on device.
+`--root-weight 4` exercises unequal point shares. `--auto-balance --steps 4`
+tests the one-time throughput-based repartition and subsequent cache warmup.
+Neither changes model atom-block boundaries. `--unpacked` retains the old MPI
+field messages, and `--tensor-cache-mib 0` disables constant-tensor reuse.
+
+`--batch-atoms 2` tests optional native batching of complete atom blocks on
+central CUDA. `--max-batch-points` exercises bounded grouping without splitting
+an atom. `--cutoff` and `--density-dual` allow use of compatible crystal restart
+bases. Use a separate output directory for each study and keep source seeds
+unchanged. `model_batch_parity.py --model /path/to/model.fun --device cpu`
+checks model energies and all seven first-adjoint groups for synthetic batches
+of 2, 4 and 8 independent complete blocks. Use the matching CUDA export with
+`--device cuda`. The bridge smoke test independently compares two complete
+blocks with separate calls, including returned per-block energies.
+
+# Electronic relaxation search
+
+`relaxation_sweep.py` compares explicit `--setting DT MASS MASS_G2 FRICTION`
+tuples from the same unmodified restart, model and geometry. It inherits the
+stationary-force driver's quadrature and residual settings. Defaults use 20
+electronic-only warmup steps followed by five full-derivative validation steps
+per block. All candidates run sequentially. Selection requires a passed final
+residual/commutator window, identical occupations and mutually consistent
+endpoint energies. Only then are validated step counts and elapsed time ranked.
+Unconverged candidates cannot justify new minimization defaults. This search
+does not certify the global electronic minimum or replace CP2K reference checks.
+
+```sh
+python tests/fulltests/skala_si2/relaxation_sweep.py \
+  --executable /path/to/paw --model /path/to/model.fun \
+  --restart /path/to/si2.rstrt --structure /path/to/si2.strc \
+  --output /path/to/new-relaxation-results --device CUDA --gpu-mode resident \
+  --setting 5 25 0.3166286988823056 0.05 \
+  --setting 2.5 25 0.3166286988823056 0.2
+```
