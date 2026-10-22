@@ -1,3 +1,4 @@
+MPIEXEC ?= mpirun
 .PHONY: mpe-registry-test
 mpe-registry-test: paw.x
 	mkdir -p unit-tests
