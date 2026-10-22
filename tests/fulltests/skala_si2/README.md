@@ -504,3 +504,12 @@ The default coarse grid and two tiny steps test implementation parity, not
 physical convergence or performance on molecular crystals. All modes start
 from the same restart and leave its source files unchanged. JSON provenance
 and results remain in the selected output directory, outside version control.
+
+`--legacy-uncached` disables packing, constant-tensor reuse and smooth-grid
+batching in the reference cases. Add `--sample-batch` to test the CPU stencil
+cache and single-pass value/Jacobian sampling. `--sample-gpu` additionally
+requires the central CUDA rank to perform its sampling on device.
+`--root-weight 4` exercises unequal point shares. `--auto-balance --steps 4`
+tests the one-time throughput-based repartition and subsequent cache warmup.
+Neither changes model atom-block boundaries. `--unpacked` retains the old MPI
+field messages, and `--tensor-cache-mib 0` disables constant-tensor reuse.

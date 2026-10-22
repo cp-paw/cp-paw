@@ -80,7 +80,7 @@ jobs:
       - name: Check one-center primitive quadrature and derivatives
         run: |
           make -C bin/Build_fast -f Makefile \
-            -f ../../tests/unittests/skala_reconstruction/driver.mk skala-primitives-test
+            -f ../../tests/unittests/skala_reconstruction/driver.mk skala-primitives-test skala-sampling-test
       - name: Check optional and required nuclear forces
         run: |
           python3 tests/unittests/force_selection/test_paw_records.py

@@ -72,6 +72,10 @@ def main():
     parser.add_argument("--root-weight", type=float, default=1.)
     parser.add_argument("--unpacked", action="store_true")
     parser.add_argument("--auto-balance", action="store_true")
+    parser.add_argument("--sample-batch", action="store_true")
+    parser.add_argument("--sample-gpu", action="store_true")
+    parser.add_argument("--tensor-cache-mib", type=int, default=64)
+    parser.add_argument("--legacy-uncached", action="store_true")
     parser.add_argument("--ranks", type=int, nargs="+", default=[1, 2, 3, 4])
     parser.add_argument("--modes", nargs="+", choices=("electronic", "forces", "stress"),
                         default=["electronic", "forces", "stress"])
@@ -86,6 +90,8 @@ def main():
         parser.error("Root weight must lie in 0.25..16")
     if args.auto_balance and (args.device != "CUDA" or args.steps < 4):
         parser.error("Auto balance needs central CUDA inference and at least four steps")
+    if args.tensor_cache_mib < 0 or (args.sample_gpu and not args.sample_batch):
+        parser.error("Need a nonnegative tensor-cache budget and batched sampling for sample GPU")
     if min(*args.ranks, args.steps, args.repeats, args.radial, args.angular) < 1 or args.cache_mib < 0:
         parser.error("Need positive ranks, step and grid counts, and nonnegative cache budget")
     if args.accelerated_grid and (args.device != "CUDA" or args.gpu_mode == "off" or args.cache_mib == 0):
@@ -102,7 +108,10 @@ def main():
                CPPAW_SKALA_TORCH_THREADS="1", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                VECLIB_MAXIMUM_THREADS="1")
     env.update(CPPAW_SKALA_POINT_ROOT_WEIGHT=str(args.root_weight),
-               CPPAW_SKALA_PACKED_EXCHANGE="0" if args.unpacked else "1")
+               CPPAW_SKALA_PACKED_EXCHANGE="0" if args.unpacked else "1",
+               CPPAW_SKALA_TENSOR_CACHE_MB=str(args.tensor_cache_mib),
+               CPPAW_SKALA_SAMPLE_BATCH="1" if args.sample_batch else "0",
+               CPPAW_SKALA_SAMPLE_ACC="1" if args.sample_gpu else "0")
     if args.auto_balance:
         env["CPPAW_SKALA_POINT_BALANCE"] = "1"
     if args.accelerated_grid:
@@ -138,8 +147,12 @@ def main():
                     command = [args.mpiexec, "-np", str(ranks), str(inputs["executable"]), "si2.cntl"]
                     print("Running " + name, flush=True)
                     start = time.monotonic()
+                    current_env = dict(env)
+                    if not parallel and args.legacy_uncached:
+                        current_env.update(CPPAW_SKALA_TENSOR_CACHE_MB="0", CPPAW_SKALA_SAMPLE_BATCH="0",
+                                           CPPAW_SKALA_SAMPLE_ACC="0", CPPAW_SKALA_PACKED_EXCHANGE="0")
                     with (work / "stdout.log").open("w") as out, (work / "stderr.log").open("w") as err:
-                        subprocess.run(command, cwd=work, env=env, stdout=out, stderr=err,
+                        subprocess.run(command, cwd=work, env=current_env, stdout=out, stderr=err,
                                        timeout=600, check=True)
                     elapsed = time.monotonic()-start
                     text = (work / "si2.prot").read_text()
@@ -150,6 +163,14 @@ def main():
                     rows = counters(text, "GRID POINTS PER MPI RANK", args.steps, ranks)
                     calls = counters(text, "MODEL CALLS PER MPI RANK", args.steps, ranks)
                     gpu_rows = {}
+                    if args.sample_batch and (parallel or not args.legacy_uncached):
+                        sampled = counters(text, "SMOOTH SAMPLE BATCH ROWS", args.steps, 1)
+                        if [row[0] for row in sampled] != [sum(row) for row in rows]:
+                            raise ValueError("Incomplete batched smooth-grid sampling")
+                        if args.sample_gpu:
+                            sampled = counters(text, "SMOOTH SAMPLE GPU ROWS", args.steps, 1)
+                            if [row[0] for row in sampled] != [row[0] for row in rows]:
+                                raise ValueError("GPU smooth-grid sampling missed root-owned points")
                     if args.accelerated_grid:
                         for label in ("SOURCE GPU FORWARD ROWS", "SOURCE GPU REVERSE ROWS"):
                             gpu_rows[label] = [row[0] for row in counters(text, label, args.steps, 1)]
