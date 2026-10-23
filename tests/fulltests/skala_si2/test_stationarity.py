@@ -1,3 +1,4 @@
+import math
 import unittest
 
 import stationarity
@@ -70,6 +71,33 @@ SKALA WEIGHTED MULTIPLIER HERMITICITY 7e-17
                      row + base):
             with self.subTest(text=text), self.assertRaises(ValueError):
                 stationarity.band_records(text)
+
+    def test_roundoff_empty_states_do_not_set_occupied_maximum(self):
+        for weight in (1., 0.25, 1.e-8):
+            base = protocol(rms="0.2", maximum="0.2", commutator="0.03")
+            base += f"{stationarity.OCCUPATION_CUTOFF} {math.ulp(1.0):.14e}\n"
+            base += f"SKALA BAND RESIDUAL 1 1 1 {weight} 0.2 -1.0 0.03\n"
+            base += f"SKALA BAND RESIDUAL 1 1 2 {weight*math.ulp(1.0)/4} 0.4 0.5 0.03\n"
+            detail = stationarity.band_records(base)
+            self.assertEqual(len(detail[0]["bands"]), 2)
+            # Finite fractional populations must not be rounded away.
+            fractional = base.replace(f"{weight*math.ulp(1.0)/4}", f"{weight*1.e-10}")
+            with self.assertRaisesRegex(ValueError, "aggregate"):
+                stationarity.band_records(fractional)
+        legacy = protocol(rms="0.2", maximum="0.4", commutator="0.03")
+        legacy += "SKALA BAND RESIDUAL 1 1 1 1.0 0.2 -1.0 0.03\n"
+        legacy += "SKALA BAND RESIDUAL 1 1 2 5e-17 0.4 0.5 0.03\n"
+        stationarity.band_records(legacy)
+
+    def test_occupation_cutoff_cannot_hide_fractional_bands(self):
+        base = protocol(rms="0.2", maximum="0.2", commutator="0.03")
+        base += "SKALA BAND RESIDUAL 1 1 1 1.0 0.2 -1.0 0.03\n"
+        for value in ("NaN", "-1e-16", "1e-8", "0.1", "Inf"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                stationarity.band_records(base + f"{stationarity.OCCUPATION_CUTOFF} {value}\n")
+        line = f"{stationarity.OCCUPATION_CUTOFF} {math.ulp(1.0):.14e}\n"
+        with self.assertRaises(ValueError):
+            stationarity.band_records(base + line + line)
 
     def test_warm_reference_meets_explicit_limits(self):
         result = stationarity.validate(stationarity.records(protocol()),
