@@ -3,6 +3,12 @@
 .PHONY: skala-source-forward-test
 .PHONY: skala-source-resident-unit skala-source-resident-test
 .PHONY: skala-sampling-test skala-sampling-gpu-test
+.PHONY: skala-descriptor-grid-test
+
+skala-descriptor-grid-test: libpawfull.a
+	mkdir -p unit-tests
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/descriptor_grid.x $(BASEDIR)/tests/unittests/skala_reconstruction/descriptor_grid.f90 libpawfull.a $(LIBS)
+	./unit-tests/descriptor_grid.x
 
 skala-sampling-test: libpaw.a
 	mkdir -p unit-tests
@@ -76,7 +82,8 @@ skala-reconstruction-test: libpaw.a skala-source-resident-unit
 	grep -qx '0' unit-tests/source_cache_off.log
 	CPPAW_SKALA_SOURCE_CACHE_MB=256 ./unit-tests/skala_reconstruction.x limit > unit-tests/source_cache_limit.log
 	grep -qx '268435456' unit-tests/source_cache_limit.log
-	@if GFORTRAN_UNBUFFERED_ALL=1 CPPAW_SKALA_SOURCE_CACHE_MB=invalid ./unit-tests/skala_reconstruction.x limit > unit-tests/source_cache_invalid.log 2>&1; then exit 1; fi
+	@status=0; GFORTRAN_UNBUFFERED_ALL=1 CPPAW_SKALA_SOURCE_CACHE_MB=invalid ./unit-tests/skala_reconstruction.x limit > unit-tests/source_cache_invalid.log 2>&1 || status=$$?; \
+	  test "$$status" -gt 0 && test "$$status" -lt 128
 	grep -q 'CPPAW_SKALA_SOURCE_CACHE_MB MUST BE A NONNEGATIVE INTEGER' unit-tests/source_cache_invalid.log
 
 # Requires an OpenACC build and a visible NVIDIA GPU. The row oracle covers

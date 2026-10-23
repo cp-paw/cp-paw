@@ -24,6 +24,15 @@ def wave_restart():
 
 
 class StationaryStressTest(unittest.TestCase):
+    def test_global_grid_size_excludes_parallel_work_counts(self):
+        text = "#(G-VECTORS FOR DENSITY)...: 570\nGRID POINTS 4096\n"
+        workload = "GRID POINTS PER MPI RANK 100 100\n"
+        self.assertEqual(stress.grid_signature(text + workload * 3), [570, 4096])
+        for invalid in (text + "GRID POINTS 4096\n", text.replace("4096", "bad"),
+                        text.replace("GRID POINTS 4096\n", workload)):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                stress.grid_signature(invalid)
+
     def test_affine_transform_changes_all_geometry_levels_only(self):
         data = restart()+wave_restart()
         matrix = stress.direction("xy")
