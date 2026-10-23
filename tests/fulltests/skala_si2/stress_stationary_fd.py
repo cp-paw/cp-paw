@@ -51,7 +51,8 @@ def grid_signature(text):
     labels = ("#(G-VECTORS FOR DENSITY)", "GRID POINTS")
     values = []
     for label in labels:
-        rows = [line for line in text.splitlines() if line.startswith(label)]
+        rows = [line for line in text.splitlines() if line.startswith(label)
+                and not line.startswith("GRID POINTS PER MPI RANK")]
         if len(rows) != 1:
             raise ValueError("Missing or duplicate grid-size diagnostic")
         value = rows[0].split()[-1]
