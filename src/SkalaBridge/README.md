@@ -48,7 +48,7 @@ the PAW projector response. The smooth scalar adjoint is also contracted with
 the translated pseudo-core densities after Skala inference; this contribution
 cannot be taken from the earlier conventional-XC potential. Analytic stress is
 available when CP-PAW requests cell stress. It includes the model-coordinate,
-energy partition, independent descriptor-window, interpolated smooth-field,
+energy partition, unpartitioned descriptor-grid, interpolated smooth-field,
 all-source, pseudo-core, positive-tau, and existing PAW projector responses.
 The new mapped radial grid has fixed Cartesian offsets and base weights, so
 there is no affine local-quadrature volume factor or radial-blend derivative.
@@ -324,20 +324,20 @@ It is derived from the occupied setup core orbitals, not the Laplacian-gauge
 kinetic-energy density. Collinear total/spin fields are converted to up/down
 channels after reconstruction; the core is unpolarized.
 
-Energy weights are `w*p_A0`, where `p_A0` uses the target-specific fixed image
-layout of all atoms. Descriptor weights are `w*T(d_A)`, with `d_A` recomputed
-from the target's self images only and a quintic taper from `1e-12` to `1e-11`.
-The descriptor window must not be obtained by tapering the all-atom energy
-partition. Rows with zero energy weight can still contribute to descriptors.
-Neither weight multiplies the physical rho, gradient or tau. The partition
-uses shifts +/-1 around each source image nearest the target; field images
-are enumerated separately from the actual source support, not that fixed shell.
+Energy weights are `w*p_A0`, where `p_A0` is a compact, periodically normalized
+Becke weight. Descriptor weights are the unpartitioned radial/angular weights
+`w`. The model integrates Gaussian radial kernels against the periodic fields
+over the complete atom-centered grid. An additional self-image window would
+truncate that convolution at a cell-dependent distance. Rows with zero energy
+weight therefore remain in the descriptor block. Neither weight multiplies
+the physical rho, gradient or tau. Field images are enumerated separately
+from the actual source support, not from the partition's fixed image shell.
 
 All source density-matrix adjoints are accumulated across target blocks and
 MPI ranks before building any one-center Hamiltonian. The reconstruction,
 matrix adjoint and spatial derivatives use the same radial interpolation
 polynomial. Forces include target and source motion; strain also includes
-source-image translations and the independent self-image window derivative.
+source-image translations and the periodic energy-partition derivative.
 
 This differs from both separate conventional one-center XC corrections and a
 literal copy of CP2K's GAPW implementation. Nonlinear Skala features are formed
@@ -478,7 +478,7 @@ and native-grid interpolation must be converged, especially around foreign
 nuclei. A finite electron-count error is reported rather than normalized away.
 
 `IMAGESHELLS` independently controls the compact periodic support for the
-energy partition and self-image descriptor window. Its default of one shell
+energy partition, not the descriptor domain. Its default of one shell
 is a starting point, not a converged periodic quadrature. The reconstructed
 source fields instead include every image within their radial support.
 Converge the image support independently of radial/angular resolution.

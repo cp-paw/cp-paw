@@ -18,6 +18,7 @@ LABELS = {
 }
 NUMBER = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[EeDd][-+]?\d+)?")
 BAND_HEADER = "SKALA BAND RESIDUAL"
+OCCUPATION_CUTOFF = "SKALA RESIDUAL OCCUPATION REL CUTOFF"
 MULTIPLIER_LABELS = {
     "SKALA FORCE MULTIPLIER MISMATCH": "force",
     "SKALA LEGACY MULTIPLIER MISMATCH": "legacy",
@@ -96,6 +97,14 @@ def band_records(text):
             current = {"step": int(line[len(HEADER):].strip()), "bands": []}
             result.append(current)
             keys = set()
+        if line.startswith(OCCUPATION_CUTOFF):
+            raw = line[len(OCCUPATION_CUTOFF):].strip()
+            if current is None or "occupation_relative_cutoff" in current or not NUMBER.fullmatch(raw):
+                raise ValueError("Invalid or duplicate residual occupation cutoff")
+            value = float(raw.replace("D", "E").replace("d", "e"))
+            if not math.isfinite(value) or not 0 <= value <= math.ulp(1.0) * (1 + 1e-12):
+                raise ValueError("Residual occupation cutoff exceeds double-precision roundoff")
+            current["occupation_relative_cutoff"] = value
         if not line.startswith(BAND_HEADER):
             continue
         fields = line[len(BAND_HEADER):].split()
@@ -115,7 +124,13 @@ def band_records(text):
             (*indices, *values))))
     for detail, total in zip(result, aggregate):
         rows = detail["bands"]
-        occupied = [row for row in rows if row["occupation"] > 0]
+        relative_cutoff = detail.get("occupation_relative_cutoff", 0.0)
+        maxima = {}
+        for row in rows:
+            group = row["kpoint"], row["spin"]
+            maxima[group] = max(maxima.get(group, 0.0), row["occupation"])
+        occupied = [row for row in rows if row["occupation"] >
+                    relative_cutoff * maxima[row["kpoint"], row["spin"]]]
         if not occupied:
             raise ValueError("Missing occupied-band details; set CPPAW_SKALA_SCF_DETAIL=1")
         groups = {(row["kpoint"], row["spin"]) for row in rows}
