@@ -3,6 +3,12 @@
 .PHONY: skala-source-forward-test
 .PHONY: skala-source-resident-unit skala-source-resident-test
 .PHONY: skala-sampling-test skala-sampling-gpu-test
+.PHONY: skala-descriptor-grid-test
+
+skala-descriptor-grid-test: libpawfull.a
+	mkdir -p unit-tests
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/descriptor_grid.x $(BASEDIR)/tests/unittests/skala_reconstruction/descriptor_grid.f90 libpawfull.a $(LIBS)
+	./unit-tests/descriptor_grid.x
 
 skala-sampling-test: libpaw.a
 	mkdir -p unit-tests
