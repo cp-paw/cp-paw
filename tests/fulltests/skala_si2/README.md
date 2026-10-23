@@ -103,6 +103,11 @@ maximum occupation-commutator element. Use `stationarity.py --bands` to read
 these records and verify their weighted RMS and maxima against the aggregate
 diagnostics. Empty-state residuals are reported but do not enter the occupied
 RMS or maximum. This opt-in diagnostic does not change propagation.
+Numerically empty occupations at or below one double-precision epsilon times
+the largest occupation in their k-point/spin block are excluded from the
+occupied residual aggregates. Their band details and the original occupations
+are retained. The protocol reports this relative cutoff explicitly, and the
+parser preserves the original positive-occupation rule for older protocols.
 
 A PBE restart must have the same cell, positions, k mesh, band layout and
 Fourier basis as the Skala probe. A small time step preserves that starting
