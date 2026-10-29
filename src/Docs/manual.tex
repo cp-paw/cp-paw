@@ -1076,6 +1076,46 @@ at short distances.}
 
 
 %----------------------------------------------------------------------
+\block{!CONTROL!DFT!SCAN}
+%----------------------------------------------------------------------
+\brules{optional, incompatible with SKALA}
+\bdescr{Selects native SCAN exchange and correlation on the joint periodic
+PAW atom grid. No model file, Torch installation, LibXC library or GPU is
+required. The parent DFT settings remain the auxiliary reference for atomic
+setup construction. For example, TYPE=10 constructs PBE reference setups,
+but the solid or molecule uses the complete SCAN XC energy and operator.
+Native SCAN atomic setup generation is not implemented.
+
+The functional receives reconstructed spin densities, gradients and positive
+kinetic energy densities. Quadrature weights are applied to the local energy
+and its first derivatives, not to these physical fields. The isolated
+frozen-core SCAN XC energy is subtracted as a constant, consistently with
+the conventional CP-PAW valence-energy reference. Its value and the raw
+reconstructed XC energy are reported separately. Higher numerical SCAN
+derivatives are not used in this path.
+
+The full smooth, kinetic-density and one-center operators are mandatory.
+MODEL, DEVICE, DEVICEINDEX, DISTRIBUTEGPU=T and VDW=T are rejected.
+Input files without this block retain the conventional XC implementation.
+This joint reconstructed-density path is under validation. Numerical
+quadrature convergence and independent physical reference calculations
+must be checked for each intended application.}
+
+\mbax{\key{RADIALPOINTS}
+\vdescr{Number of radial quadrature points per atom.}
+\vformat{integer} \vrules{optional, positive} \vdefault{200}}
+
+\mbax{\key{LEBEDEVEXACTNESS}
+\vdescr{Angular exactness of the Lebedev rule. Exactness 53 uses 974 points.}
+\vformat{integer} \vrules{optional, supported Lebedev rule} \vdefault{53}}
+
+\mbax{\key{CHECK}
+\vdescr{Reports reconstructed charges, kinetic energy densities, operator
+norms and the native SCAN energy decomposition. This is diagnostic output,
+not an electronic convergence or correctness criterion.}
+\vformat{logical} \vrules{optional} \vdefault{F}}
+
+%----------------------------------------------------------------------
 \block{!CONTROL!DFT!NTBO}
 %----------------------------------------------------------------------
 \brules{optional} \bdescr{Experimental option. Do not use!  Constructs

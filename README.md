@@ -91,6 +91,56 @@ installation, quadrature and cache controls, and optional Si2 and crystal
 verification. Finite-difference checks establish derivative consistency,
 not agreement of the functional implementation with an independent reference.
 
+## Optional native SCAN functional
+
+The native Fortran SCAN kernel can use the same joint periodic PAW
+reconstruction and adjoint as Skala. It requires neither a model file nor
+PyTorch, FTorch, LibXC or a GPU at runtime. A conventional `fast` or
+`fast_parallel` build includes this opt-in path.
+
+```text
+!DFT TYPE=10
+ !SCAN RADIALPOINTS=200 LEBEDEVEXACTNESS=53 CHECK=T !END
+!END
+```
+
+Here `TYPE=10` selects the PBE reference for atomic setup construction.
+The `SCAN` block replaces the solid or molecule XC energy and its complete
+operator, including the positive kinetic-energy-density contribution.
+It does not add SCAN on top of PBE. Collinear spin-polarized calculations
+are supported. Native SCAN atomic setup generation is not provided.
+
+The physical spin densities, gradients and positive kinetic energy densities
+are reconstructed before the local functional is evaluated. Quadrature
+weights multiply the resulting energy and derivatives, not its inputs.
+The isolated frozen-core SCAN XC energy is subtracted as a constant to
+retain CP-PAW's valence-energy convention. The protocol reports both the
+reconstructed energy and this reference. Skala's existing energy convention
+is unchanged.
+
+The complete smooth, tau and one-center operators are mandatory. Native
+SCAN rejects model/device settings, disabled operator contributions and
+`VDW=T`, which would otherwise select the auxiliary PBE dispersion parameters.
+Conventional input files without a `SCAN` or `SKALA` block are unchanged.
+
+Run the kernel, independent LibXC-reference and backend tests with
+
+```sh
+bash tests/unittests/scan/run.sh bin/Build_fast
+python3 tests/unittests/scan/input_checks.py bin/fast/paw_fast.x
+```
+
+`tests/fulltests/scan_si2/run.py` audits an existing restart, while
+`tests/fulltests/scan_si2/relax.py` requires explicit orbital-residual and
+occupation-commutator convergence. The shared orbital, force and stress
+verification drivers accept `--functional scan` without a model file.
+Their finite-difference tests establish derivative consistency, not
+independent physical accuracy. Joint reconstructed-density SCAN remains
+under validation, particularly for quadrature and basis convergence and
+comparison with independently converged calculations. The retained
+numerical second- and third-derivative kernel entry points are diagnostic
+and are not used by this PAW path.
+
 ## License
 
 The CP-PAW code is distributed under the GNU Public License Version 3.

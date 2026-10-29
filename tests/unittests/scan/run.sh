@@ -2,7 +2,7 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)
 if [ "$#" -gt 0 ]; then
-  "${MAKE:-make}" -C "$1" -f Makefile -f "$root/tests/unittests/scan/driver.mk" scan-test
+  "${MAKE:-make}" -C "$1" -f Makefile -f "$root/tests/unittests/scan/driver.mk" scan-test scan-backend-test
 else
   work=$(mktemp -d "${TMPDIR:-/tmp}/scan-kernel.XXXXXX")
   trap 'rm -rf "$work"' EXIT HUP INT TERM

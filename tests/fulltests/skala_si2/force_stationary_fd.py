@@ -173,11 +173,19 @@ def control(args, *, electronic_only=False, steps=None):
     steps = args.block_steps if steps is None else steps
     dual = getattr(args, "density_dual", 2.)
     dual_text = "2" if dual == 2. else f"{dual:.16e}"
+    functional = getattr(args, "functional", "skala")
+    xc = "!SCAN" if functional == "scan" else f"!SKALA MODEL='model.fun' DEVICE='{args.device}'"
+    setup_path = getattr(args, "setups", None)
+    files = ""
+    if setup_path is not None:
+        if "'" in str(setup_path):
+            raise ValueError("The setup path cannot contain a single quote")
+        files = f" !FILES !FILE ID='PARMS_STP' NAME='{Path(setup_path).resolve()}' !END !END\n"
     return f"""!CONTROL
- !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={steps} NWRITE=10 START=F
+{files} !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={steps} NWRITE=10 START=F
           RSTRTTYPE='STATIC' AUTOCONV=1000 !END
  !DFT TYPE=10
-  !SKALA MODEL='model.fun' DEVICE='{args.device}'
+  {xc}
    RADIALPOINTS={args.radial_points} LEBEDEVEXACTNESS={args.lebedev_exactness}
    LEBEDEVORIENTATIONS=1 IMAGESHELLS=1 APPLY=T CHECK=T
   !END
@@ -215,14 +223,15 @@ def run_leg(name, delta, args, inputs, env):
                 block = work / f"{phase}-{index + 1}"
                 block.mkdir()
                 (block / "si2.cntl").write_text(control(args, electronic_only=electronic_only, steps=steps))
-                (block / "model.fun").symlink_to(inputs["model"])
+                if "model" in inputs:
+                    (block / "model.fun").symlink_to(inputs["model"])
                 shutil.copy2(inputs["structure"], block / "si2.strc")
                 if restart is None:
                     (block / "si2.rstrt").write_bytes(initial)
                 else:
                     shutil.copy2(restart, block / "si2.rstrt")
-                write_json(block / "inputs.json", {key: digest(block / key)
-                           for key in ("si2.cntl", "si2.rstrt", "si2.strc", "model.fun")})
+                names = ("si2.cntl", "si2.rstrt", "si2.strc") + (("model.fun",) if "model" in inputs else ())
+                write_json(block / "inputs.json", {key: digest(block / key) for key in names})
                 print(f"Running {name}, {phase} {index + 1}: {block}", flush=True)
                 with (block / "stdout.log").open("w") as out, (block / "stderr.log").open("w") as err:
                     subprocess.run([str(inputs["executable"]), "si2.cntl"], cwd=block,
@@ -254,8 +263,11 @@ def run_leg(name, delta, args, inputs, env):
 
 
 def add_relaxation_arguments(parser):
-    for name in ("executable", "model", "restart", "structure", "output"):
+    for name in ("executable", "restart", "structure", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
+    parser.add_argument("--functional", choices=("skala", "scan"), default="skala")
+    parser.add_argument("--model", type=Path, help="Required only for Skala")
+    parser.add_argument("--setups", type=Path, help="Optional explicit atomic setup parameter file")
     parser.add_argument("--device", choices=("CPU", "CUDA"), default="CPU")
     parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
     parser.add_argument("--steps", type=float, nargs="+", default=(0.001, 0.0003))
@@ -298,6 +310,19 @@ def validate_relaxation_arguments(parser, args):
         parser.error("Invalid indices, sizes, relaxation settings or finite-difference parameters")
 
 
+def relaxation_inputs(parser, args):
+    if args.functional == "skala" and args.model is None:
+        parser.error("--model is required for Skala")
+    if args.functional == "scan" and (args.model is not None or args.device != "CPU"):
+        parser.error("Native SCAN does not use a Torch model/device")
+    keys = ("executable", "restart", "structure")
+    if args.functional == "skala":
+        keys += ("model",)
+    if args.setups is not None:
+        keys += ("setups",)
+    return {key: getattr(args, key).resolve(strict=True) for key in keys}
+
+
 def displacement_tasks(args, natom):
     """Share an undisplaced center across Cartesian components, never displaced seeds."""
     if args.all_cartesian:
@@ -333,8 +358,7 @@ def main():
     validate_relaxation_arguments(parser, args)
     if args.atom < 1 or not math.isfinite(args.center_displacement):
         parser.error("Need a positive atom index and finite displacement")
-    inputs = {key: getattr(args, key).resolve(strict=True)
-              for key in ("executable", "model", "restart", "structure")}
+    inputs = relaxation_inputs(parser, args)
     initial = inputs["restart"].read_bytes()
     try:
         tasks, comparisons = displacement_tasks(args, geometry(initial)["natom"])

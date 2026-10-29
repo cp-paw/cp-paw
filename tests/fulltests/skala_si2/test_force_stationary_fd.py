@@ -1,3 +1,4 @@
+import argparse
 import copy
 from contextlib import redirect_stderr, redirect_stdout
 import io
@@ -42,6 +43,34 @@ PROGRAM FINISHED
 
 
 class StationaryForceTest(unittest.TestCase):
+    def test_native_scan_has_no_model_and_retains_setup_provenance(self):
+        parser = argparse.ArgumentParser()
+        force_fd.add_relaxation_arguments(parser)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            argv = ["--functional", "scan"]
+            for key in ("executable", "restart", "structure", "setups"):
+                path = root / key
+                path.write_bytes(b"fixture")
+                argv.extend(["--" + key, str(path)])
+            argv.extend(["--output", str(root / "result")])
+            args = parser.parse_args(argv)
+            inputs = force_fd.relaxation_inputs(parser, args)
+            self.assertEqual(set(inputs), {"executable", "restart", "structure", "setups"})
+            text = force_fd.control(args)
+            self.assertIn("!SCAN\n", text)
+            self.assertIn(f"ID='PARMS_STP' NAME='{inputs['setups']}'", text)
+            self.assertNotIn("MODEL=", text)
+            self.assertNotIn("DEVICE=", text)
+            self.assertNotIn("!SKALA", text)
+            for extra in (["--device", "CUDA"], ["--model", str(root / "setups")],
+                          ["--functional", "skala"]):
+                with self.subTest(extra=extra), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                    force_fd.relaxation_inputs(parser, parser.parse_args(argv + extra))
+            args.setups = root / "invalid'path"
+            with self.assertRaises(ValueError):
+                force_fd.control(args)
+
     def test_all_cartesian_tasks_share_only_the_center(self):
         args = SimpleNamespace(all_cartesian=True, rigid_translation=False,
                                center_displacement=0., atom=2, axis=1, steps=(3e-5, 1e-5))
