@@ -381,9 +381,14 @@
 !     == BASIC VARIABLES: ZETA, RS, P, DS(ZETA), PHI(ZETA), ALPHA             ==
 !     ==========================================================================
       ZETA=(RUP-RDN)/N
-      ZETA=MAX(-ZETAMAX,MIN(ZETAMAX,ZETA))
-      DZ_DRUP=(1.D0-ZETA)/N
-      DZ_DRDN=-(1.D0+ZETA)/N
+      IF(ABS(ZETA).GE.ZETAMAX) THEN
+        ZETA=MAX(-ZETAMAX,MIN(ZETAMAX,ZETA))
+        DZ_DRUP=0.D0
+        DZ_DRDN=0.D0
+      ELSE
+        DZ_DRUP=(1.D0-ZETA)/N
+        DZ_DRDN=-(1.D0+ZETA)/N
+      END IF
       OPZ=1.D0+ZETA
       OMZ=1.D0-ZETA
 !
@@ -567,20 +572,37 @@
 !     ==========================================================================
       CALL SCAN_CORR(RUP,RDN,MAX(0.D0,VAL(3)),TUP+TDN,AC,C_UP,C_DN,C_G,C_T)
       EXC=EXC+AC
+!     Differentiate the actual clipped energy, including numerical PAW tails.
+      XU_N=XU_N+C_UP
+      XD_N=XD_N+C_DN
+      XU_T=XU_T+C_T
+      XD_T=XD_T+C_T
+      IF(VAL(8)+VAL(9).LT.0.D0) XU_T=0.D0
+      IF(VAL(8)-VAL(9).LT.0.D0) XD_T=0.D0
+      IF(VAL(3)+VAL(4)+2.D0*VAL(5).LT.0.D0) XU_S=0.D0
+      IF(VAL(3)+VAL(4)-2.D0*VAL(5).LT.0.D0) XD_S=0.D0
+      IF(VAL(3).LT.0.D0) C_G=0.D0
 !
 !     ==========================================================================
 !     == CHAIN RULE BACK TO THE CP-PAW STATE VARIABLES                        ==
 !     ==   RUP=(RHOT+RHOS)/2, SUU=(GRHOT2+GRHOS2+2*GRHOST)/4, ETC.            ==
 !     ==========================================================================
-      DEXC(1)=0.5D0*(XU_N+XD_N)+0.5D0*(C_UP+C_DN)
-      DEXC(2)=0.5D0*(XU_N-XD_N)+0.5D0*(C_UP-C_DN)
+      DEXC(1)=0.5D0*(XU_N+XD_N)
+      DEXC(2)=0.5D0*(XU_N-XD_N)
+      IF(VAL(2).GT.VAL(1)-RHOMIN) THEN
+        DEXC(1)=XU_N
+        DEXC(2)=0.D0
+      ELSE IF(VAL(2).LT.-VAL(1)+RHOMIN) THEN
+        DEXC(1)=XD_N
+        DEXC(2)=0.D0
+      END IF
       SVAR=0.25D0*(XU_S+XD_S)
       DEXC(3)=SVAR+C_G
       DEXC(4)=SVAR
       DEXC(5)=0.5D0*(XU_S-XD_S)
       DEXC(6)=0.D0
       DEXC(7)=0.D0
-      DEXC(8)=0.5D0*(XU_T+XD_T)+C_T
+      DEXC(8)=0.5D0*(XU_T+XD_T)
       DEXC(9)=0.5D0*(XU_T-XD_T)
       RETURN
       END SUBROUTINE SCAN$EVAL1
