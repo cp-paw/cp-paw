@@ -300,12 +300,7 @@
       DA_DTAU=1.D0/TAUUNIF
 !     == CLAMP ALPHA TO THE PHYSICAL RANGE ALPHA>=0. (NUMERICALLY TAU<TAUW    ==
 !     == CAN OCCUR.) THE DERIVATIVES OF ALPHA ARE ZEROED CONSISTENTLY.        ==
-      IF(ALPHA.LT.0.D0) THEN
-        ALPHA=0.D0
-        DA_DN=0.D0
-        DA_DGN2=0.D0
-        DA_DTAU=0.D0
-      END IF
+!     Retain the smooth SCAN continuation if reconstructed tau falls below tauW.
 !
 !     == ENHANCEMENT FACTOR AND ASSEMBLY =======================================
       CALL SCAN_FX(P,ALPHA,FX,DFX_DP,DFX_DA)
@@ -412,13 +407,6 @@
       DA_DZ=-ALPHA*DDS_DZ/DS
       DA_DG=-1.D0/(8.D0*N*TAUUNIF)
       DA_DTAU=1.D0/TAUUNIF
-      IF(ALPHA.LT.0.D0) THEN
-        ALPHA=0.D0
-        DA_DN=0.D0
-        DA_DZ=0.D0
-        DA_DG=0.D0
-        DA_DTAU=0.D0
-      END IF
 !
 !     ==========================================================================
 !     == EPSC1=EPSC_LSDA1(PW92)+H1  (SEE SUPPL.MAT., PBE-LIKE WITH            ==
@@ -613,8 +601,8 @@
 !     ** SCAN ENERGY WITH FIRST AND SECOND DERIVATIVES.                       **
 !     ** THE SECOND DERIVATIVES ARE OBTAINED BY CENTRAL FINITE DIFFERENCES    **
 !     ** OF THE ANALYTIC FIRST DERIVATIVES.                                   **
-!     ** CAUTION: NEAR THE NON-ANALYTIC POINTS OF SCAN (ALPHA=1, ALPHA=0      **
-!     ** CLAMP, ZETA=+-1) THE NUMERICAL DERIVATIVES ARE APPROXIMATE.          **
+!     ** CAUTION: NEAR SPIN AND DENSITY SAFETY LIMITS THE NUMERICAL          **
+!     ** DERIVATIVES ARE APPROXIMATE.                                       **
 !     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: VAL(9)

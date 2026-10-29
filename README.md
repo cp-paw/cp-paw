@@ -147,6 +147,11 @@ negative-tau and spin-channel von Weizsaecker-bound violations in the raw
 reconstructed fields, including the quadrature-weighted electron count in
 the affected region. These diagnostics can expose underresolved fields.
 Increasing the atom-grid size alone does not refine the underlying density grid.
+The native kernel retains the smooth SCAN continuation at negative iso-orbital
+indicator alpha rather than imposing an extra alpha=0 clamp. Its boundary
+references use LibXC with Fermi-hole-curvature (FHC) enforcement disabled.
+LibXC's optional FHC enforcement changes gradient invariants and is a distinct
+regularization. Match this convention in independent reference calculations.
 
 ## License
 
