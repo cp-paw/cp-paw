@@ -66,6 +66,41 @@ def records(text):
     return result
 
 
+def charge_records(text):
+    """Match independent PAW traces and composite quadrature to each XC step."""
+    steps = records(text)
+    labels = {"OCCUPATION ELECTRONS": "occupation", "FROZEN CORE ELECTRONS": "core",
+              "PAW ALL ELECTRON TRACE": "trace", "COMPOSITE ELECTRONS": "quadrature"}
+    result, pending, independent = [], {}, False
+    for line in text.splitlines():
+        if line == "SKALA INDEPENDENT ELECTRON COUNTS":
+            independent = True
+        elif not line.strip():
+            independent = False
+        for label, key in labels.items():
+            if not line.startswith(label) or (key != "quadrature" and not independent):
+                continue
+            raw = line[len(label):].strip()
+            if key in pending or not NUMBER.fullmatch(raw):
+                raise ValueError(f"Invalid or duplicate charge diagnostic {label}")
+            value = float(raw.replace("D", "E").replace("d", "e"))
+            if not math.isfinite(value) or (key in ("occupation", "core") and value < 0):
+                raise ValueError("Invalid electron count")
+            pending[key] = value
+        if line.startswith(HEADER):
+            if set(pending) != set(labels.values()):
+                raise ValueError("Incomplete independent charge diagnostics")
+            result.append(dict(step=int(line[len(HEADER):].strip()), **pending))
+            pending = {}
+            independent = False
+    if pending or [row["step"] for row in result] != [row["step"] for row in steps]:
+        raise ValueError("Charge diagnostics do not match electronic steps")
+    for row in result:
+        row["trace_minus_occupation_core"] = row["trace"] - row["occupation"] - row["core"]
+        row["quadrature_minus_trace"] = row["quadrature"] - row["trace"]
+    return result
+
+
 def multiplier_records(text):
     """Read force-multiplier checks separately from orbital stationarity."""
     records(text)

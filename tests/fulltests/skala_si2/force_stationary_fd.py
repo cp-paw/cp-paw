@@ -141,6 +141,14 @@ def analyze(text, natom, steps, last, residual, commutator, *, electronic_only=F
         result["stationarity_failure"] = str(error)
     result["final_energy_span_hartree"] = (max(row["energy"] for row in forces[-last:])
                                             - min(row["energy"] for row in forces[-last:]))
+    if "COMPOSITE ELECTRONS" in text:
+        charges = stationarity.charge_records(text)
+        result["quadrature_charge"] = {
+            "final": charges[-1],
+            "final_window_max_error_electrons": max(
+                abs(row[key]) for row in charges[-last:]
+                for key in ("trace_minus_occupation_core", "quadrature_minus_trace")),
+        }
     return result
 
 
