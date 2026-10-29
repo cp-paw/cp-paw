@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import math
 import os
 from pathlib import Path
 import sys
@@ -16,6 +17,8 @@ def main():
     fd.add_relaxation_arguments(parser)
     parser.add_argument("--electronic-only", action="store_true",
                         help="Require stationary energies without evaluating ionic forces")
+    parser.add_argument("--charge-tolerance", type=float,
+                        help="Also require PAW-trace and composite-grid electron counts within this absolute error")
     parser.set_defaults(functional="scan", dt=1.5, mass=25., friction=0.4, density_dual=4.,
                         radial_points=64, lebedev_exactness=17, block_steps=5,
                         electronic_warmup_steps=80, max_blocks=20, last=5,
@@ -23,6 +26,9 @@ def main():
                         orthogonality_tolerance=1e-12)
     args = parser.parse_args()
     fd.validate_relaxation_arguments(parser, args)
+    if args.charge_tolerance is not None and (
+            not math.isfinite(args.charge_tolerance) or args.charge_tolerance <= 0):
+        parser.error("Charge tolerance must be positive and finite")
     inputs = fd.relaxation_inputs(parser, args)
     args.atom, args.axis = 1, 1
     args.output = args.output.resolve()
@@ -50,10 +56,14 @@ def main():
     result["functional"] = args.functional
     result["scope"] = "electronic stationarity at the specified PAW basis and quadrature, not cross-code accuracy"
     result["forces_evaluated"] = not args.electronic_only
+    charge = result.get("quadrature_charge")
+    result["charge_tolerance_electrons"] = args.charge_tolerance
+    result["passed"] = result["stationary"] and (args.charge_tolerance is None or (
+        charge is not None and charge["final_window_max_error_electrons"] <= args.charge_tolerance))
     fd.write_json(args.output / "results.json", result)
     print(json.dumps({key: value for key, value in result.items()
                       if key not in ("trace", "force_trace", "energy_trace", "occupations")}, indent=2))
-    return 0 if result["stationary"] else 1
+    return 0 if result["passed"] else 1
 
 
 if __name__ == "__main__":

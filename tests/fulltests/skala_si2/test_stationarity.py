@@ -60,6 +60,24 @@ SKALA WEIGHTED MULTIPLIER HERMITICITY 7e-17
         self.assertEqual(data[0]["bands"][0]["occupation"], 0.25)
         self.assertEqual(data[0]["bands"][1]["residual"], 0.4)
 
+    def test_charge_audit_distinguishes_trace_and_quadrature(self):
+        charges = ("SKALA INDEPENDENT ELECTRON COUNTS\n"
+                   "OCCUPATION ELECTRONS 1.0\nFROZEN CORE ELECTRONS 2.0\n"
+                   "PAW ALL ELECTRON TRACE 3.00000000001\nCOMPOSITE ELECTRONS 34.0\n")
+        rows = stationarity.charge_records(charges + protocol())
+        self.assertAlmostEqual(rows[0]["trace_minus_occupation_core"], 1e-11)
+        self.assertAlmostEqual(rows[0]["quadrature_minus_trace"], 31.0)
+        self.assertEqual(rows[0]["step"], 300)
+        # The model audit repeats a reference trace outside the independent block.
+        repeated = charges + "\nPAW ALL ELECTRON TRACE 3.00000000001\n" + protocol()
+        self.assertEqual(stationarity.charge_records(repeated), rows)
+        for text in (protocol(), charges + charges + protocol(),
+                     charges.replace("1.0\n", "NaN\n") + protocol(),
+                     charges.replace("2.0\n", "-2.0\n") + protocol(),
+                     charges + protocol() + "COMPOSITE ELECTRONS 3.0\n"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                stationarity.charge_records(text)
+
     def test_invalid_and_inconsistent_band_details(self):
         base = protocol(rms="0.2", maximum="0.2", commutator="0.03")
         row = "SKALA BAND RESIDUAL 1 1 1 0.25 0.2 -1.0 0.03\n"

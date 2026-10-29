@@ -182,6 +182,9 @@ For basis and quadrature energy comparisons, `relax.py` accepts
 including collinear open-shell inputs. It also accepts `--electronic-only`.
 It keeps the same stationarity tests while omitting
 ionic forces. Its results explicitly distinguish energies from force validation.
+Use `--charge-tolerance` to require agreement of the composite-grid electron
+count with the independent PAW trace and occupation/core count. This check is
+separate from electronic stationarity and does not certify energy convergence.
 Warmup and the final stationarity window share one process in this mode,
 so geometric quadrature caches do not need to be rebuilt between them.
 Their finite-difference tests establish derivative consistency, not

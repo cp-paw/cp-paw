@@ -43,6 +43,14 @@ PROGRAM FINISHED
 
 
 class StationaryForceTest(unittest.TestCase):
+    def test_stationarity_and_quadrature_charge_are_reported_separately(self):
+        charges = ("SKALA INDEPENDENT ELECTRON COUNTS\n"
+                   "OCCUPATION ELECTRONS 1.0\nFROZEN CORE ELECTRONS 0.0\n"
+                   "PAW ALL ELECTRON TRACE 1.0\nCOMPOSITE ELECTRONS 34.0\n")
+        result = force_fd.analyze(charges + protocol(), 2, 1, 1, 1e-6, 1e-6)
+        self.assertTrue(result["stationary"])
+        self.assertEqual(result["quadrature_charge"]["final_window_max_error_electrons"], 33.)
+
     def test_rotated_angular_rules_are_selectable_and_positive(self):
         parser = argparse.ArgumentParser()
         force_fd.add_relaxation_arguments(parser)
