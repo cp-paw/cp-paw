@@ -638,6 +638,14 @@ negative-tau and spin-channel von Weizsaecker-bound violations in the raw
 reconstructed fields, including the quadrature-weighted electron count in
 the affected region. These diagnostics can expose underresolved fields.
 Increasing the atom-grid size alone does not refine the underlying density grid.
+Check the density multipole cutoff `LRHOX` separately from the wavefunction
+cutoff and both grids. Products of partial waves with maximum angular momentum
+`lmax` require density multipoles through `2*lmax`. For example, the historical
+Si2 PBE regression uses d projectors but truncates these multipoles at
+`LRHOX=2`. Use `LRHOX=4` for a full-multipole Si2 accuracy comparison without
+changing that regression input or its reference energy. A stationary restart
+in a smaller basis or with truncated multipoles is not a convergence test for
+the enlarged representation.
 The native run and relaxation drivers also accept `--lebedev-orientations`.
 This averages rotated copies of the selected angular rule. It increases the
 point count without increasing the rule's formal polynomial exactness and
