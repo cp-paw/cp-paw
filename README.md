@@ -147,6 +147,10 @@ negative-tau and spin-channel von Weizsaecker-bound violations in the raw
 reconstructed fields, including the quadrature-weighted electron count in
 the affected region. These diagnostics can expose underresolved fields.
 Increasing the atom-grid size alone does not refine the underlying density grid.
+Integrated Pauli and negative-tau deficits report the magnitude of the
+violations in Hartree using absolute quadrature weights. They distinguish
+rounding-level sign changes from finite deficits. Neither affected electron
+counts nor integrated deficits are error bounds for the XC energy.
 The native kernel retains the smooth SCAN continuation at negative iso-orbital
 indicator alpha rather than imposing an extra alpha=0 clamp. Its boundary
 references use LibXC with Fermi-hole-curvature (FHC) enforcement disabled.
