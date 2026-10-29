@@ -614,6 +614,18 @@ references for complex Bloch waves, packed real orbitals, nonuniform
 occupations, analytic core orbitals and complex s/p/d PAW superpositions.
 These checks test the fields themselves, not just energy derivatives.
 
+The shared `tests/unittests/xc_spin/driver.mk` target `xc-spin-closed-test`
+checks equal-spin adjoints and charge/spin directional derivatives through
+the actual XC backend. It defaults to native SCAN. On a Skala-enabled build,
+set `XC_FUNCTIONAL=SKALA XC_MODEL=/path/to/skala-1.1-rev1.fun` to run the
+same checks with the neural model. These are backend consistency tests,
+not self-consistent physical reference calculations.
+The published Skala export uses mixed precision, so its finite differences
+use steps above its Float32 rounding floor. CI also checks the separately
+validated Float64 diagnostic export with smaller steps and a tighter bound.
+Select it with `XC_MODEL_PRECISION=diagnostic64`; this test setting does not
+change the production model or its arithmetic.
+
 `tests/fulltests/scan_si2/run.py` audits an existing restart, while
 `tests/fulltests/scan_si2/relax.py` requires explicit orbital-residual and
 occupation-commutator convergence. The shared orbital, force and stress

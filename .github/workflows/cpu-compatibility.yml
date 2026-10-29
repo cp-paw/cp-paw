@@ -104,6 +104,12 @@ jobs:
             --mpi-executable bin/fast_parallel/ppaw_fast.x \
             --restart tests/fulltests/si2/si2.rstrt \
             --output "$RUNNER_TEMP/native-scan-parallel"
+      - name: Check the closed-shell XC spin contract without Torch
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test
+          make -C bin/Build_fast_parallel -f Makefile \
+            -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test
       - name: Check one-center primitive quadrature and derivatives
         run: |
           make -C bin/Build_fast -f Makefile \
@@ -168,6 +174,20 @@ jobs:
           done
       - name: Check Skala reconstruction and adjoint kernels
         run: bash tests/unittests/skala_reconstruction/run.sh bin/Build_skala_cpu_fast
+      - name: Check the shared closed-shell Skala and SCAN spin contract
+        run: |
+          for build in Build_skala_cpu_fast Build_skala_cpu_fast_parallel; do
+            make -C "bin/${build}" -f Makefile \
+              -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test
+            make -C "bin/${build}" -f Makefile \
+              -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test \
+              XC_FUNCTIONAL=SKALA \
+              XC_MODEL="$GITHUB_WORKSPACE/bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun"
+            make -C "bin/${build}" -f Makefile \
+              -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test \
+              XC_FUNCTIONAL=SKALA XC_MODEL_PRECISION=diagnostic64 \
+              XC_MODEL="$RUNNER_TEMP/skala-precision-check.fun"
+          done
       - name: Run serial and MPI Skala Si2 regressions
         env:
           SKALA_MODEL: ${{ github.workspace }}/bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun
