@@ -19,6 +19,7 @@ LABELS = {
 NUMBER = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[EeDd][-+]?\d+)?")
 BAND_HEADER = "SKALA BAND RESIDUAL"
 OCCUPATION_CUTOFF = "SKALA RESIDUAL OCCUPATION REL CUTOFF"
+OCCUPATION_SCOPE = "SKALA RESIDUAL OCCUPATION SCOPE"
 MULTIPLIER_LABELS = {
     "SKALA FORCE MULTIPLIER MISMATCH": "force",
     "SKALA LEGACY MULTIPLIER MISMATCH": "legacy",
@@ -105,6 +106,11 @@ def band_records(text):
             if not math.isfinite(value) or not 0 <= value <= math.ulp(1.0) * (1 + 1e-12):
                 raise ValueError("Residual occupation cutoff exceeds double-precision roundoff")
             current["occupation_relative_cutoff"] = value
+        if line.startswith(OCCUPATION_SCOPE):
+            scope = line[len(OCCUPATION_SCOPE):].strip()
+            if current is None or "occupation_scope" in current or scope != "KPOINT":
+                raise ValueError("Invalid or duplicate residual occupation scope")
+            current["occupation_scope"] = scope
         if not line.startswith(BAND_HEADER):
             continue
         fields = line[len(BAND_HEADER):].split()
@@ -125,12 +131,17 @@ def band_records(text):
     for detail, total in zip(result, aggregate):
         rows = detail["bands"]
         relative_cutoff = detail.get("occupation_relative_cutoff", 0.0)
+        if "occupation_scope" in detail and "occupation_relative_cutoff" not in detail:
+            raise ValueError("Occupation scope requires an explicit relative cutoff")
+        # Older reports used a separate reference for each spin channel.
+        group_key = lambda row: (row["kpoint"], None if detail.get("occupation_scope") == "KPOINT"
+                                else row["spin"])
         maxima = {}
         for row in rows:
-            group = row["kpoint"], row["spin"]
+            group = group_key(row)
             maxima[group] = max(maxima.get(group, 0.0), row["occupation"])
         occupied = [row for row in rows if row["occupation"] >
-                    relative_cutoff * maxima[row["kpoint"], row["spin"]]]
+                    relative_cutoff * maxima[group_key(row)]]
         if not occupied:
             raise ValueError("Missing occupied-band details; set CPPAW_SKALA_SCF_DETAIL=1")
         groups = {(row["kpoint"], row["spin"]) for row in rows}

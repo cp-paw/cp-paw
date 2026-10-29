@@ -99,6 +99,40 @@ SKALA WEIGHTED MULTIPLIER HERMITICITY 7e-17
         with self.assertRaises(ValueError):
             stationarity.band_records(base + line + line)
 
+    def test_kpoint_cutoff_handles_an_entire_roundoff_spin_channel(self):
+        for weight in (1., 0.25, 1e-8):
+            text = protocol(rms="0.2", maximum="0.2", commutator="0.03")
+            text += f"{stationarity.OCCUPATION_CUTOFF} {math.ulp(1.0):.14e}\n"
+            text += f"SKALA BAND RESIDUAL 1 1 1 {weight} 0.2 -1.0 0.03\n"
+            noise = weight * math.ulp(1.0) / 4
+            text += f"SKALA BAND RESIDUAL 1 2 1 {noise} 800.0 60.0 0.0\n"
+            scope = f"{stationarity.OCCUPATION_SCOPE} KPOINT\n"
+            stationarity.band_records(text + scope)
+            # The legacy block-relative scale counted this entire empty spin.
+            with self.assertRaisesRegex(ValueError, "aggregate"):
+                stationarity.band_records(text)
+            with self.assertRaisesRegex(ValueError, "aggregate"):
+                stationarity.band_records(text.replace(str(noise), str(weight * 1e-10)) + scope)
+
+    def test_kpoint_cutoff_keeps_small_kpoint_weights(self):
+        weight = 1e-8
+        rms = math.sqrt((0.2**2 + weight * 0.4**2) / (1 + weight))
+        text = protocol(rms=str(rms), maximum="0.4", commutator="0.03")
+        text += f"{stationarity.OCCUPATION_CUTOFF} {math.ulp(1.0):.14e}\n"
+        text += f"{stationarity.OCCUPATION_SCOPE} KPOINT\n"
+        text += "SKALA BAND RESIDUAL 1 1 1 1.0 0.2 -1.0 0.03\n"
+        text += f"SKALA BAND RESIDUAL 2 1 1 {weight} 0.4 -0.8 0.03\n"
+        stationarity.band_records(text)
+
+    def test_occupation_scope_is_explicit_and_not_overridable(self):
+        text = protocol(rms="0.2", maximum="0.2", commutator="0.03")
+        text += "SKALA BAND RESIDUAL 1 1 1 1.0 0.2 -1.0 0.03\n"
+        scope = f"{stationarity.OCCUPATION_SCOPE} KPOINT\n"
+        cutoff = f"{stationarity.OCCUPATION_CUTOFF} {math.ulp(1.0):.14e}\n"
+        for extra in (scope, cutoff + scope + scope, cutoff + scope.replace("KPOINT", "GLOBAL")):
+            with self.subTest(extra=extra), self.assertRaises(ValueError):
+                stationarity.band_records(text + extra)
+
     def test_warm_reference_meets_explicit_limits(self):
         result = stationarity.validate(stationarity.records(protocol()),
                                        residual=1e-6, commutator=1e-6)

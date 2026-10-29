@@ -174,6 +174,9 @@ not replace self-consistent open-shell material or molecular references.
 `tests/fulltests/scan_si2/relax.py` requires explicit orbital-residual and
 occupation-commutator convergence. The shared orbital, force and stress
 verification drivers accept `--functional scan` without a model file.
+Residual checks exclude occupation roundoff relative to the largest population
+across both spins at the same k-point. An empty spin channel therefore cannot
+normalize its own roundoff, while small k-point weights remain meaningful.
 For basis and quadrature energy comparisons, `relax.py` accepts
 `--functional scan` (the default) or `--functional skala --model MODEL`,
 including collinear open-shell inputs. It also accepts `--electronic-only`.
