@@ -55,6 +55,22 @@ def scalar_trace(text, label, steps, *, positive=False):
     return values
 
 
+def parallel_work(text, steps, ranks):
+    traces = {}
+    for label, key in (("GRID POINTS PER MPI RANK", "rows"),
+                       ("MODEL CALLS PER MPI RANK", "calls")):
+        rows = [line[len(label):].split() for line in text.splitlines()
+                if line.startswith(label)]
+        if (len(rows) != steps or any(len(row) != ranks for row in rows)
+                or any(not value.isdigit() for row in rows for value in row)):
+            raise ValueError("Missing or invalid native SCAN parallel work: " + label)
+        traces[key] = [[int(value) for value in row] for row in rows]
+    for work, calls in zip(traces["rows"], traces["calls"]):
+        if any((n > 0) != (c > 0) for n, c in zip(work, calls)):
+            raise ValueError("Native SCAN kernel did not run on every nonempty point rank")
+    return traces
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for key in ("executable", "restart", "output"):
@@ -146,6 +162,7 @@ def main():
            for raw, ref, net in zip(reconstructed, core, xc)):
         raise ValueError("Native SCAN frozen-core energy decomposition is inconsistent")
     stress = stress_records(text) if args.stress else None
+    work = parallel_work(text, args.steps, args.mpi_ranks)
     fd.check_geometry(before, fd.geometry((output / "si2.rstrt").read_bytes()))
     for key, path in paths.items():
         if digest(path) != provenance["inputs"][key]["sha256"]:
@@ -153,7 +170,7 @@ def main():
     result = {"passed": True, "scope": checks["scope"], "stationarity": checks,
               "native_scan_xc_hartree": xc, "reconstructed_xc_hartree": reconstructed,
               "frozen_core_xc_hartree": core, "operators": operators, "final": reports[-1],
-              "stress": stress, "field_limits": limits}
+              "stress": stress, "field_limits": limits, "parallel_work": work}
     fd.write_json(output / "results.json", result)
     print(json.dumps(result, indent=2, allow_nan=False))
 
