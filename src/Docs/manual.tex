@@ -1139,6 +1139,12 @@ second- or third-order one-center XC Taylor expansion is used.
 \vdescr{Angular exactness of the Lebedev rule. Exactness 53 uses 974 points.}
 \vformat{integer} \vrules{optional, supported Lebedev rule} \vdefault{53}}
 
+\mbax{\key{LEBEDEVORIENTATIONS}
+\vdescr{Number of rotated copies of the angular rule whose integrals are
+averaged. The angular point count is multiplied by this number. This checks
+angular aliasing but does not increase the rule's formal polynomial exactness.}
+\vformat{integer} \vrules{optional, positive} \vdefault{1}}
+
 \mbax{\key{CHECK}
 \vdescr{Reports reconstructed charges, kinetic energy densities, operator
 norms and the native SCAN energy decomposition. Raw-field diagnostics count

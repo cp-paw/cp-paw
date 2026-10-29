@@ -24,12 +24,13 @@ def digest(path):
 
 def control(args):
     flags = "FORCE=F STRESS=F" if args.electronic_only else f"FORCE=T STRESS={'T' if args.stress else 'F'}"
+    orientations = getattr(args, "lebedev_orientations", 1)
     return f"""!CONTROL
  !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={args.steps} NWRITE=1 START=F
           RSTRTTYPE='STATIC' AUTOCONV=1000 !END
  !DFT TYPE=10
   !SCAN RADIALPOINTS={args.radial_points} LEBEDEVEXACTNESS={args.lebedev_exactness}
-        LEBEDEVORIENTATIONS=1 IMAGESHELLS=1 CHECK=T
+        LEBEDEVORIENTATIONS={orientations} IMAGESHELLS=1 CHECK=T
   !END
  !END
  !FOURIER EPWPSI={args.cutoff:.16e} CDUAL={args.density_dual:.16e} !END
@@ -71,6 +72,8 @@ def main():
     parser.add_argument("--density-dual", type=float, default=4.)
     parser.add_argument("--radial-points", type=int, default=64)
     parser.add_argument("--lebedev-exactness", type=int, default=17)
+    parser.add_argument("--lebedev-orientations", type=int, default=1,
+                        help="Average rotated angular rules without changing their formal exactness")
     parser.add_argument("--stress", action="store_true")
     parser.add_argument("--electronic-only", action="store_true")
     parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
@@ -79,7 +82,8 @@ def main():
     parser.add_argument("--last", type=int, default=1)
     parser.add_argument("--timeout", type=float, default=1800.)
     args = parser.parse_args()
-    if min(args.steps, args.mpi_ranks, args.radial_points, args.lebedev_exactness) < 1:
+    if min(args.steps, args.mpi_ranks, args.radial_points, args.lebedev_exactness,
+           args.lebedev_orientations) < 1:
         parser.error("Step, rank and quadrature counts must be positive")
     for key in ("dt", "mass", "cutoff", "density_dual", "timeout"):
         if not math.isfinite(getattr(args, key)) or getattr(args, key) <= 0:

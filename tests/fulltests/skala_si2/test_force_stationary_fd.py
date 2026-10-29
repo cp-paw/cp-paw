@@ -43,6 +43,20 @@ PROGRAM FINISHED
 
 
 class StationaryForceTest(unittest.TestCase):
+    def test_rotated_angular_rules_are_selectable_and_positive(self):
+        parser = argparse.ArgumentParser()
+        force_fd.add_relaxation_arguments(parser)
+        argv = ["--executable", "paw.x", "--restart", "state.rstrt",
+                "--structure", "system.strc", "--output", "result"]
+        for functional in ("scan", "skala"):
+            args = parser.parse_args(argv + ["--functional", functional,
+                                            "--lebedev-orientations", "4"])
+            force_fd.validate_relaxation_arguments(parser, args)
+            self.assertIn("LEBEDEVORIENTATIONS=4", force_fd.control(args))
+        args.lebedev_orientations = 0
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            force_fd.validate_relaxation_arguments(parser, args)
+
     def test_native_scan_has_no_model_and_uses_structure_setups(self):
         parser = argparse.ArgumentParser()
         force_fd.add_relaxation_arguments(parser)

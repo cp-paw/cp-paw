@@ -629,6 +629,10 @@ negative-tau and spin-channel von Weizsaecker-bound violations in the raw
 reconstructed fields, including the quadrature-weighted electron count in
 the affected region. These diagnostics can expose underresolved fields.
 Increasing the atom-grid size alone does not refine the underlying density grid.
+The native run and relaxation drivers also accept `--lebedev-orientations`.
+This averages rotated copies of the selected angular rule. It increases the
+point count without increasing the rule's formal polynomial exactness and
+allows a separate check of angular aliasing in periodic fields.
 Integrated Pauli and negative-tau deficits report the magnitude of the
 violations in Hartree using absolute quadrature weights. They distinguish
 rounding-level sign changes from finite deficits. Neither affected electron
