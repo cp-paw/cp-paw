@@ -34,6 +34,7 @@ export LIBLIST=" \
         paw_classical \
         paw_forcefield \
         paw_dft \
+        paw_scan \
         paw_dftaddendum \
         paw_constants \
         paw_spherical \
