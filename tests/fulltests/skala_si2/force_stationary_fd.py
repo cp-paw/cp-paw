@@ -233,8 +233,11 @@ def run_leg(name, delta, args, inputs, env):
                 names = ("si2.cntl", "si2.rstrt", "si2.strc") + (("model.fun",) if "model" in inputs else ())
                 write_json(block / "inputs.json", {key: digest(block / key) for key in names})
                 print(f"Running {name}, {phase} {index + 1}: {block}", flush=True)
+                command = [str(inputs["executable"]), "si2.cntl"]
+                if getattr(args, "mpi_ranks", 1) > 1:
+                    command = [args.mpiexec, "-np", str(args.mpi_ranks), *command]
                 with (block / "stdout.log").open("w") as out, (block / "stderr.log").open("w") as err:
-                    subprocess.run([str(inputs["executable"]), "si2.cntl"], cwd=block,
+                    subprocess.run(command, cwd=block,
                                    env=env, stdout=out, stderr=err, check=True, timeout=args.timeout)
                 restart = block / "si2.rstrt"
                 check_geometry(expected, geometry(restart.read_bytes()))
@@ -292,6 +295,8 @@ def add_relaxation_arguments(parser):
     parser.add_argument("--orthogonality-tolerance", type=float,
                         help="Optional tighter PAW constraint solve, from 1e-14 to 1e-8")
     parser.add_argument("--jobs", type=int, default=1, help="Independent serial processes, not MPI ranks")
+    parser.add_argument("--mpi-ranks", type=int, default=1, help="MPI ranks per independent calculation")
+    parser.add_argument("--mpiexec", default="mpirun")
     parser.add_argument("--timeout", type=float, default=3600, help="Seconds per relaxation block")
 
 
@@ -305,7 +310,7 @@ def validate_relaxation_arguments(parser, args):
     if (any(not math.isfinite(x) or x <= 0 for x in positive)
             or len(set(args.steps)) != len(args.steps)
             or args.electronic_warmup_steps < 0
-            or min(args.jobs, args.block_steps, args.max_blocks, args.last,
+            or min(args.jobs, getattr(args, "mpi_ranks", 1), args.block_steps, args.max_blocks, args.last,
                    args.radial_points, args.lebedev_exactness) < 1 or args.last > args.block_steps):
         parser.error("Invalid indices, sizes, relaxation settings or finite-difference parameters")
 

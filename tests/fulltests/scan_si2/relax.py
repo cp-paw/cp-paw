@@ -14,7 +14,7 @@ import force_stationary_fd as fd
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     fd.add_relaxation_arguments(parser)
-    parser.set_defaults(functional="scan", dt=1.5, mass=25., friction=0.4,
+    parser.set_defaults(functional="scan", dt=1.5, mass=25., friction=0.4, density_dual=4.,
                         radial_points=64, lebedev_exactness=17, block_steps=5,
                         electronic_warmup_steps=80, max_blocks=20, last=5,
                         residual_tolerance=1e-7, commutator_tolerance=1e-7,

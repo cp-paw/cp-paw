@@ -141,6 +141,13 @@ comparison with independently converged calculations. The retained
 numerical second- and third-derivative kernel entry points are diagnostic
 and are not used by this PAW path.
 
+Start density-grid convergence checks at `CDUAL=4`, which is also the
+default in the native SCAN verification drivers. `CHECK=T` reports low-density,
+negative-tau and spin-channel von Weizsaecker-bound violations in the raw
+reconstructed fields, including the quadrature-weighted electron count in
+the affected region. These diagnostics can expose underresolved fields.
+Increasing the atom-grid size alone does not refine the underlying density grid.
+
 ## License
 
 The CP-PAW code is distributed under the GNU Public License Version 3.

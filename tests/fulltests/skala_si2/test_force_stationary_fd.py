@@ -158,8 +158,11 @@ class StationaryForceTest(unittest.TestCase):
             self.assertFalse(result["stationary"])
             self.assertIn("failure", result)
             args.rigid_translation = True
-            with patch.object(force_fd.subprocess, "run", side_effect=run):
+            args.mpi_ranks = 3
+            args.mpiexec = "mpirun"
+            with patch.object(force_fd.subprocess, "run", side_effect=run) as launch:
                 force_fd.run_leg("translated", 0.003, args, inputs, {})
+            self.assertEqual(launch.call_args.args[0][:3], ["mpirun", "-np", "3"])
             translated = force_fd.geometry((root / "translated/block-1/si2.rstrt").read_bytes())
             self.assertEqual(translated["positions"], [[0.003, 0, 0, 2.003, 3, 4]] * 2)
 

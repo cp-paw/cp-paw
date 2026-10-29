@@ -50,3 +50,5 @@ tmp.*
 /doc/
 /err*
 /out*
+/tests/fulltests/scan_si2/__pycache__/
+/tests/unittests/scan/__pycache__/
