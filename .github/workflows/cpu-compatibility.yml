@@ -89,9 +89,20 @@ jobs:
       - name: Check native SCAN limits, derivatives, and independent references
         run: |
           make -C bin/Build_fast -f Makefile \
-            -f ../../tests/unittests/scan/driver.mk scan-test
+            -f ../../tests/unittests/scan/driver.mk scan-test scan-backend-test
           make -C bin/Build_fast_parallel -f Makefile \
-            -f ../../tests/unittests/scan/driver.mk scan-test
+            -f ../../tests/unittests/scan/driver.mk scan-test scan-backend-test
+          python3 tests/unittests/scan/input_checks.py bin/Build_fast/paw.x
+          python3 tests/unittests/scan/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
+      - name: Check native SCAN energy, force and stress MPI parity
+        env:
+          OMPI_MCA_rmaps_base_oversubscribe: "1"
+        run: |
+          python3 tests/fulltests/scan_si2/parallel.py \
+            --serial-executable bin/fast/paw_fast.x \
+            --mpi-executable bin/fast_parallel/ppaw_fast.x \
+            --restart tests/fulltests/si2/si2.rstrt \
+            --output "$RUNNER_TEMP/native-scan-parallel"
       - name: Check one-center primitive quadrature and derivatives
         run: |
           make -C bin/Build_fast -f Makefile \
