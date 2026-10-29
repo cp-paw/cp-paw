@@ -139,7 +139,8 @@ def main():
     limits = {label: scalar_trace(text, label, args.steps) for label in (
         "SCAN SPIN ROWS", "SCAN LOW-DENSITY SPIN ROWS", "SCAN NEGATIVE TAU SPIN ROWS",
         "SCAN PAULI-BOUND VIOLATING SPIN ROWS", "SCAN PAULI-BOUND VIOLATING ELECTRONS",
-        "SCAN ABSOLUTE QUADRATURE ELECTRONS")}
+        "SCAN ABSOLUTE QUADRATURE ELECTRONS", "SCAN INTEGRATED PAULI DEFICIT",
+        "SCAN INTEGRATED NEGATIVE TAU DEFICIT")}
     if any(not math.isclose(raw-ref, net, rel_tol=1e-12, abs_tol=1e-12)
            for raw, ref, net in zip(reconstructed, core, xc)):
         raise ValueError("Native SCAN frozen-core energy decomposition is inconsistent")

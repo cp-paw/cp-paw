@@ -298,8 +298,6 @@
       DA_DN=(TAUW/N)/TAUUNIF-ALPHA*(5.D0/3.D0)/N
       DA_DGN2=-1.D0/(8.D0*N*TAUUNIF)
       DA_DTAU=1.D0/TAUUNIF
-!     == CLAMP ALPHA TO THE PHYSICAL RANGE ALPHA>=0. (NUMERICALLY TAU<TAUW    ==
-!     == CAN OCCUR.) THE DERIVATIVES OF ALPHA ARE ZEROED CONSISTENTLY.        ==
 !     Retain the smooth SCAN continuation if reconstructed tau falls below tauW.
 !
 !     == ENHANCEMENT FACTOR AND ASSEMBLY =======================================
@@ -746,19 +744,27 @@
       IMPLICIT NONE
       INTEGER,INTENT(IN) :: NPOINT
       REAL(8),INTENT(IN) :: RHO(NPOINT,2),GRAD(NPOINT,3,2),TAU(NPOINT,2),WEIGHT(NPOINT)
-      REAL(8),INTENT(OUT) :: STATS(6)
+      REAL(8),INTENT(OUT) :: STATS(8)
+      REAL(8) :: DEFICIT
       INTEGER :: I,S
       STATS=0.D0
       STATS(1)=2.D0*REAL(NPOINT,8)
       DO S=1,2
         DO I=1,NPOINT
           STATS(6)=STATS(6)+ABS(WEIGHT(I)*RHO(I,S))
-          IF(TAU(I,S).LT.0.D0) STATS(3)=STATS(3)+1.D0
+          IF(TAU(I,S).LT.0.D0) THEN
+            STATS(3)=STATS(3)+1.D0
+            STATS(8)=STATS(8)-ABS(WEIGHT(I))*TAU(I,S)
+          END IF
           IF(RHO(I,S).LT.RHOMIN) THEN
             STATS(2)=STATS(2)+1.D0
-          ELSE IF(TAU(I,S).LT.SUM(GRAD(I,:,S)**2)/(8.D0*RHO(I,S))) THEN
-            STATS(4)=STATS(4)+1.D0
-            STATS(5)=STATS(5)+ABS(WEIGHT(I)*RHO(I,S))
+          ELSE
+            DEFICIT=SUM(GRAD(I,:,S)**2)/(8.D0*RHO(I,S))-TAU(I,S)
+            IF(DEFICIT.GT.0.D0) THEN
+              STATS(4)=STATS(4)+1.D0
+              STATS(5)=STATS(5)+ABS(WEIGHT(I)*RHO(I,S))
+              STATS(7)=STATS(7)+ABS(WEIGHT(I))*DEFICIT
+            END IF
           END IF
         END DO
       END DO
