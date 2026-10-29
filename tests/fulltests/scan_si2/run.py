@@ -74,7 +74,7 @@ def main():
     parser.add_argument("--mass-g2", type=float, default=0.3166286988823056)
     parser.add_argument("--friction", type=float, default=0.4)
     parser.add_argument("--cutoff", type=float, default=20.)
-    parser.add_argument("--density-dual", type=float, default=2.)
+    parser.add_argument("--density-dual", type=float, default=4.)
     parser.add_argument("--radial-points", type=int, default=64)
     parser.add_argument("--lebedev-exactness", type=int, default=17)
     parser.add_argument("--stress", action="store_true")
@@ -136,6 +136,10 @@ def main():
     xc = scalar_trace(text, "SCAN XC ENERGY", args.steps)
     core = scalar_trace(text, "SCAN FROZEN-CORE XC REFERENCE", args.steps)
     reconstructed = scalar_trace(text, "SCAN RECONSTRUCTED XC ENERGY", args.steps)
+    limits = {label: scalar_trace(text, label, args.steps) for label in (
+        "SCAN SPIN ROWS", "SCAN LOW-DENSITY SPIN ROWS", "SCAN NEGATIVE TAU SPIN ROWS",
+        "SCAN PAULI-BOUND VIOLATING SPIN ROWS", "SCAN PAULI-BOUND VIOLATING ELECTRONS",
+        "SCAN ABSOLUTE QUADRATURE ELECTRONS")}
     if any(not math.isclose(raw-ref, net, rel_tol=1e-12, abs_tol=1e-12)
            for raw, ref, net in zip(reconstructed, core, xc)):
         raise ValueError("Native SCAN frozen-core energy decomposition is inconsistent")
@@ -147,7 +151,7 @@ def main():
     result = {"passed": True, "scope": checks["scope"], "stationarity": checks,
               "native_scan_xc_hartree": xc, "reconstructed_xc_hartree": reconstructed,
               "frozen_core_xc_hartree": core, "operators": operators, "final": reports[-1],
-              "stress": stress}
+              "stress": stress, "field_limits": limits}
     fd.write_json(output / "results.json", result)
     print(json.dumps(result, indent=2, allow_nan=False))
 

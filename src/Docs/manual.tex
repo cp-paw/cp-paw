@@ -1111,7 +1111,11 @@ must be checked for each intended application.}
 
 \mbax{\key{CHECK}
 \vdescr{Reports reconstructed charges, kinetic energy densities, operator
-norms and the native SCAN energy decomposition. This is diagnostic output,
+norms and the native SCAN energy decomposition. Raw-field diagnostics count
+low-density, negative kinetic-density and spin-channel von Weizsaecker-bound
+violations, together with the quadrature-weighted electron count affected
+by the latter. The native verification drivers start at CDUAL=4. Atom-grid
+refinement does not replace density-grid convergence. This is diagnostic output,
 not an electronic convergence or correctness criterion.}
 \vformat{logical} \vrules{optional} \vdefault{F}}
 

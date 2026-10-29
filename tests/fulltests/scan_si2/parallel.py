@@ -55,6 +55,8 @@ def main():
         row["strain_derivative"] = difference(reference["stress"][0]["tensor"], result["stress"][0]["tensor"])
         row["operator_norm"] = max(difference(reference["operators"][key], result["operators"][key])
                                    for key in reference["operators"])
+        row["field_limits"] = max(difference(reference["field_limits"][key], result["field_limits"][key])
+                                  for key in reference["field_limits"])
         if any(value > args.tolerance for value in row.values()):
             raise ValueError(f"Native SCAN MPI layout {ranks} differs: {row}")
         differences[ranks] = row

@@ -50,8 +50,9 @@ tmp.*
 /doc/
 /err*
 /out*
-
 # Local validation notes and generated benchmark reports.
 /tests/fulltests/**/VALIDATION.md
 /tests/profile/si64/**/*.md
 !/tests/profile/si64/**/README.md
+/tests/fulltests/scan_si2/__pycache__/
+/tests/unittests/scan/__pycache__/
