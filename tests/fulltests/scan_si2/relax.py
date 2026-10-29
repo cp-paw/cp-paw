@@ -18,8 +18,7 @@ def main():
                         radial_points=64, lebedev_exactness=17, block_steps=5,
                         electronic_warmup_steps=80, max_blocks=20, last=5,
                         residual_tolerance=1e-7, commutator_tolerance=1e-7,
-                        orthogonality_tolerance=1e-12,
-                        setups=Path(__file__).resolve().parents[1] / "si2/stp.cntl")
+                        orthogonality_tolerance=1e-12)
     args = parser.parse_args()
     fd.validate_relaxation_arguments(parser, args)
     if args.functional != "scan":

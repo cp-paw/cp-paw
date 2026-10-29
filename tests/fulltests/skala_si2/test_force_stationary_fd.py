@@ -43,33 +43,31 @@ PROGRAM FINISHED
 
 
 class StationaryForceTest(unittest.TestCase):
-    def test_native_scan_has_no_model_and_retains_setup_provenance(self):
+    def test_native_scan_has_no_model_and_uses_structure_setups(self):
         parser = argparse.ArgumentParser()
         force_fd.add_relaxation_arguments(parser)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             argv = ["--functional", "scan"]
-            for key in ("executable", "restart", "structure", "setups"):
+            for key in ("executable", "restart", "structure"):
                 path = root / key
                 path.write_bytes(b"fixture")
                 argv.extend(["--" + key, str(path)])
             argv.extend(["--output", str(root / "result")])
             args = parser.parse_args(argv)
             inputs = force_fd.relaxation_inputs(parser, args)
-            self.assertEqual(set(inputs), {"executable", "restart", "structure", "setups"})
+            self.assertEqual(set(inputs), {"executable", "restart", "structure"})
             text = force_fd.control(args)
             self.assertIn("!SCAN\n", text)
-            self.assertIn(f"ID='PARMS_STP' NAME='{inputs['setups']}'", text)
+            self.assertNotIn("PARMS_STP", text)
+            self.assertNotIn("!FILES", text)
             self.assertNotIn("MODEL=", text)
             self.assertNotIn("DEVICE=", text)
             self.assertNotIn("!SKALA", text)
-            for extra in (["--device", "CUDA"], ["--model", str(root / "setups")],
+            for extra in (["--device", "CUDA"], ["--model", str(root / "structure")],
                           ["--functional", "skala"]):
                 with self.subTest(extra=extra), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                     force_fd.relaxation_inputs(parser, parser.parse_args(argv + extra))
-            args.setups = root / "invalid'path"
-            with self.assertRaises(ValueError):
-                force_fd.control(args)
 
     def test_all_cartesian_tasks_share_only_the_center(self):
         args = SimpleNamespace(all_cartesian=True, rigid_translation=False,

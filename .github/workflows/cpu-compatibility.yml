@@ -79,6 +79,7 @@ jobs:
             -f ../../tests/unittests/projector_strain/driver.mk projector-strain-test
       - name: Check native SCAN limits, derivatives, and independent references
         run: |
+          python3 -m unittest discover -s tests/fulltests/scan_si2 -p 'test_*.py'
           make -C bin/Build_fast -f Makefile \
             -f ../../tests/unittests/scan/driver.mk scan-test scan-backend-test
           make -C bin/Build_fast_parallel -f Makefile \
