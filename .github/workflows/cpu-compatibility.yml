@@ -99,6 +99,14 @@ jobs:
         run: |
           make -C bin/Build_fast -f Makefile \
             -f ../../tests/unittests/skala_reconstruction/driver.mk skala-primitives-test skala-sampling-test
+      - name: Check positive kinetic density against independent orbital references
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/skala_reconstruction/driver.mk skala-tau-test
+          make -C bin/Build_fast_parallel -f Makefile \
+            -f ../../tests/unittests/skala_reconstruction/driver.mk skala-tau-test
+          OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 mpirun -np 2 \
+            bin/Build_fast_parallel/unit-tests/tau_density.x
       - name: Check optional and required nuclear forces
         run: |
           python3 tests/unittests/force_selection/test_paw_records.py

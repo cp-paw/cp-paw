@@ -4,6 +4,13 @@
 .PHONY: skala-source-resident-unit skala-source-resident-test
 .PHONY: skala-sampling-test skala-sampling-gpu-test
 .PHONY: skala-descriptor-grid-test
+.PHONY: skala-tau-test
+
+skala-tau-test: libpawfull.a
+	mkdir -p unit-tests
+	etc/f90pp $(CPPFLAGS) < $(BASEDIR)/tests/unittests/skala_reconstruction/tau_density.f90 > unit-tests/tau_density.f90
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/tau_density.x unit-tests/tau_density.f90 libpawfull.a $(LIBS)
+	./unit-tests/tau_density.x
 
 skala-descriptor-grid-test: libpawfull.a
 	mkdir -p unit-tests
