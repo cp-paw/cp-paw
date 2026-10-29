@@ -14,6 +14,8 @@ import force_stationary_fd as fd
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     fd.add_relaxation_arguments(parser)
+    parser.add_argument("--electronic-only", action="store_true",
+                        help="Require stationary energies without evaluating ionic forces")
     parser.set_defaults(functional="scan", dt=1.5, mass=25., friction=0.4, density_dual=4.,
                         radial_points=64, lebedev_exactness=17, block_steps=5,
                         electronic_warmup_steps=80, max_blocks=20, last=5,
@@ -41,13 +43,14 @@ def main():
                         ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "CUDA_VISIBLE_DEVICES")},
     }
     fd.write_json(args.output / "provenance.json", provenance)
-    _, result = fd.run_leg("relax", 0., args, inputs, env)
+    _, result = fd.run_leg("relax", 0., args, inputs, env, energy_only=args.electronic_only)
     for key, path in inputs.items():
         if fd.digest(path) != provenance["inputs"][key]["sha256"]:
             raise ValueError(f"Changed source input during relaxation: {key}")
     if result["blocks"]:
         result["restart"] = str(Path(result["blocks"][-1]["directory"]) / "si2.rstrt")
     result["scope"] = "electronic stationarity at the specified PAW basis and quadrature, not cross-code accuracy"
+    result["forces_evaluated"] = not args.electronic_only
     fd.write_json(args.output / "results.json", result)
     print(json.dumps({key: value for key, value in result.items()
                       if key not in ("trace", "force_trace", "energy_trace", "occupations")}, indent=2))

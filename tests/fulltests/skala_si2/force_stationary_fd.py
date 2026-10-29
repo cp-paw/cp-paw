@@ -198,7 +198,7 @@ def write_json(path, data):
     path.write_text(json.dumps(data, indent=2, allow_nan=False) + "\n")
 
 
-def run_leg(name, delta, args, inputs, env):
+def run_leg(name, delta, args, inputs, env, *, energy_only=False):
     work = args.output / name
     work.mkdir()
     initial = displace_geometry(inputs["restart"].read_bytes(), args.atom, args.axis, delta,
@@ -214,7 +214,7 @@ def run_leg(name, delta, args, inputs, env):
             phases = [("electronic", warmup), ("block", args.block_steps)] if warmup else [
                 ("block", args.block_steps)]
             for phase, steps in phases:
-                electronic_only = phase == "electronic"
+                electronic_only = phase == "electronic" or energy_only
                 block = work / f"{phase}-{index + 1}"
                 block.mkdir()
                 (block / "si2.cntl").write_text(control(args, electronic_only=electronic_only, steps=steps))
@@ -243,7 +243,7 @@ def run_leg(name, delta, args, inputs, env):
                     raise ValueError("Band layout or occupations changed across restart blocks")
                 result["occupations"] = data["occupations"]
                 write_json(block / "results.json", data)
-                result["electronic_blocks" if electronic_only else "blocks"].append({
+                result["electronic_blocks" if phase == "electronic" else "blocks"].append({
                     "directory": str(block), "stationary": data["stationary"],
                     "final_residual": data["trace"][-1]})
             result.update({key: value for key, value in data.items()
