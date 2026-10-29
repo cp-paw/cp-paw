@@ -202,6 +202,38 @@ class StationaryForceTest(unittest.TestCase):
         self.assertIn("NSTEP=12 ", text)
         self.assertIn("STRESS=T", force_fd.control(args))
 
+    def test_energy_only_relaxation_keeps_strict_stationarity_and_checkpoint_blocks(self):
+        from test_force_mode_parity import electronic
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            inputs = {key: root/key for key in ("restart", "structure", "executable")}
+            for path in inputs.values():
+                path.write_bytes(b"fixture")
+            inputs["restart"].write_bytes(restart())
+            args = SimpleNamespace(output=root, atom=1, axis=1, functional="scan",
+                dt=3, block_steps=1, electronic_warmup_steps=0, max_blocks=2,
+                last=1, residual_tolerance=1e-7, commutator_tolerance=1e-7,
+                device="CPU", radial_points=400, lebedev_exactness=65, cutoff=40,
+                mass=25, mass_g2=.3166286988823056, friction=.1, timeout=1)
+            def run(command, cwd, **kwargs):
+                self.assertIn("FORCE=F STRESS=F", (cwd/"si2.cntl").read_text())
+                text = electronic()
+                if cwd.name == "block-1":
+                    text = text.replace("1e-8", "1e-3")
+                (cwd/"si2.prot").write_text(text)
+            with patch.object(force_fd.subprocess, "run", side_effect=run):
+                _, result = force_fd.run_leg("energy", 0., args, inputs, {}, energy_only=True)
+            self.assertTrue(result["stationary"])
+            self.assertEqual([b["stationary"] for b in result["blocks"]], [False, True])
+            self.assertNotIn("forces", result["final"])
+            self.assertNotIn("force_trace", result)
+            self.assertTrue((Path(result["blocks"][-1]["directory"])/"si2.rstrt").exists())
+            args.max_blocks = 1
+            with patch.object(force_fd.subprocess, "run", side_effect=run):
+                _, result = force_fd.run_leg("unfinished", 0., args, inputs, {}, energy_only=True)
+            self.assertFalse(result["stationary"])
+            self.assertIn("failure", result)
+
     def test_warmup_cannot_replace_complete_stationary_force_blocks(self):
         from test_force_mode_parity import electronic
         with tempfile.TemporaryDirectory() as temporary:
