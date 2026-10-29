@@ -77,6 +77,12 @@ jobs:
         run: |
           make -C bin/Build_fast -f Makefile \
             -f ../../tests/unittests/projector_strain/driver.mk projector-strain-test
+      - name: Check native SCAN limits, derivatives, and independent references
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/scan/driver.mk scan-test
+          make -C bin/Build_fast_parallel -f Makefile \
+            -f ../../tests/unittests/scan/driver.mk scan-test
       - name: Check one-center primitive quadrature and derivatives
         run: |
           make -C bin/Build_fast -f Makefile \
