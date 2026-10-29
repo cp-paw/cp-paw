@@ -22,14 +22,9 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def control(args, setups):
+def control(args):
     flags = "FORCE=F STRESS=F" if args.electronic_only else f"FORCE=T STRESS={'T' if args.stress else 'F'}"
-    if "'" in str(setups):
-        raise ValueError("The setup path cannot contain a single quote")
     return f"""!CONTROL
- !FILES
-  !FILE ID='PARMS_STP' NAME='{setups}' !END
- !END
  !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={args.steps} NWRITE=1 START=F
           RSTRTTYPE='STATIC' AUTOCONV=1000 !END
  !DFT TYPE=10
@@ -65,7 +60,6 @@ def main():
         parser.add_argument("--" + key, type=Path, required=True)
     si2 = Path(__file__).resolve().parents[1] / "si2"
     parser.add_argument("--structure", type=Path, default=si2 / "si2.strc")
-    parser.add_argument("--setups", type=Path, default=si2 / "stp.cntl")
     parser.add_argument("--mpi-ranks", type=int, default=1)
     parser.add_argument("--mpiexec", default="mpirun")
     parser.add_argument("--steps", type=int, default=1)
@@ -95,7 +89,7 @@ def main():
     if args.electronic_only and args.stress:
         parser.error("Electronic-only mode cannot request stress")
     paths = {key: getattr(args, key).resolve(strict=True)
-             for key in ("executable", "restart", "structure", "setups")}
+             for key in ("executable", "restart", "structure")}
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     before = fd.geometry(paths["restart"].read_bytes())
@@ -110,7 +104,7 @@ def main():
                       for key, value in vars(args).items()},
     }
     fd.write_json(output / "provenance.json", provenance)
-    (output / "si2.cntl").write_text(control(args, paths["setups"]), encoding="ascii")
+    (output / "si2.cntl").write_text(control(args), encoding="ascii")
     shutil.copy2(paths["restart"], output / "si2.rstrt")
     shutil.copy2(paths["structure"], output / "si2.strc")
     command = [str(paths["executable"]), "si2.cntl"]

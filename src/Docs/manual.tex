@@ -1099,7 +1099,9 @@ MODEL, DEVICE, DEVICEINDEX, DISTRIBUTEGPU=T and VDW=T are rejected.
 Input files without this block retain the conventional XC implementation.
 This joint reconstructed-density path is under validation. Numerical
 quadrature convergence and independent physical reference calculations
-must be checked for each intended application.}
+must be checked for each intended application. Reference comparisons must
+also account for the PAW dataset, frozen-core energy convention and
+relativistic treatment.}
 
 \mbax{\key{RADIALPOINTS}
 \vdescr{Number of radial quadrature points per atom.}

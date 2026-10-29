@@ -569,6 +569,9 @@ The `SCAN` block replaces the solid or molecule XC energy and its complete
 operator, including the positive kinetic-energy-density contribution.
 It does not add SCAN on top of PBE. Collinear spin-polarized calculations
 are supported. Native SCAN atomic setup generation is not provided.
+The verification drivers use the setup definitions in the supplied structure,
+including built-in IDs or complete `!SPECIES!AUGMENT` blocks. They do not attach
+the historical `PARMS_STP` file, which did not override the built-in setups.
 
 The physical spin densities, gradients and positive kinetic energy densities
 are reconstructed before the local functional is evaluated. Quadrature
@@ -597,7 +600,9 @@ verification drivers accept `--functional scan` without a model file.
 Their finite-difference tests establish derivative consistency, not
 independent physical accuracy. Joint reconstructed-density SCAN remains
 under validation, particularly for quadrature and basis convergence and
-comparison with independently converged calculations. The retained
+comparison with independently converged calculations. Reference
+comparisons must also account for the PAW dataset, frozen-core reference
+and relativistic treatment. The retained
 numerical second- and third-derivative kernel entry points are diagnostic
 and are not used by this PAW path.
 

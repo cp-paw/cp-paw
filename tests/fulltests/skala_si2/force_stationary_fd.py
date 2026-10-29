@@ -175,14 +175,8 @@ def control(args, *, electronic_only=False, steps=None):
     dual_text = "2" if dual == 2. else f"{dual:.16e}"
     functional = getattr(args, "functional", "skala")
     xc = "!SCAN" if functional == "scan" else f"!SKALA MODEL='model.fun' DEVICE='{args.device}'"
-    setup_path = getattr(args, "setups", None)
-    files = ""
-    if setup_path is not None:
-        if "'" in str(setup_path):
-            raise ValueError("The setup path cannot contain a single quote")
-        files = f" !FILES !FILE ID='PARMS_STP' NAME='{Path(setup_path).resolve()}' !END !END\n"
     return f"""!CONTROL
-{files} !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={steps} NWRITE=10 START=F
+ !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={steps} NWRITE=10 START=F
           RSTRTTYPE='STATIC' AUTOCONV=1000 !END
  !DFT TYPE=10
   {xc}
@@ -270,7 +264,6 @@ def add_relaxation_arguments(parser):
         parser.add_argument("--" + name, required=True, type=Path)
     parser.add_argument("--functional", choices=("skala", "scan"), default="skala")
     parser.add_argument("--model", type=Path, help="Required only for Skala")
-    parser.add_argument("--setups", type=Path, help="Optional explicit atomic setup parameter file")
     parser.add_argument("--device", choices=("CPU", "CUDA"), default="CPU")
     parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
     parser.add_argument("--steps", type=float, nargs="+", default=(0.001, 0.0003))
@@ -323,8 +316,6 @@ def relaxation_inputs(parser, args):
     keys = ("executable", "restart", "structure")
     if args.functional == "skala":
         keys += ("model",)
-    if args.setups is not None:
-        keys += ("setups",)
     return {key: getattr(args, key).resolve(strict=True) for key in keys}
 
 
