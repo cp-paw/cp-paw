@@ -139,8 +139,7 @@ def main():
     if len(set(args.directions)) != len(args.directions):
         parser.error("Strain directions must be unique")
     args.stress, args.atom, args.axis = True, 1, 1
-    inputs = {key: getattr(args, key).resolve(strict=True)
-              for key in ("executable", "model", "restart", "structure")}
+    inputs = fd.relaxation_inputs(parser, args)
     fd.geometry(inputs["restart"].read_bytes())
     basis_signature(inputs["restart"].read_bytes())
     args.output = args.output.resolve()

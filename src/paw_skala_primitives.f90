@@ -1145,7 +1145,9 @@ CONTAINS
  &                +F/R**2*HY(ID,JD,LM)
               END DO
             END DO
-            WAVE(5:13,LMN,Q)=RESHAPE(H,(/9/))
+            WAVE(5:7,LMN,Q)=H(:,1)
+            WAVE(8:10,LMN,Q)=H(:,2)
+            WAVE(11:13,LMN,Q)=H(:,3)
           END IF
         END DO
       END DO
@@ -1198,7 +1200,14 @@ CONTAINS
       SGN=MERGE(1.D0,-1.D0,Q.EQ.1)
       C=WAVE(1,:,Q)
       G=WAVE(2:4,:,Q)
-      IF(GEOMETRY) H=RESHAPE(WAVE(5:13,:,Q),SHAPE(H))
+      IF(GEOMETRY) THEN
+        ! Avoid runtime RESHAPE temporaries in the per-point contraction.
+        DO I=1,S%LMNX
+          H(:,1,I)=WAVE(5:7,I,Q)
+          H(:,2,I)=WAVE(8:10,I,Q)
+          H(:,3,I)=WAVE(11:13,I,Q)
+        END DO
+      END IF
       DO D=1,S%NDIMD
         DC=0.D0
         DG=0.D0

@@ -551,6 +551,115 @@ columns.
    ```
 7. Consult the manual `doc/manual.pdf` for further information.
 
+## Optional native SCAN functional
+
+The native Fortran SCAN kernel can use the same joint periodic PAW
+reconstruction and adjoint as Skala. It requires neither a model file nor
+PyTorch, FTorch, LibXC or a GPU at runtime. A conventional `fast` or
+`fast_parallel` build includes this opt-in path.
+
+```text
+!DFT TYPE=10
+ !SCAN RADIALPOINTS=200 LEBEDEVEXACTNESS=53 CHECK=T !END
+!END
+```
+
+Here `TYPE=10` selects the PBE reference for atomic setup construction.
+The `SCAN` block replaces the solid or molecule XC energy and its complete
+operator, including the positive kinetic-energy-density contribution.
+It does not add SCAN on top of PBE. Collinear spin-polarized calculations
+are supported. Native SCAN atomic setup generation is not provided.
+The native kernel was contributed by Konstantin Tamoev and implements
+[SCAN exchange and correlation](https://doi.org/10.1103/PhysRevLett.115.036402).
+The verification drivers use the setup definitions in the supplied structure,
+including built-in IDs or complete `!SPECIES!AUGMENT` blocks. They do not attach
+the historical `PARMS_STP` file, which did not override the built-in setups.
+
+The physical spin densities, gradients and positive kinetic energy densities
+are reconstructed before the local functional is evaluated. Quadrature
+weights multiply the resulting energy and derivatives, not its inputs.
+The isolated frozen-core SCAN XC energy is subtracted as a constant to
+retain CP-PAW's valence-energy convention. The protocol reports both the
+reconstructed energy and this reference. Skala's existing energy convention
+is unchanged.
+
+This path integrates the functional of the jointly reconstructed fields.
+It does not evaluate separate smooth, all-electron one-center and pseudo
+one-center XC energies. Those two PAW approximations need not coincide at
+finite partial-wave completeness. The joint path includes nonlinear cross
+terms through the reconstructed fields and differentiates the same discrete
+energy through the smooth fields, on-site density matrices and quadrature
+geometry. It uses only first functional derivatives, not the conventional
+one-center XC Taylor expansion.
+
+Native SCAN evaluates each rank's reconstructed point block locally. It does
+not gather the complete atom block onto a group root for functional evaluation.
+The nonlocal Skala model retains its complete-block evaluation and adjoint exchange.
+
+The complete smooth, tau and one-center operators are mandatory. Native
+SCAN rejects model/device settings, disabled operator contributions and
+`VDW=T`, which would otherwise select the auxiliary PBE dispersion parameters.
+Conventional input files without a `SCAN` or `SKALA` block are unchanged.
+
+Run the kernel, independent LibXC-reference and backend tests with
+
+```sh
+bash tests/unittests/scan/run.sh bin/Build_fast
+python3 tests/unittests/scan/input_checks.py bin/fast/paw_fast.x
+bash tests/unittests/skala_reconstruction/run.sh bin/Build_fast
+```
+
+The reconstruction suite includes independent pointwise kinetic-density
+references for complex Bloch waves, packed real orbitals, nonuniform
+occupations, analytic core orbitals and complex s/p/d PAW superpositions.
+These checks test the fields themselves, not just energy derivatives.
+
+`tests/fulltests/scan_si2/run.py` audits an existing restart, while
+`tests/fulltests/scan_si2/relax.py` requires explicit orbital-residual and
+occupation-commutator convergence. The shared orbital, force and stress
+verification drivers accept `--functional scan` without a model file.
+For basis and quadrature energy comparisons, native `relax.py` also accepts
+`--electronic-only`. It keeps the same stationarity tests while omitting
+ionic forces. Its results explicitly distinguish energies from force validation.
+Warmup and the final stationarity window share one process in this mode,
+so geometric quadrature caches do not need to be rebuilt between them.
+Their finite-difference tests establish derivative consistency, not
+independent physical accuracy. Joint reconstructed-density SCAN remains
+under validation, particularly for quadrature and basis convergence and
+comparison with independently converged calculations. Reference
+comparisons must also account for the PAW dataset, frozen-core reference
+and relativistic treatment. The retained
+numerical second- and third-derivative kernel entry points are diagnostic
+and are not used by this PAW path.
+
+Start density-grid convergence checks at `CDUAL=4`, which is also the
+default in the native SCAN verification drivers. `CHECK=T` reports low-density,
+negative-tau and spin-channel von Weizsaecker-bound violations in the raw
+reconstructed fields, including the quadrature-weighted electron count in
+the affected region. These diagnostics can expose underresolved fields.
+Increasing the atom-grid size alone does not refine the underlying density grid.
+Check the density multipole cutoff `LRHOX` separately from the wavefunction
+cutoff and both grids. Products of partial waves with maximum angular momentum
+`lmax` require density multipoles through `2*lmax`. For example, the historical
+Si2 PBE regression uses d projectors but truncates these multipoles at
+`LRHOX=2`. Use `LRHOX=4` for a full-multipole Si2 accuracy comparison without
+changing that regression input or its reference energy. A stationary restart
+in a smaller basis or with truncated multipoles is not a convergence test for
+the enlarged representation.
+The native run and relaxation drivers also accept `--lebedev-orientations`.
+This averages rotated copies of the selected angular rule. It increases the
+point count without increasing the rule's formal polynomial exactness and
+allows a separate check of angular aliasing in periodic fields.
+Integrated Pauli and negative-tau deficits report the magnitude of the
+violations in Hartree using absolute quadrature weights. They distinguish
+rounding-level sign changes from finite deficits. Neither affected electron
+counts nor integrated deficits are error bounds for the XC energy.
+The native kernel retains the smooth SCAN continuation at negative iso-orbital
+indicator alpha rather than imposing an extra alpha=0 clamp. Its boundary
+references use LibXC with Fermi-hole-curvature (FHC) enforcement disabled.
+LibXC's optional FHC enforcement changes gradient invariants and is a distinct
+regularization. Match this convention in independent reference calculations.
+
 ## License
 
 The CP-PAW code is distributed under the GNU Public License Version 3.
