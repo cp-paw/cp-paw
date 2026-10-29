@@ -592,6 +592,10 @@ energy through the smooth fields, on-site density matrices and quadrature
 geometry. It uses only first functional derivatives, not the conventional
 one-center XC Taylor expansion.
 
+Native SCAN evaluates each rank's reconstructed point block locally. It does
+not gather the complete atom block onto a group root for functional evaluation.
+The nonlocal Skala model retains its complete-block evaluation and adjoint exchange.
+
 The complete smooth, tau and one-center operators are mandatory. Native
 SCAN rejects model/device settings, disabled operator contributions and
 `VDW=T`, which would otherwise select the auxiliary PBE dispersion parameters.

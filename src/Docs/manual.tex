@@ -1131,6 +1131,12 @@ energies. Equality at finite partial-wave completeness is not assumed.
 Nonlinear cross terms are included through the reconstructed fields. No
 second- or third-order one-center XC Taylor expansion is used.
 
+Each MPI point rank evaluates its own reconstructed SCAN rows. This partitions
+the quadrature, not the physical PAW contributions entering the nonlinear
+functional. Local energies and adjoints are combined after evaluation, without
+gathering complete atom blocks for SCAN. The nonlocal Skala model retains its
+complete-block evaluation and adjoint exchange.
+
 \mbax{\key{RADIALPOINTS}
 \vdescr{Number of radial quadrature points per atom.}
 \vformat{integer} \vrules{optional, positive} \vdefault{200}}

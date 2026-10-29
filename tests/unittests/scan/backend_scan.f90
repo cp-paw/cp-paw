@@ -6,6 +6,8 @@
       REAL(8) :: E,REF,DR(NP,2),DG(NP,3,2),DT(NP,2),DX(NP,3),DC(1,3),DD(NP)
       REAL(8) :: RR(NP,2),RG(NP,3,2),RT(NP,2),RW(NP),ERROR
       INTEGER(8) :: SIZES(1)
+      INTEGER :: I,FIRST,LAST
+      REAL(8) :: SPLIT_ENERGY
       LOGICAL :: AVAILABLE,CUDA
       CALL MPE$INIT
       CALL TEST_SCAN_CORE_REFERENCE
@@ -31,6 +33,22 @@
       ERROR=MAX(ERROR,MAXVAL(ABS(DW-RW)),MAXVAL(ABS(DX)),MAXVAL(ABS(DC)),MAXVAL(ABS(DD)))
       IF(ERROR.GT.1.D-13) ERROR STOP 'Native SCAN backend changes primitive adjoints'
       IF(.NOT.TINITIALIZED) ERROR STOP 'Native SCAN backend was not initialized'
+      ! Include an empty range, as on layouts with more ranks than points.
+      SPLIT_ENERGY=0.D0
+      DO I=1,3
+        FIRST=1+(I-1)*NP/3
+        LAST=I*NP/3
+        SIZES=LAST-FIRST+1
+        CALL SKALA$EVALUATE(LAST-FIRST+1,1,RHO(FIRST:LAST,:),G(FIRST:LAST,:,:) &
+     &     ,T(FIRST:LAST,:),X(FIRST:LAST,:),W(FIRST:LAST),C,DESC(FIRST:LAST),SIZES &
+     &     ,E,DR(FIRST:LAST,:),DG(FIRST:LAST,:,:),DT(FIRST:LAST,:) &
+     &     ,DX(FIRST:LAST,:),DW(FIRST:LAST),DC,DD(FIRST:LAST))
+        SPLIT_ENERGY=SPLIT_ENERGY+E
+      END DO
+      ERROR=MAX(ABS(SPLIT_ENERGY-REF),MAXVAL(ABS(DR-RR)),MAXVAL(ABS(DG-RG)) &
+     &         ,MAXVAL(ABS(DT-RT)),MAXVAL(ABS(DW-RW)),MAXVAL(ABS(DX)),MAXVAL(ABS(DC)))
+      IF(ERROR.GT.1.D-13) ERROR STOP 'Native SCAN row partition changes energy or adjoints'
+      SIZES=NP
       ! A local functional does not depend on coordinates or descriptor windows.
       X=2.1D0
       C=-3.D0
