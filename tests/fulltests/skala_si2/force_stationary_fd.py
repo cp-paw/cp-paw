@@ -174,6 +174,7 @@ def control(args, *, electronic_only=False, steps=None):
     dual = getattr(args, "density_dual", 2.)
     dual_text = "2" if dual == 2. else f"{dual:.16e}"
     functional = getattr(args, "functional", "skala")
+    orientations = getattr(args, "lebedev_orientations", 1)
     xc = "!SCAN" if functional == "scan" else f"!SKALA MODEL='model.fun' DEVICE='{args.device}'"
     return f"""!CONTROL
  !GENERIC TRACE=F DT={args.dt:.16e} NSTEP={steps} NWRITE=10 START=F
@@ -181,7 +182,7 @@ def control(args, *, electronic_only=False, steps=None):
  !DFT TYPE=10
   {xc}
    RADIALPOINTS={args.radial_points} LEBEDEVEXACTNESS={args.lebedev_exactness}
-   LEBEDEVORIENTATIONS=1 IMAGESHELLS=1 APPLY=T CHECK=T
+   LEBEDEVORIENTATIONS={orientations} IMAGESHELLS=1 APPLY=T CHECK=T
   !END
  !END
  !FOURIER EPWPSI={args.cutoff:.16e} CDUAL={dual_text} !END
@@ -278,6 +279,8 @@ def add_relaxation_arguments(parser):
                         help="Omit to measure without claiming passed derivative accuracy")
     parser.add_argument("--radial-points", type=int, default=96)
     parser.add_argument("--lebedev-exactness", type=int, default=17)
+    parser.add_argument("--lebedev-orientations", type=int, default=1,
+                        help="Average rotated angular rules without changing their formal exactness")
     parser.add_argument("--cutoff", type=float, default=20)
     parser.add_argument("--density-dual", type=float, default=2,
                         help="Density/wavefunction cutoff ratio, independently refining the FFT grid")
@@ -304,7 +307,8 @@ def validate_relaxation_arguments(parser, args):
             or len(set(args.steps)) != len(args.steps)
             or args.electronic_warmup_steps < 0
             or min(args.jobs, getattr(args, "mpi_ranks", 1), args.block_steps, args.max_blocks, args.last,
-                   args.radial_points, args.lebedev_exactness) < 1 or args.last > args.block_steps):
+                   args.radial_points, args.lebedev_exactness,
+                   getattr(args, "lebedev_orientations", 1)) < 1 or args.last > args.block_steps):
         parser.error("Invalid indices, sizes, relaxation settings or finite-difference parameters")
 
 

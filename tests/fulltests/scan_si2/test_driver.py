@@ -14,6 +14,9 @@ class NativeScanDriverTest(unittest.TestCase):
         self.assertNotIn("stp.cntl", text)
         self.assertNotIn("PARMS_STP", text)
         self.assertIn("!SCAN RADIALPOINTS=200 LEBEDEVEXACTNESS=53", text)
+        self.assertIn("LEBEDEVORIENTATIONS=1", text)
+        args.lebedev_orientations = 4
+        self.assertIn("LEBEDEVORIENTATIONS=4", run.control(args))
 
 
 if __name__ == "__main__":
