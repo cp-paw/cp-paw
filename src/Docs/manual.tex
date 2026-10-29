@@ -1079,7 +1079,8 @@ at short distances.}
 \block{!CONTROL!DFT!SCAN}
 %----------------------------------------------------------------------
 \brules{optional, incompatible with SKALA}
-\bdescr{Selects native SCAN exchange and correlation on the joint periodic
+\bdescr{Selects native SCAN exchange and correlation\cite{sun15_prl115_036402}
+on the joint periodic
 PAW atom grid. No model file, Torch installation, LibXC library or GPU is
 required. The parent DFT settings remain the auxiliary reference for atomic
 setup construction. For example, TYPE=10 constructs PBE reference setups,
@@ -1102,6 +1103,33 @@ quadrature convergence and independent physical reference calculations
 must be checked for each intended application. Reference comparisons must
 also account for the PAW dataset, frozen-core energy convention and
 relativistic treatment.}
+
+Writing $X_\sigma=(n_\sigma,\nabla n_\sigma,\tau_\sigma)$, the smooth
+fields and their atom-centered corrections are combined before evaluating
+the nonlinear functional,
+\begin{align}
+ X_\sigma(\mathbf r_q)&=\widetilde X_\sigma(\mathbf r_q)
+             +\sum_a\Delta X^a_\sigma(\mathbf r_q),\\
+ \tau_\sigma&=\frac12\sum_n f_{n\sigma}|\nabla\psi_{n\sigma}|^2 .
+\end{align}
+The corrections include the physical frozen-core fields. The smooth density
+contains the pseudo-core density, which is removed in the density correction.
+The discrete XC contribution in the valence-energy convention is
+\begin{equation}
+ E_{\rm xc}^{\rm grid}=\sum_q w_q e_{\rm xc}(X_\uparrow(\mathbf r_q),
+                            X_\downarrow(\mathbf r_q))
+                        -\sum_a E_{\rm xc}^{a,\rm frozen\ core} .
+\end{equation}
+The isolated frozen-core reference is constant for a fixed setup. The full
+operator follows by differentiating this same discrete energy with respect
+to the smooth fields and the on-site density matrices. Atomic forces and
+stress also differentiate the moving quadrature and reconstruction.
+
+This is a joint reconstructed-density PAW approximation, not the conventional
+sum of separate smooth, all-electron one-center and pseudo one-center XC
+energies. Equality at finite partial-wave completeness is not assumed.
+Nonlinear cross terms are included through the reconstructed fields. No
+second- or third-order one-center XC Taylor expansion is used.
 
 \mbax{\key{RADIALPOINTS}
 \vdescr{Number of radial quadrature points per atom.}

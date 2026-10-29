@@ -109,6 +109,8 @@ The `SCAN` block replaces the solid or molecule XC energy and its complete
 operator, including the positive kinetic-energy-density contribution.
 It does not add SCAN on top of PBE. Collinear spin-polarized calculations
 are supported. Native SCAN atomic setup generation is not provided.
+The native kernel was contributed by Konstantin Tamoev and implements
+[SCAN exchange and correlation](https://doi.org/10.1103/PhysRevLett.115.036402).
 The verification drivers use the setup definitions in the supplied structure,
 including built-in IDs or complete `!SPECIES!AUGMENT` blocks. They do not attach
 the historical `PARMS_STP` file, which did not override the built-in setups.
@@ -121,6 +123,15 @@ retain CP-PAW's valence-energy convention. The protocol reports both the
 reconstructed energy and this reference. Skala's existing energy convention
 is unchanged.
 
+This path integrates the functional of the jointly reconstructed fields.
+It does not evaluate separate smooth, all-electron one-center and pseudo
+one-center XC energies. Those two PAW approximations need not coincide at
+finite partial-wave completeness. The joint path includes nonlinear cross
+terms through the reconstructed fields and differentiates the same discrete
+energy through the smooth fields, on-site density matrices and quadrature
+geometry. It uses only first functional derivatives, not the conventional
+one-center XC Taylor expansion.
+
 The complete smooth, tau and one-center operators are mandatory. Native
 SCAN rejects model/device settings, disabled operator contributions and
 `VDW=T`, which would otherwise select the auxiliary PBE dispersion parameters.
@@ -131,7 +142,13 @@ Run the kernel, independent LibXC-reference and backend tests with
 ```sh
 bash tests/unittests/scan/run.sh bin/Build_fast
 python3 tests/unittests/scan/input_checks.py bin/fast/paw_fast.x
+bash tests/unittests/skala_reconstruction/run.sh bin/Build_fast
 ```
+
+The reconstruction suite includes independent pointwise kinetic-density
+references for complex Bloch waves, packed real orbitals, nonuniform
+occupations, analytic core orbitals and complex s/p/d PAW superpositions.
+These checks test the fields themselves, not just energy derivatives.
 
 `tests/fulltests/scan_si2/run.py` audits an existing restart, while
 `tests/fulltests/scan_si2/relax.py` requires explicit orbital-residual and
