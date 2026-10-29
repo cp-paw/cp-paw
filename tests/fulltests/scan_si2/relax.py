@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Relax native SCAN electrons until explicit PAW stationarity criteria hold."""
+"""Relax SCAN or Skala electrons until explicit PAW stationarity criteria hold."""
 
 import argparse
 import json
@@ -23,8 +23,6 @@ def main():
                         orthogonality_tolerance=1e-12)
     args = parser.parse_args()
     fd.validate_relaxation_arguments(parser, args)
-    if args.functional != "scan":
-        parser.error("Use the general Skala drivers for Skala relaxation")
     inputs = fd.relaxation_inputs(parser, args)
     args.atom, args.axis = 1, 1
     args.output = args.output.resolve()
@@ -49,6 +47,7 @@ def main():
             raise ValueError(f"Changed source input during relaxation: {key}")
     if result["blocks"]:
         result["restart"] = str(Path(result["blocks"][-1]["directory"]) / "si2.rstrt")
+    result["functional"] = args.functional
     result["scope"] = "electronic stationarity at the specified PAW basis and quadrature, not cross-code accuracy"
     result["forces_evaluated"] = not args.electronic_only
     fd.write_json(args.output / "results.json", result)

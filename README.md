@@ -634,8 +634,10 @@ not replace self-consistent open-shell material or molecular references.
 `tests/fulltests/scan_si2/relax.py` requires explicit orbital-residual and
 occupation-commutator convergence. The shared orbital, force and stress
 verification drivers accept `--functional scan` without a model file.
-For basis and quadrature energy comparisons, native `relax.py` also accepts
-`--electronic-only`. It keeps the same stationarity tests while omitting
+For basis and quadrature energy comparisons, `relax.py` accepts
+`--functional scan` (the default) or `--functional skala --model MODEL`,
+including collinear open-shell inputs. It also accepts `--electronic-only`.
+It keeps the same stationarity tests while omitting
 ionic forces. Its results explicitly distinguish energies from force validation.
 Warmup and the final stationarity window share one process in this mode,
 so geometric quadrature caches do not need to be rebuilt between them.
