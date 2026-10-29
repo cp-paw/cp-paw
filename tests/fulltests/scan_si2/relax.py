@@ -36,6 +36,9 @@ def main():
         "driver_sha256": fd.digest(Path(__file__)),
         "arguments": {key: str(value) if isinstance(value, Path) else value
                       for key, value in vars(args).items()},
+        "environment": {key: value for key, value in env.items()
+                        if key.startswith("CPPAW_") or key in
+                        ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "CUDA_VISIBLE_DEVICES")},
     }
     fd.write_json(args.output / "provenance.json", provenance)
     _, result = fd.run_leg("relax", 0., args, inputs, env)
