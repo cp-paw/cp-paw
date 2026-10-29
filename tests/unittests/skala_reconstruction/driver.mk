@@ -37,7 +37,8 @@ skala-source-resident-test: skala-source-resident-unit
 	CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_FWD_RESIDENT_MB=1 ./unit-tests/source_residency.x gpu
 	CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS=1 CPPAW_SKALA_SOURCE_FWD_RESIDENT_MB=0 ./unit-tests/source_residency.x gpu
 	@for value in -1 invalid 99999999999999999999 ''; do \
-	  if CPPAW_SKALA_SOURCE_FWD_RESIDENT_MB="$$value" ./unit-tests/source_residency.x limit > unit-tests/source_resident_invalid.log 2>&1; then exit 1; fi; \
+	  status=0; CPPAW_SKALA_SOURCE_FWD_RESIDENT_MB="$$value" ./unit-tests/source_residency.x limit > unit-tests/source_resident_invalid.log 2>&1 || status=$$?; \
+	  if test "$$status" -eq 0 || test "$$status" -ge 128; then cat unit-tests/source_resident_invalid.log; exit 1; fi; \
 	  grep -q 'CPPAW_SKALA_SOURCE_FWD_RESIDENT_MB MUST BE A NONNEGATIVE INTEGER' unit-tests/source_resident_invalid.log || exit 1; \
 	done
 
