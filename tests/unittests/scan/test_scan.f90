@@ -14,6 +14,7 @@
 !****   (6) EVAL2 DIAGONAL AND HESSIAN SYMMETRY                            ****
 !****   (7) INDEPENDENT LIBXC ENERGY AND FIRST-DERIVATIVE VALUES           ****
 !****   (8) QUADRATURE BLOCK CHAIN RULE AND WEIGHT DERIVATIVES             ****
+!****   (9) EMPTY-SPIN EXCHANGE GUARD AND SATURATED-SPIN TAU LIMITS         ****
 !*******************************************************************************
       PROGRAM TEST_SCAN
       IMPLICIT NONE
@@ -23,6 +24,7 @@
       CALL TEST_UNIFORMGAS(NFAIL)
       CALL TEST_SINGLEORBITAL(NFAIL)
       CALL TEST_ONEELECTRON(NFAIL)
+      CALL TEST_SCAN_EMPTY_SPIN(NFAIL)
       CALL TEST_SPINSYMMETRY(NFAIL)
       CALL TEST_FINITEDIFFERENCE(NFAIL)
       CALL TEST_SCAN_CLAMP_DERIVATIVES(NFAIL)
@@ -37,6 +39,43 @@
         STOP 1
       END IF
       END PROGRAM TEST_SCAN
+
+      SUBROUTINE TEST_SCAN_EMPTY_SPIN(NFAIL)
+      USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: IEEE_IS_FINITE
+      IMPLICIT NONE
+      INTEGER,INTENT(INOUT) :: NFAIL
+      REAL(8) :: V(9),VP(9),E,EP,EPP,D(9),DUMMY(9),SIGN,FD,H,VT
+      INTEGER :: S
+      ! Independent polarized LibXC 5.2.3 and 7.0.0 SCAN values.
+      ! Only majority derivatives are compared across density-floor conventions.
+      H=1.D-5
+      DO S=1,2
+        SIGN=REAL(3-2*S,8)
+        V=[0.1D0,SIGN*0.1D0,0.0004D0,0.0004D0,SIGN*0.0004D0 &
+     &     ,0.D0,0.D0,0.01D0,SIGN*0.01D0]
+        CALL SCAN$EVAL1(V,E,D)
+        IF(.NOT.IEEE_IS_FINITE(E).OR.ANY(.NOT.IEEE_IS_FINITE(D))) &
+     &    ERROR STOP 'Nonfinite saturated-spin SCAN result'
+        CALL TEST_REPORT('EMPTY SPIN LIBXC ENERGY',E,-0.05038939053081558D0,1.D-12,NFAIL)
+        CALL TEST_REPORT('MAJORITY SPIN LIBXC DENSITY DERIVATIVE',D(1)+SIGN*D(2) &
+     &                  ,-0.6769663050819785D0,5.D-10,NFAIL)
+        CALL TEST_REPORT('MAJORITY SPIN LIBXC TAU DERIVATIVE',D(8)+SIGN*D(9) &
+     &                  ,0.03566942205948772D0,5.D-10,NFAIL)
+        VT=D(8)-SIGN*D(9)
+        CALL TEST_REPORT('EMPTY SPIN TAU OPERATOR BOUND',MAX(0.D0,ABS(VT)-1.D0) &
+     &                  ,0.D0,1.D-12,NFAIL)
+        ! A one-sided probe remains inside the nonnegative-tau domain.
+        VP=V
+        VP(8)=V(8)+H
+        VP(9)=V(9)-SIGN*H
+        CALL SCAN$EVAL1(VP,EP,DUMMY)
+        VP(8)=V(8)+2.D0*H
+        VP(9)=V(9)-2.D0*SIGN*H
+        CALL SCAN$EVAL1(VP,EPP,DUMMY)
+        FD=(-3.D0*E+4.D0*EP-EPP)/(2.D0*H)
+        CALL TEST_REPORT('EMPTY SPIN TAU ONE-SIDED DERIVATIVE',VT,FD,1.D-7,NFAIL)
+      END DO
+      END SUBROUTINE TEST_SCAN_EMPTY_SPIN
 
       SUBROUTINE TEST_SCAN_CLAMP_DERIVATIVES(NFAIL)
       IMPLICIT NONE
