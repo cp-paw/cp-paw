@@ -625,6 +625,10 @@ use steps above its Float32 rounding floor. CI also checks the separately
 validated Float64 diagnostic export with smaller steps and a tighter bound.
 Select it with `XC_MODEL_PRECISION=diagnostic64`; this test setting does not
 change the production model or its arithmetic.
+The companion `xc-spin-open-test` target checks unequal spin channels,
+spin interchange of the energy and every adjoint, separate primitive
+derivatives, and finite results when one spin channel is empty. It does
+not replace self-consistent open-shell material or molecular references.
 
 `tests/fulltests/scan_si2/run.py` audits an existing restart, while
 `tests/fulltests/scan_si2/relax.py` requires explicit orbital-residual and
