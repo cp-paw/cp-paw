@@ -118,8 +118,10 @@ def compare(center, minus, plus, step, absolute_tolerance=None, relative_toleran
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("executable", "model", "restart", "structure", "output"):
+    for name in ("executable", "restart", "structure", "output"):
         parser.add_argument("--" + name, required=True, type=Path)
+    parser.add_argument("--functional", choices=("skala", "scan"), default="skala")
+    parser.add_argument("--model", type=Path, help="Required for Skala, not used by native SCAN")
     parser.add_argument("--device", choices=("CPU", "CUDA"), default="CPU")
     parser.add_argument("--gpu-mode", choices=("off", "transfer", "resident"), default="off")
     parser.add_argument("--mpi-ranks", type=int, default=1)
@@ -141,6 +143,10 @@ def main():
     parser.add_argument("--relative-tolerance", type=float, default=0.0)
     parser.add_argument("--timeout", type=float, default=1800)
     args = parser.parse_args()
+    if args.functional == "skala" and args.model is None:
+        parser.error("--model is required for the Skala functional")
+    if args.functional == "scan" and (args.model is not None or args.device != "CPU" or args.reference_pbe):
+        parser.error("Native SCAN does not use a Torch model/device or --reference-pbe")
     if ((args.direction == "kinetic" and args.bands is not None)
             or (args.direction == "subspace" and args.band is not None)):
         parser.error("Use --bands for subspace rotations and --band for kinetic tangents")
@@ -157,8 +163,8 @@ def main():
             or (args.absolute_tolerance is not None and
                 (not math.isfinite(args.absolute_tolerance) or args.absolute_tolerance <= 0))):
         parser.error("Invalid tolerances")
-    inputs = {key: getattr(args, key).resolve(strict=True)
-              for key in ("executable", "model", "restart", "structure")}
+    keys = ("executable", "restart", "structure") + (("model",) if args.functional == "skala" else ())
+    inputs = {key: getattr(args, key).resolve(strict=True) for key in keys}
     args.output.mkdir(parents=True, exist_ok=False)
     env = dict(os.environ, CPPAW_GPU_MODE=args.gpu_mode)
     for key in ("CPPAW_SKALA_ORBITAL_ROTATION", "CPPAW_SKALA_ORBITAL_TANGENT"):
@@ -173,12 +179,15 @@ def main():
                                   if key.startswith("CPPAW_") or key in
                                   ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "CUDA_VISIBLE_DEVICES")}
     (args.output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
-    template = Path(__file__).with_name("skala_si2.cntl").read_text()
+    template_file = (Path(__file__).with_name("skala_si2.cntl") if args.functional == "skala" else
+                     Path(__file__).parent / "../scan_si2/scan_si2.cntl")
+    template = template_file.read_text()
     replacements = {"START=T": "START=F", "!CELL MOVE=T": "!CELL MOVE=F",
-                    "DEVICE='AUTO'": f"DEVICE='{args.device}'",
                     "RADIALPOINTS=200": f"RADIALPOINTS={args.radial_points}",
                     "LEBEDEVEXACTNESS=53": f"LEBEDEVEXACTNESS={args.lebedev_exactness}",
                     "NAME='../si2/stp.cntl'": "NAME='stp.cntl'"}
+    if args.functional == "skala":
+        replacements["DEVICE='AUTO'"] = f"DEVICE='{args.device}'"
     if args.reference_pbe:
         replacements["APPLY=T"] = "APPLY=F"
     for old, new in replacements.items():
@@ -191,7 +200,8 @@ def main():
         work = (args.output / name).resolve()
         work.mkdir()
         (work / "si2.cntl").write_text(template)
-        (work / "model.fun").symlink_to(inputs["model"])
+        if args.functional == "skala":
+            (work / "model.fun").symlink_to(inputs["model"])
         shutil.copy2(inputs["restart"], work / "si2.rstrt")
         shutil.copy2(inputs["structure"], work / "si2.strc")
         shutil.copy2(Path(__file__).parent / "../si2/stp.cntl", work / "stp.cntl")
@@ -228,7 +238,7 @@ def main():
                                    args.relative_tolerance))
     summary = {"scope": "fixed-occupation orbital derivative, not stationary forces",
                "direction": args.direction,
-               "functional": "PBE reference" if args.reference_pbe else "Skala",
+               "functional": "SCAN" if args.functional == "scan" else "PBE reference" if args.reference_pbe else "Skala",
                "center_repeat_energy_difference_hartree":
                    abs(center["ENERGY"][0] - repeat["ENERGY"][0]),
                "center_repeat_derivative_difference_hartree":

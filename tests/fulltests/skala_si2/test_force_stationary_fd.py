@@ -1,3 +1,4 @@
+import argparse
 import copy
 from contextlib import redirect_stderr, redirect_stdout
 import io
@@ -42,6 +43,46 @@ PROGRAM FINISHED
 
 
 class StationaryForceTest(unittest.TestCase):
+    def test_rotated_angular_rules_are_selectable_and_positive(self):
+        parser = argparse.ArgumentParser()
+        force_fd.add_relaxation_arguments(parser)
+        argv = ["--executable", "paw.x", "--restart", "state.rstrt",
+                "--structure", "system.strc", "--output", "result"]
+        for functional in ("scan", "skala"):
+            args = parser.parse_args(argv + ["--functional", functional,
+                                            "--lebedev-orientations", "4"])
+            force_fd.validate_relaxation_arguments(parser, args)
+            self.assertIn("LEBEDEVORIENTATIONS=4", force_fd.control(args))
+        args.lebedev_orientations = 0
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            force_fd.validate_relaxation_arguments(parser, args)
+
+    def test_native_scan_has_no_model_and_uses_structure_setups(self):
+        parser = argparse.ArgumentParser()
+        force_fd.add_relaxation_arguments(parser)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            argv = ["--functional", "scan"]
+            for key in ("executable", "restart", "structure"):
+                path = root / key
+                path.write_bytes(b"fixture")
+                argv.extend(["--" + key, str(path)])
+            argv.extend(["--output", str(root / "result")])
+            args = parser.parse_args(argv)
+            inputs = force_fd.relaxation_inputs(parser, args)
+            self.assertEqual(set(inputs), {"executable", "restart", "structure"})
+            text = force_fd.control(args)
+            self.assertIn("!SCAN\n", text)
+            self.assertNotIn("PARMS_STP", text)
+            self.assertNotIn("!FILES", text)
+            self.assertNotIn("MODEL=", text)
+            self.assertNotIn("DEVICE=", text)
+            self.assertNotIn("!SKALA", text)
+            for extra in (["--device", "CUDA"], ["--model", str(root / "structure")],
+                          ["--functional", "skala"]):
+                with self.subTest(extra=extra), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                    force_fd.relaxation_inputs(parser, parser.parse_args(argv + extra))
+
     def test_all_cartesian_tasks_share_only_the_center(self):
         args = SimpleNamespace(all_cartesian=True, rigid_translation=False,
                                center_displacement=0., atom=2, axis=1, steps=(3e-5, 1e-5))
@@ -128,9 +169,13 @@ class StationaryForceTest(unittest.TestCase):
                 _, result = force_fd.run_leg("unconverged", 0, args, inputs, {})
             self.assertFalse(result["stationary"])
             self.assertIn("failure", result)
+
             args.rigid_translation = True
-            with patch.object(force_fd.subprocess, "run", side_effect=run):
+            args.mpi_ranks = 3
+            args.mpiexec = "mpirun"
+            with patch.object(force_fd.subprocess, "run", side_effect=run) as launch:
                 force_fd.run_leg("translated", 0.003, args, inputs, {})
+            self.assertEqual(launch.call_args.args[0][:3], ["mpirun", "-np", "3"])
             translated = force_fd.geometry((root / "translated/block-1/si2.rstrt").read_bytes())
             self.assertEqual(translated["positions"], [[0.003, 0, 0, 2.003, 3, 4]] * 2)
 
@@ -157,6 +202,56 @@ class StationaryForceTest(unittest.TestCase):
         self.assertNotIn("STRESS=T", text)
         self.assertIn("NSTEP=12 ", text)
         self.assertIn("STRESS=T", force_fd.control(args))
+
+    def test_energy_only_relaxation_keeps_strict_stationarity_and_checkpoint_blocks(self):
+        from test_force_mode_parity import electronic
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            inputs = {key: root/key for key in ("restart", "structure", "executable")}
+            for path in inputs.values():
+                path.write_bytes(b"fixture")
+            inputs["restart"].write_bytes(restart())
+            args = SimpleNamespace(output=root, atom=1, axis=1, functional="scan",
+                dt=3, block_steps=1, electronic_warmup_steps=0, max_blocks=2,
+                last=1, residual_tolerance=1e-7, commutator_tolerance=1e-7,
+                device="CPU", radial_points=400, lebedev_exactness=65, cutoff=40,
+                mass=25, mass_g2=.3166286988823056, friction=.1, timeout=1)
+            def run(command, cwd, **kwargs):
+                self.assertIn("FORCE=F STRESS=F", (cwd/"si2.cntl").read_text())
+                text = electronic()
+                if cwd.name == "block-1":
+                    text = text.replace("1e-8", "1e-3")
+                (cwd/"si2.prot").write_text(text)
+            with patch.object(force_fd.subprocess, "run", side_effect=run):
+                _, result = force_fd.run_leg("energy", 0., args, inputs, {}, energy_only=True)
+            self.assertTrue(result["stationary"])
+            self.assertEqual([b["stationary"] for b in result["blocks"]], [False, True])
+            self.assertNotIn("forces", result["final"])
+            self.assertNotIn("force_trace", result)
+            self.assertTrue((Path(result["blocks"][-1]["directory"])/"si2.rstrt").exists())
+            args.max_blocks = 1
+            with patch.object(force_fd.subprocess, "run", side_effect=run):
+                _, result = force_fd.run_leg("unfinished", 0., args, inputs, {}, energy_only=True)
+            self.assertFalse(result["stationary"])
+            self.assertIn("failure", result)
+
+            args.electronic_warmup_steps = 2
+            args.max_blocks = 2
+            calls = []
+            def combined(command, cwd, **kwargs):
+                calls.append(cwd.name)
+                self.assertIn("NSTEP=3 ", (cwd/"si2.cntl").read_text())
+                tail = electronic(3)
+                if cwd.name == "block-1":
+                    tail = tail.replace("1e-8", "1e-3")
+                (cwd/"si2.prot").write_text(electronic(1)+electronic(2)+tail)
+            with patch.object(force_fd.subprocess, "run", side_effect=combined):
+                _, result = force_fd.run_leg("combined", 0., args, inputs, {}, energy_only=True)
+            self.assertEqual(calls, ["block-1", "block-2"])
+            self.assertTrue(result["stationary"])
+            self.assertEqual([b["stationary"] for b in result["blocks"]], [False, True])
+            self.assertNotIn("electronic_blocks", result)
+            self.assertEqual(len(result["energy_trace"]), 3)
 
     def test_warmup_cannot_replace_complete_stationary_force_blocks(self):
         from test_force_mode_parity import electronic

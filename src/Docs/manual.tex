@@ -1076,6 +1076,96 @@ at short distances.}
 
 
 %----------------------------------------------------------------------
+\block{!CONTROL!DFT!SCAN}
+%----------------------------------------------------------------------
+\brules{optional, incompatible with SKALA}
+\bdescr{Selects native SCAN exchange and correlation\cite{sun15_prl115_036402}
+on the joint periodic
+PAW atom grid. No model file, Torch installation, LibXC library or GPU is
+required. The parent DFT settings remain the auxiliary reference for atomic
+setup construction. For example, TYPE=10 constructs PBE reference setups,
+but the solid or molecule uses the complete SCAN XC energy and operator.
+Native SCAN atomic setup generation is not implemented.
+
+The functional receives reconstructed spin densities, gradients and positive
+kinetic energy densities. Quadrature weights are applied to the local energy
+and its first derivatives, not to these physical fields. The isolated
+frozen-core SCAN XC energy is subtracted as a constant, consistently with
+the conventional CP-PAW valence-energy reference. Its value and the raw
+reconstructed XC energy are reported separately. Higher numerical SCAN
+derivatives are not used in this path.
+
+The full smooth, kinetic-density and one-center operators are mandatory.
+MODEL, DEVICE, DEVICEINDEX, DISTRIBUTEGPU=T and VDW=T are rejected.
+Input files without this block retain the conventional XC implementation.
+This joint reconstructed-density path is under validation. Numerical
+quadrature convergence and independent physical reference calculations
+must be checked for each intended application. Reference comparisons must
+also account for the PAW dataset, frozen-core energy convention and
+relativistic treatment.}
+
+Writing $X_\sigma=(n_\sigma,\nabla n_\sigma,\tau_\sigma)$, the smooth
+fields and their atom-centered corrections are combined before evaluating
+the nonlinear functional,
+\begin{align}
+ X_\sigma(\mathbf r_q)&=\widetilde X_\sigma(\mathbf r_q)
+             +\sum_a\Delta X^a_\sigma(\mathbf r_q),\\
+ \tau_\sigma&=\frac12\sum_n f_{n\sigma}|\nabla\psi_{n\sigma}|^2 .
+\end{align}
+The corrections include the physical frozen-core fields. The smooth density
+contains the pseudo-core density, which is removed in the density correction.
+The discrete XC contribution in the valence-energy convention is
+\begin{equation}
+ E_{\rm xc}^{\rm grid}=\sum_q w_q e_{\rm xc}(X_\uparrow(\mathbf r_q),
+                            X_\downarrow(\mathbf r_q))
+                        -\sum_a E_{\rm xc}^{a,\rm frozen\ core} .
+\end{equation}
+The isolated frozen-core reference is constant for a fixed setup. The full
+operator follows by differentiating this same discrete energy with respect
+to the smooth fields and the on-site density matrices. Atomic forces and
+stress also differentiate the moving quadrature and reconstruction.
+
+This is a joint reconstructed-density PAW approximation, not the conventional
+sum of separate smooth, all-electron one-center and pseudo one-center XC
+energies. Equality at finite partial-wave completeness is not assumed.
+Nonlinear cross terms are included through the reconstructed fields. No
+second- or third-order one-center XC Taylor expansion is used.
+
+Each MPI point rank evaluates its own reconstructed SCAN rows. This partitions
+the quadrature, not the physical PAW contributions entering the nonlinear
+functional. Local energies and adjoints are combined after evaluation, without
+gathering complete atom blocks for SCAN. The nonlocal Skala model retains its
+complete-block evaluation and adjoint exchange.
+
+\mbax{\key{RADIALPOINTS}
+\vdescr{Number of radial quadrature points per atom.}
+\vformat{integer} \vrules{optional, positive} \vdefault{200}}
+
+\mbax{\key{LEBEDEVEXACTNESS}
+\vdescr{Angular exactness of the Lebedev rule. Exactness 53 uses 974 points.}
+\vformat{integer} \vrules{optional, supported Lebedev rule} \vdefault{53}}
+
+\noindent\begin{minipage}{\linewidth}
+\mbax{\key{LEBEDEVORIENTATIONS}
+\vdescr{Number of rotated copies of the angular rule whose integrals are
+averaged. The angular point count is multiplied by this number. This checks
+angular aliasing but does not increase the rule's formal polynomial exactness.}
+\vformat{integer} \vrules{optional, positive} \vdefault{1}}
+\end{minipage}
+
+\mbax{\key{CHECK}
+\vdescr{Reports reconstructed charges, kinetic energy densities, operator
+norms and the native SCAN energy decomposition. Raw-field diagnostics count
+low-density, negative kinetic-density and spin-channel von Weizsaecker-bound
+violations, together with the quadrature-weighted electron count affected
+by the latter. Integrated Pauli and negative kinetic-density deficits quantify
+their magnitude in Hartree with absolute quadrature weights. These are
+diagnostics, not XC energy error bounds. The native verification drivers start at CDUAL=4. Atom-grid
+refinement does not replace density-grid convergence. This is diagnostic output,
+not an electronic convergence or correctness criterion.}
+\vformat{logical} \vrules{optional} \vdefault{F}}
+
+%----------------------------------------------------------------------
 \block{!CONTROL!DFT!NTBO}
 %----------------------------------------------------------------------
 \brules{optional} \bdescr{Experimental option. Do not use!  Constructs
