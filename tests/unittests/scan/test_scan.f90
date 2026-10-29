@@ -25,6 +25,7 @@
       CALL TEST_ONEELECTRON(NFAIL)
       CALL TEST_SPINSYMMETRY(NFAIL)
       CALL TEST_FINITEDIFFERENCE(NFAIL)
+      CALL TEST_SCAN_CLAMP_DERIVATIVES(NFAIL)
       CALL TEST_EVAL2(NFAIL)
       CALL TEST_SCAN_REFERENCE(NFAIL)
       CALL TEST_SCAN_BLOCK(NFAIL)
@@ -35,6 +36,42 @@
         STOP 1
       END IF
       END PROGRAM TEST_SCAN
+
+      SUBROUTINE TEST_SCAN_CLAMP_DERIVATIVES(NFAIL)
+      IMPLICIT NONE
+      INTEGER,INTENT(INOUT) :: NFAIL
+      REAL(8) :: V(9),VP(9),VM(9),E,D(9),EP,EM,DUMMY(9),FD,ERROR,H
+      INTEGER :: CASE_,J
+      H=1.D-6
+      ERROR=0.D0
+      DO CASE_=1,4
+        V=[0.6D0,0.1D0,0.09D0,0.01D0,0.03D0,0.D0,0.D0,1.2D0,0.3D0]
+        SELECT CASE(CASE_)
+        CASE(1)
+          V(8)=0.37D0
+          V(9)=-0.43D0
+        CASE(2)
+          V(8)=0.37D0
+          V(9)=0.43D0
+        CASE(3)
+          V(2)=0.7D0
+        CASE(4)
+          V(2)=-0.7D0
+        END SELECT
+        CALL SCAN$EVAL1(V,E,D)
+        DO J=1,9
+          VP=V
+          VM=V
+          VP(J)=VP(J)+H
+          VM(J)=VM(J)-H
+          CALL SCAN$EVAL1(VP,EP,DUMMY)
+          CALL SCAN$EVAL1(VM,EM,DUMMY)
+          FD=(EP-EM)/(2.D0*H)
+          ERROR=MAX(ERROR,ABS(FD-D(J))/MAX(1.D0,ABS(FD),ABS(D(J))))
+        END DO
+      END DO
+      CALL TEST_REPORT('CLAMPED PRIMITIVE CHAIN RULE',ERROR,0.D0,2.D-8,NFAIL)
+      END SUBROUTINE TEST_SCAN_CLAMP_DERIVATIVES
 !
 !     ..........................................................................
       SUBROUTINE TEST_REPORT(NAME,VALUE,TARGET,TOL,NFAIL)
