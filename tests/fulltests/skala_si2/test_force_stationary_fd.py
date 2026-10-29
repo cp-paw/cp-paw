@@ -169,6 +169,7 @@ class StationaryForceTest(unittest.TestCase):
                 _, result = force_fd.run_leg("unconverged", 0, args, inputs, {})
             self.assertFalse(result["stationary"])
             self.assertIn("failure", result)
+
             args.rigid_translation = True
             args.mpi_ranks = 3
             args.mpiexec = "mpirun"
@@ -233,6 +234,24 @@ class StationaryForceTest(unittest.TestCase):
                 _, result = force_fd.run_leg("unfinished", 0., args, inputs, {}, energy_only=True)
             self.assertFalse(result["stationary"])
             self.assertIn("failure", result)
+
+            args.electronic_warmup_steps = 2
+            args.max_blocks = 2
+            calls = []
+            def combined(command, cwd, **kwargs):
+                calls.append(cwd.name)
+                self.assertIn("NSTEP=3 ", (cwd/"si2.cntl").read_text())
+                tail = electronic(3)
+                if cwd.name == "block-1":
+                    tail = tail.replace("1e-8", "1e-3")
+                (cwd/"si2.prot").write_text(electronic(1)+electronic(2)+tail)
+            with patch.object(force_fd.subprocess, "run", side_effect=combined):
+                _, result = force_fd.run_leg("combined", 0., args, inputs, {}, energy_only=True)
+            self.assertEqual(calls, ["block-1", "block-2"])
+            self.assertTrue(result["stationary"])
+            self.assertEqual([b["stationary"] for b in result["blocks"]], [False, True])
+            self.assertNotIn("electronic_blocks", result)
+            self.assertEqual(len(result["energy_trace"]), 3)
 
     def test_warmup_cannot_replace_complete_stationary_force_blocks(self):
         from test_force_mode_parity import electronic
