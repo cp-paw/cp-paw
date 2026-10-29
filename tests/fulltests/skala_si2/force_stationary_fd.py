@@ -206,13 +206,16 @@ def run_leg(name, delta, args, inputs, env, *, energy_only=False):
     expected = geometry(initial)
     result = {"displacement_bohr": delta, "stationary": False, "blocks": []}
     warmup = getattr(args, "electronic_warmup_steps", 0)
-    if warmup:
+    if warmup and not energy_only:
         result["electronic_blocks"] = []
     restart = None
     try:
         for index in range(args.max_blocks):
-            phases = [("electronic", warmup), ("block", args.block_steps)] if warmup else [
-                ("block", args.block_steps)]
+            if energy_only:
+                phases = [("block", warmup + args.block_steps)]
+            else:
+                phases = [("electronic", warmup), ("block", args.block_steps)] if warmup else [
+                    ("block", args.block_steps)]
             for phase, steps in phases:
                 electronic_only = phase == "electronic" or energy_only
                 block = work / f"{phase}-{index + 1}"

@@ -621,6 +621,8 @@ verification drivers accept `--functional scan` without a model file.
 For basis and quadrature energy comparisons, native `relax.py` also accepts
 `--electronic-only`. It keeps the same stationarity tests while omitting
 ionic forces. Its results explicitly distinguish energies from force validation.
+Warmup and the final stationarity window share one process in this mode,
+so geometric quadrature caches do not need to be rebuilt between them.
 Their finite-difference tests establish derivative consistency, not
 independent physical accuracy. Joint reconstructed-density SCAN remains
 under validation, particularly for quadrature and basis convergence and
