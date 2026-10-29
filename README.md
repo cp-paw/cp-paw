@@ -192,6 +192,9 @@ comparisons must also account for the PAW dataset, frozen-core reference
 and relativistic treatment. The retained
 numerical second- and third-derivative kernel entry points are diagnostic
 and are not used by this PAW path.
+Native SCAN tests include saturated-spin limits. A density floor does not
+create exchange in an otherwise empty spin channel. This avoids artificial
+large kinetic-energy-density potentials in fully polarized calculations.
 
 Start density-grid convergence checks at `CDUAL=4`, which is also the
 default in the native SCAN verification drivers. `CHECK=T` reports low-density,
