@@ -1136,90 +1136,49 @@ END MODULE NEWDFT_MODULE
 !     **************************************************************************
 !     **************************************************************************
       USE, INTRINSIC :: ISO_C_BINDING
-!     -- SEE LIBXC_MASTER.F90 OF THE LIBXC DISTRIBUTION.
-!     -- SOME VARIABLES HAVE BEEN MOVED FROM MODULE XC_F03_LIB_M
-!     -- TO THE MODULE XC_F03_FUNCS_M.
-!     -- THE MODULE XC_F03_FUNCS_M  INCLUDES LIBXC_INC.F90.
-!     -- CONDITIONAL COMPILATION FOR LIBXC VERSION COMPATIBILITY
-!     -- CPPVAR_LIBXC_V7 IS SET AUTOMATICALLY BY THE BUILD SYSTEM FOR LIBXC >= 7.0.0
-#IF DEFINED(CPPVAR_LIBXC_V7)
-!     -- LIBXC >= 7.0.0: USE NEW MODULE STRUCTURE WHERE SOME CONSTANTS MOVED TO XC_F03_FUNCS_M
-      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
-     &                          ,XC_F03_FUNC_INIT &! FUNCTION
-     &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
-     &                          ,XC_F03_FUNCTIONAL_GET_NAME
-      USE XC_F03_FUNCS_M , ONLY: XC_LDA_X & 
-     &                          ,XC_LDA_C_VWN &
-     &                          ,XC_GGA_X_PBE &
-     &                          ,XC_GGA_C_PBE &
-     &                          ,XC_MGGA_X_R2SCAN &
-     &                          ,XC_MGGA_C_R2SCAN
-#ELSE
-!     -- LIBXC < 7.0.0: XC_F03_FUNCS_M DIDN'T EXIST, EVERYTHING IN XC_F03_LIB_M
-      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
-     &                          ,XC_LDA_X & 
-     &                          ,XC_LDA_C_VWN &
-     &                          ,XC_GGA_X_PBE &
-     &                          ,XC_GGA_C_PBE &
-     &                          ,XC_MGGA_X_R2SCAN &
-     &                          ,XC_MGGA_C_R2SCAN
-     &                          ,XC_F03_FUNC_INIT &! FUNCTION
-#ENDIF 
+      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED, XC_F03_FUNC_INIT &
+     &                          ,XC_F03_FUNCTIONAL_GET_NUMBER
       USE PAWLIBXC_MODULE, ONLY: NXC &
      &                          ,XC_FUNC
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(*),INTENT(IN) :: VAL
+      CHARACTER(20)           :: NAMES(2)
+      INTEGER(4)              :: I
+      INTEGER(C_INT)          :: NUMBER
 !     **************************************************************************
       IF(ID.EQ.'FUNCTIONAL') THEN 
-!       ========================================================================
-!       == VOSKO WILK NUSAIR
-!       ========================================================================
-        IF(VAL.EQ.'VWN') THEN
-          IF(ALLOCATED(XC_FUNC)) THEN
-            PRINT*,'ERROR: XC_FUNC IS ALREADY SET'
-            STOP 'DFT_LIBXC_SETCH'
-          END IF
-          NXC=2
-          ALLOCATE(XC_FUNC(NXC))          
-          CALL XC_F03_FUNC_INIT(XC_FUNC(1),XC_LDA_X,XC_POLARIZED)
-          CALL XC_F03_FUNC_INIT(XC_FUNC(2),XC_LDA_C_VWN,XC_POLARIZED)
-
-!       ========================================================================
-!       == PERDEW-BURKE ERNZERHOF (PBE) FUNCTIONAL                            ==
-!       ========================================================================
-        ELSE IF(VAL.EQ.'PBE') THEN
-          IF(ALLOCATED(XC_FUNC)) THEN
-            PRINT*,'ERROR: XC_FUNC IS ALREADY SET'
-            STOP 'DFT_LIBXC_SETCH'
-          END IF
-          NXC=2
-          ALLOCATE(XC_FUNC(NXC))          
-          CALL XC_F03_FUNC_INIT(XC_FUNC(1),XC_GGA_X_PBE,XC_POLARIZED)
-          CALL XC_F03_FUNC_INIT(XC_FUNC(2),XC_GGA_C_PBE,XC_POLARIZED)
-!
-!       ========================================================================
-!       == SCAN-R2 FUNCTIONAL                                                 ==
-!       == FURNESS,KAPLAN,NING,PERDEW,SUN, J.PHYS.CHEM.LETT.11, 8208 (2020)   ==
-!       ==                                 (DOI: 10.1021/ACS.JPCLETT.0C02405) ==
-!       == FURNESS,KAPLAN,NING,PERDEW,SUN, J.PHYS.CHEM.LETT.11, 9248 (2020)   ==
-!       ==                                (DOI: 10.1021/ACS.JPCLETT.0C03077)  ==
-!       ========================================================================
-        ELSE IF(VAL.EQ.'SCANR2') THEN
-          IF(ALLOCATED(XC_FUNC)) THEN
-            PRINT*,'ERROR: XC_FUNC IS ALREADY SET'
-            STOP 'DFT_LIBXC_SETCH'
-          END IF
-          NXC=2
-          ALLOCATE(XC_FUNC(NXC))          
-          CALL XC_F03_FUNC_INIT(XC_FUNC(1),XC_MGGA_X_R2SCAN,XC_POLARIZED)
-          CALL XC_F03_FUNC_INIT(XC_FUNC(2),XC_MGGA_C_R2SCAN,XC_POLARIZED)
-!
-       ELSE
-          PRINT*,'FUNCTIONAL ID NOT RECOGNIZED'
-          PRINT*,'VAL=',VAL
-          STOP 'IN DFT_LIBXC1_ADDFUNC'
+        SELECT CASE(VAL)
+        CASE('VWN')
+          NAMES(1)='XC_LDA_X'
+          NAMES(2)='XC_LDA_C_VWN'
+        CASE('PBE')
+          NAMES(1)='XC_GGA_X_PBE'
+          NAMES(2)='XC_GGA_C_PBE'
+        CASE('SCANR2')
+!         R2SCAN: DOI 10.1021/ACS.JPCLETT.0C02405 AND 10.1021/ACS.JPCLETT.0C03077
+          NAMES(1)='XC_MGGA_X_R2SCAN'
+          NAMES(2)='XC_MGGA_C_R2SCAN'
+        CASE DEFAULT
+          CALL ERROR$MSG('FUNCTIONAL ID NOT RECOGNIZED')
+          CALL ERROR$CHVAL('VAL',VAL)
+          CALL ERROR$STOP('PAWLIBXC$SETCH')
+        END SELECT
+        IF(ALLOCATED(XC_FUNC)) THEN
+          CALL ERROR$MSG('XC_FUNC IS ALREADY SET')
+          CALL ERROR$STOP('PAWLIBXC$SETCH')
         END IF
+        NXC=SIZE(NAMES)
+        ALLOCATE(XC_FUNC(NXC))
+        DO I=1,NXC
+          NUMBER=XC_F03_FUNCTIONAL_GET_NUMBER(TRIM(NAMES(I)))
+          IF(NUMBER.LT.0) THEN
+            CALL ERROR$MSG('FUNCTIONAL UNAVAILABLE IN LIBXC')
+            CALL ERROR$CHVAL('FUNCTIONAL',TRIM(NAMES(I)))
+            CALL ERROR$STOP('PAWLIBXC$SETCH')
+          END IF
+          CALL XC_F03_FUNC_INIT(XC_FUNC(I),NUMBER,XC_POLARIZED)
+        END DO
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -1233,37 +1192,9 @@ END MODULE NEWDFT_MODULE
 !     **************************************************************************
 !     **************************************************************************
       USE, INTRINSIC :: ISO_C_BINDING
-!     -- SEE LIBXC_MASTER.F90 OF THE LIBXC DISTRIBUTION.
-!     -- SOME VARIABLES HAVE BEEN MOVED FROM MODULE XC_F03_LIB_M
-!     -- TO THE MODULE XC_F03_FUNCS_M.
-!     -- THE MODULE XC_F03_FUNCS_M  INCLUDES LIBXC_INC.F90.
-!     -- CONDITIONAL COMPILATION FOR LIBXC VERSION COMPATIBILITY
-!     -- CPPVAR_LIBXC_V7 IS SET AUTOMATICALLY BY THE BUILD SYSTEM FOR LIBXC >= 7.0.0
-#IF DEFINED(CPPVAR_LIBXC_V7)
-!     -- LIBXC >= 7.0.0: USE NEW MODULE STRUCTURE WHERE SOME CONSTANTS MOVED TO XC_F03_FUNCS_M
-      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
-     &                          ,XC_F03_FUNC_INIT &! FUNCTION
+      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED, XC_F03_FUNC_INIT &
      &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
      &                          ,XC_F03_FUNCTIONAL_GET_NAME
-      USE XC_F03_FUNCS_M , ONLY: XC_LDA_X & 
-     &                          ,XC_LDA_C_VWN &
-     &                          ,XC_GGA_X_PBE &
-     &                          ,XC_GGA_C_PBE &
-     &                          ,XC_MGGA_X_R2SCAN &
-     &                          ,XC_MGGA_C_R2SCAN
-#ELSE
-!     -- LIBXC < 7.0.0: XC_F03_FUNCS_M DIDN'T EXIST, EVERYTHING IN XC_F03_LIB_M
-      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
-     &                          ,XC_LDA_X & 
-     &                          ,XC_LDA_C_VWN &
-     &                          ,XC_GGA_X_PBE &
-     &                          ,XC_GGA_C_PBE &
-     &                          ,XC_MGGA_X_R2SCAN &
-     &                          ,XC_MGGA_C_R2SCAN &
-     &                          ,XC_F03_FUNC_INIT &! FUNCTION
-     &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
-     &                          ,XC_F03_FUNCTIONAL_GET_NAME
-#endif 
       USE PAWLIBXC_MODULE, ONLY: NXC &
      &                          ,XC_FUNC &
      &                          ,NIDX &
