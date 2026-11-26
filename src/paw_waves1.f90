@@ -4501,7 +4501,7 @@ END IF
       ! Remove the whole current band space twice in the PAW metric.
       DO PASS=1,2
         CALL WAVES_PROJECTIONS(MAP,GSET,MAP%NAT,R0,NGL,NDIM,NBH,MAP%NPRO &
-     &                       ,CHI,PROJ,'SKALA_TANGENT')
+     &                       ,CHI,PROJ)
         CALL MPE$COMBINE('K','+',PROJ)
         SCHI=CHI
         CALL WAVES_OPSI(NB,NBH,MAP%NPRO,MAP%NAT,NGL,R0,PROJ,SCHI)
@@ -4512,7 +4512,7 @@ END IF
         CALL WAVES_ADDPSI(NGL,NDIM,NBH,NFULL,CHI,THIS%PSI0,GRAM)
       END DO
       CALL WAVES_PROJECTIONS(MAP,GSET,MAP%NAT,R0,NGL,NDIM,NBH,MAP%NPRO &
-     &                     ,CHI,PROJ,'SKALA_TANGENT')
+     &                     ,CHI,PROJ)
       CALL MPE$COMBINE('K','+',PROJ)
       SCHI=CHI
       CALL WAVES_OPSI(NB,NBH,MAP%NPRO,MAP%NAT,NGL,R0,PROJ,SCHI)
