@@ -1547,9 +1547,19 @@ case ${CPPAW_USE_D3BJ:-0} in
       echo "CPPAW_USE_D3BJ=1 requires the s-dftd3 library and its pkg-config file" >&2
       exit 1
     fi
+    d3_libdir=$(pkg-config --variable=libdir s-dftd3)
+    if [[ ${CPPAW_NVHPC_ACC_FLAGS_ADDED:-no} == yes && -f ${d3_libdir}/libs-dftd3.so ]] && command -v ldd >/dev/null; then
+      # Some GNU OpenMP runtimes export a stub that aborts NVIDIA OpenACC startup.
+      d3_gomp=$(ldd "${d3_libdir}/libs-dftd3.so" | awk '/libgomp\.so.* => / {print $3; exit}')
+      if [[ -f ${d3_gomp} ]] && nm -D --defined-only "${d3_gomp}" | awk '/ acc_register_library(@|$)/ {seen=1} END {exit !seen}'; then
+        echo "This s-dftd3 loads a GNU OpenACC registration hook incompatible with NVIDIA OpenACC." >&2
+        echo "Build s-dftd3 with -Dopenmp=false (Meson) and point PKG_CONFIG_PATH at that installation." >&2
+        exit 1
+      fi
+    fi
     CPPFLAGS="${CPPFLAGS} -DCPPVAR_D3BJ"
     LIBS="${LIBS} $(pkg-config --libs s-dftd3)"
-    LDFLAGS="${LDFLAGS} -Wl,-rpath,$(pkg-config --variable=libdir s-dftd3)"
+    LDFLAGS="${LDFLAGS} -Wl,-rpath,${d3_libdir}"
     ;;
   *) echo "CPPAW_USE_D3BJ must be 0 or 1" >&2; exit 1 ;;
 esac

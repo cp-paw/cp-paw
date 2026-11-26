@@ -157,6 +157,12 @@ Grimme D3 with Becke-Johnson damping for energies, nuclear forces and cell
 stress. Build with `CPPAW_USE_D3BJ=1` and an `s-dftd3` installation visible
 to `pkg-config`. Other builds do not link this library.
 
+For NVIDIA OpenACC builds, use an s-dftd3 installation without GNU OpenMP
+(Meson option `-Dopenmp=false`). Some GNU OpenMP libraries also supply an
+OpenACC profiling hook that aborts NVIDIA runtime initialization. Set
+`PKG_CONFIG_PATH` to the compatible installation's `lib/pkgconfig` directory.
+The D3 correction runs on the host. This does not disable CP-PAW GPU kernels.
+
 With a Skala block, both `VDW=T` and `VDW=BJ` select the B3LYP damping
 parameters, including in observer mode (`APPLY=F`). Without Skala, `VDW=T`
 retains the original PBE dispersion implementation. Explicit BJ uses the
