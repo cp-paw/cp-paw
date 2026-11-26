@@ -115,6 +115,15 @@ The verification drivers use the setup definitions in the supplied structure,
 including built-in IDs or complete `!SPECIES!AUGMENT` blocks. They do not attach
 the historical `PARMS_STP` file, which did not override the built-in setups.
 
+For experimental noncollinear SCAN without spin-orbit coupling, select
+`NSPIN=3` in the structure and `MULTICOLLINEAR=T` in the SCAN block.
+The default spin integration uses Lebedev directions. The alternative
+`SPINQUADRATURE='POLAR_IBP'` integrates the projected response by parts
+in a local spin frame, including the derivative of this frame.
+`SPINPOLARPOINTS` counts nodes per hemisphere and `SPINAZIMUTHALPOINTS`
+counts azimuths. For example, 16 and 16 give 514 directions including the
+two poles. These settings are independent of the spatial PAW quadrature.
+
 The physical spin densities, gradients and positive kinetic energy densities
 are reconstructed before the local functional is evaluated. Quadrature
 weights multiply the resulting energy and derivatives, not its inputs.

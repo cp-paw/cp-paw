@@ -97,10 +97,10 @@ jobs:
             --mpi-executable bin/fast_parallel/ppaw_fast.x \
             --restart tests/fulltests/si2/si2.rstrt \
             --output "$RUNNER_TEMP/native-scan-parallel"
-      - name: Check the collinear XC spin contract without Torch
+      - name: Check collinear XC and noncollinear native SCAN without Torch
         run: |
           make -C bin/Build_fast -f Makefile \
-            -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test
+            -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test xc-spin-noncollinear-test scan-ibp-test
           make -C bin/Build_fast_parallel -f Makefile \
             -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test
       - name: Check one-center primitive quadrature and derivatives
