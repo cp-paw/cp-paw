@@ -152,6 +152,28 @@ weights and the independently constructed self-image descriptor window are
 distinct. This is a PAW-specific integration, not a literal copy of CP2K's GAPW
 implementation.
 
+In `!CONTROL !DFT`, `VDW=F` (default) disables dispersion. `VDW=BJ` selects
+Grimme D3 with Becke-Johnson damping for energies, nuclear forces and cell
+stress. Build with `CPPAW_USE_D3BJ=1` and an `s-dftd3` installation visible
+to `pkg-config`. Other builds do not link this library.
+
+For NVIDIA OpenACC builds, use an s-dftd3 installation without GNU OpenMP
+(Meson option `-Dopenmp=false`). Some GNU OpenMP libraries also supply an
+OpenACC profiling hook that aborts NVIDIA runtime initialization. Set
+`PKG_CONFIG_PATH` to the compatible installation's `lib/pkgconfig` directory.
+The D3 correction runs on the host. This does not disable CP-PAW GPU kernels.
+
+With a Skala block, `VDW=BJ` uses B3LYP BJ parameters as in the
+[Skala paper, Appendix D.2](https://arxiv.org/html/2506.14665v6#A4.SS2).
+`VDW=T` instead uses the B3LYP zero-damping parameters for comparison.
+This is not a separate fit for Skala. Neither option depends on `APPLY`.
+Conventional PBE (`TYPE=10`) retains the original implementation for `VDW=T`.
+Native SCAN uses the SCAN parameter set for the selected damping. For
+other combinations such as Libxc, supply the matching
+`VDW-FUNCTIONAL='name'` when no automatic match exists. A missing parameter
+set is an error. The optional three-body term is off by default. Do not add a
+second dispersion correction in post-processing.
+
 The revised periodic partition sums compact, translated Becke seeds over all
 images in their support. Its force and strain derivatives include the cell
 dependence of the smooth image cutoffs. `RADIALPOINTS`, `LEBEDEVEXACTNESS`,
@@ -614,9 +636,14 @@ not gather the complete atom block onto a group root for functional evaluation.
 The nonlocal Skala model retains its complete-block evaluation and adjoint exchange.
 
 The complete smooth, tau and one-center operators are mandatory. Native
-SCAN rejects model/device settings, disabled operator contributions and
-`VDW=T`, which would otherwise select the auxiliary PBE dispersion parameters.
-Conventional input files without a `SCAN` or `SKALA` block are unchanged.
+SCAN rejects model/device settings and disabled operator contributions.
+
+To thread native SCAN grid rows within an MPI rank, build with
+`CPPAW_OPENMP=1 src/Buildtools/paw_build.sh -c fast_parallel -j8 -z` and
+set `OMP_NUM_THREADS` to the cores assigned to each rank. The default build
+does not require OpenMP. Grid rows are already distributed across MPI ranks.
+With an NVIDIA compiler, leave this switch off if the Skala bridge or its
+PyTorch dependency already loads GNU OpenMP.
 
 Run the kernel, independent LibXC-reference and backend tests with
 
