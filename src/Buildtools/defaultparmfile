@@ -480,6 +480,17 @@ fi
 #   mpifort  is identical to mpif90 
 #   mpiifort is the compiler wrapper for the intel compiler with intel's mpi
 #-------------------------------------------------------------------------------
+mpi_backend_compiler() {
+  local command
+  # A distribution wrapper can invoke a versioned or target-prefixed GNU driver.
+  if [[ $(LC_ALL=C "$1" --version 2>/dev/null) == "GNU Fortran"* ]]; then
+    printf '%s\n' gfortran
+  else
+    command=$("$1" --showme:command 2>/dev/null || "$1" -show 2>/dev/null) || return 1
+    basename "${command%% *}"
+  fi
+}
+
 case $SELECT in 
   *parallel*)
      PARALLEL=true
@@ -497,9 +508,7 @@ case $SELECT in
          if [[ -z ${MPI_WRAPPER} ]] ; then
            continue
          fi
-         MPI_COMMAND=$("${MPI_WRAPPER}" --showme:command 2>/dev/null \
-                       || "${MPI_WRAPPER}" -show 2>/dev/null | awk '{print $1}')
-         if [[ $(basename "${MPI_COMMAND}") = gfortran ]] ; then
+         if [[ $(mpi_backend_compiler "${MPI_WRAPPER}") = gfortran ]] ; then
            FC=${MPI_WRAPPER}
            LD=${FC}
            break
@@ -554,9 +563,8 @@ case ${FC_BASE} in
   nvfortran) COMPILER=nvfortran ;;
   mpiifort) COMPILER=ifort ;;
   mpifort|mpif90)
-    MPI_COMMAND=$("${FC}" --showme:command 2>/dev/null \
-                  || "${FC}" -show 2>/dev/null | awk '{print $1}')
-    case $(basename "${MPI_COMMAND}") in
+    MPI_COMMAND=$(mpi_backend_compiler "${FC}")
+    case ${MPI_COMMAND} in
       gfortran)   COMPILER=gfortran ;;
       ifort)      COMPILER=ifort ;;
       nvfortran)  COMPILER=nvfortran ;;

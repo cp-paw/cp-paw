@@ -19,6 +19,7 @@ LABELS = {
 NUMBER = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[EeDd][-+]?\d+)?")
 BAND_HEADER = "SKALA BAND RESIDUAL"
 OCCUPATION_CUTOFF = "SKALA RESIDUAL OCCUPATION REL CUTOFF"
+OCCUPATION_SCOPE = "SKALA RESIDUAL OCCUPATION SCOPE"
 MULTIPLIER_LABELS = {
     "SKALA FORCE MULTIPLIER MISMATCH": "force",
     "SKALA LEGACY MULTIPLIER MISMATCH": "legacy",
@@ -65,6 +66,41 @@ def records(text):
     return result
 
 
+def charge_records(text):
+    """Match independent PAW traces and composite quadrature to each XC step."""
+    steps = records(text)
+    labels = {"OCCUPATION ELECTRONS": "occupation", "FROZEN CORE ELECTRONS": "core",
+              "PAW ALL ELECTRON TRACE": "trace", "COMPOSITE ELECTRONS": "quadrature"}
+    result, pending, independent = [], {}, False
+    for line in text.splitlines():
+        if line == "SKALA INDEPENDENT ELECTRON COUNTS":
+            independent = True
+        elif not line.strip():
+            independent = False
+        for label, key in labels.items():
+            if not line.startswith(label) or (key != "quadrature" and not independent):
+                continue
+            raw = line[len(label):].strip()
+            if key in pending or not NUMBER.fullmatch(raw):
+                raise ValueError(f"Invalid or duplicate charge diagnostic {label}")
+            value = float(raw.replace("D", "E").replace("d", "e"))
+            if not math.isfinite(value) or (key in ("occupation", "core") and value < 0):
+                raise ValueError("Invalid electron count")
+            pending[key] = value
+        if line.startswith(HEADER):
+            if set(pending) != set(labels.values()):
+                raise ValueError("Incomplete independent charge diagnostics")
+            result.append(dict(step=int(line[len(HEADER):].strip()), **pending))
+            pending = {}
+            independent = False
+    if pending or [row["step"] for row in result] != [row["step"] for row in steps]:
+        raise ValueError("Charge diagnostics do not match electronic steps")
+    for row in result:
+        row["trace_minus_occupation_core"] = row["trace"] - row["occupation"] - row["core"]
+        row["quadrature_minus_trace"] = row["quadrature"] - row["trace"]
+    return result
+
+
 def multiplier_records(text):
     """Read force-multiplier checks separately from orbital stationarity."""
     records(text)
@@ -105,6 +141,11 @@ def band_records(text):
             if not math.isfinite(value) or not 0 <= value <= math.ulp(1.0) * (1 + 1e-12):
                 raise ValueError("Residual occupation cutoff exceeds double-precision roundoff")
             current["occupation_relative_cutoff"] = value
+        if line.startswith(OCCUPATION_SCOPE):
+            scope = line[len(OCCUPATION_SCOPE):].strip()
+            if current is None or "occupation_scope" in current or scope != "KPOINT":
+                raise ValueError("Invalid or duplicate residual occupation scope")
+            current["occupation_scope"] = scope
         if not line.startswith(BAND_HEADER):
             continue
         fields = line[len(BAND_HEADER):].split()
@@ -125,12 +166,17 @@ def band_records(text):
     for detail, total in zip(result, aggregate):
         rows = detail["bands"]
         relative_cutoff = detail.get("occupation_relative_cutoff", 0.0)
+        if "occupation_scope" in detail and "occupation_relative_cutoff" not in detail:
+            raise ValueError("Occupation scope requires an explicit relative cutoff")
+        # Older reports used a separate reference for each spin channel.
+        group_key = lambda row: (row["kpoint"], None if detail.get("occupation_scope") == "KPOINT"
+                                else row["spin"])
         maxima = {}
         for row in rows:
-            group = row["kpoint"], row["spin"]
+            group = group_key(row)
             maxima[group] = max(maxima.get(group, 0.0), row["occupation"])
         occupied = [row for row in rows if row["occupation"] >
-                    relative_cutoff * maxima[row["kpoint"], row["spin"]]]
+                    relative_cutoff * maxima[group_key(row)]]
         if not occupied:
             raise ValueError("Missing occupied-band details; set CPPAW_SKALA_SCF_DETAIL=1")
         groups = {(row["kpoint"], row["spin"]) for row in rows}

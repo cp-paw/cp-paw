@@ -62,6 +62,7 @@ jobs:
       - name: Check MPI communicator insertion
         env:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
+          PRTE_MCA_rmaps_default_mapping_policy: "slot:oversubscribe"
         run: |
           make -C bin/Build_fast_parallel -f Makefile \
             -f ../../tests/unittests/mpe_registry/driver.mk mpe-registry-test skala-point-exchange-test MPIEXEC=mpirun
@@ -98,12 +99,19 @@ jobs:
       - name: Check native SCAN energy, force and stress MPI parity
         env:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
+          PRTE_MCA_rmaps_default_mapping_policy: "slot:oversubscribe"
         run: |
           python3 tests/fulltests/scan_si2/parallel.py \
             --serial-executable bin/fast/paw_fast.x \
             --mpi-executable bin/fast_parallel/ppaw_fast.x \
             --restart tests/fulltests/si2/si2.rstrt \
             --output "$RUNNER_TEMP/native-scan-parallel"
+      - name: Check the collinear XC spin contract without Torch
+        run: |
+          make -C bin/Build_fast -f Makefile \
+            -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test
+          make -C bin/Build_fast_parallel -f Makefile \
+            -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test
       - name: Check one-center primitive quadrature and derivatives
         run: |
           make -C bin/Build_fast -f Makefile \
@@ -168,6 +176,20 @@ jobs:
           done
       - name: Check Skala reconstruction and adjoint kernels
         run: bash tests/unittests/skala_reconstruction/run.sh bin/Build_skala_cpu_fast
+      - name: Check the shared collinear Skala and SCAN spin contract
+        run: |
+          for build in Build_skala_cpu_fast Build_skala_cpu_fast_parallel; do
+            make -C "bin/${build}" -f Makefile \
+              -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test
+            make -C "bin/${build}" -f Makefile \
+              -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test \
+              XC_FUNCTIONAL=SKALA \
+              XC_MODEL="$GITHUB_WORKSPACE/bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun"
+            make -C "bin/${build}" -f Makefile \
+              -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test \
+              XC_FUNCTIONAL=SKALA XC_MODEL_PRECISION=diagnostic64 \
+              XC_MODEL="$RUNNER_TEMP/skala-precision-check.fun"
+          done
       - name: Run serial and MPI Skala Si2 regressions
         env:
           SKALA_MODEL: ${{ github.workspace }}/bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun
@@ -195,6 +217,7 @@ jobs:
       - name: Check cooperative Skala point ranges
         env:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
+          PRTE_MCA_rmaps_default_mapping_policy: "slot:oversubscribe"
         run: |
           python tests/fulltests/skala_si2/parallel_grid.py \
             --executable bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x \
