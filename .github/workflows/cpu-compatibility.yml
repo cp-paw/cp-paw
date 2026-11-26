@@ -147,12 +147,18 @@ jobs:
           python tests/fulltests/skala_si2/model_precision.py \
             bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
             "$RUNNER_TEMP/skala-precision-check.fun" --device cpu
+      - name: Install s-dftd3 for the optional BJ build
+        id: d3bj
+        uses: mamba-org/setup-micromamba@add3a49764cedee8ee24e82dfde87f5bc2914462 # v2
+        with:
+          environment-name: d3bj
+          create-args: -c conda-forge simple-dftd3=1.7.0
+          init-shell: none
       - name: Build dedicated serial and MPI Skala binaries
         env:
           CPPAW_USE_D3BJ: "1"
+          PKG_CONFIG_PATH: ${{ steps.d3bj.outputs.environment-path }}/lib/pkgconfig
         run: |
-          "$CONDA/bin/conda" create -y -p "$RUNNER_TEMP/d3bj" --override-channels -c conda-forge simple-dftd3=1.7.0
-          export PKG_CONFIG_PATH="$RUNNER_TEMP/d3bj/lib/pkgconfig"
           src/Buildtools/paw_build.sh -c skala_cpu_fast -j2 -z
           src/Buildtools/paw_build.sh -c skala_cpu_fast_parallel -j2 -z
       - name: Reject CUDA dependencies
