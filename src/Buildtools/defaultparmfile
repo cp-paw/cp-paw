@@ -849,6 +849,9 @@ if [[ -n $(which pkg-config) ]] ; then
           echo "are not usable with ${COMPILER}; building without LibXC."
           continue
         fi
+        if pkg-config --atleast-version=7.1.0 libxcf03; then
+          CPPFLAGS="${CPPFLAGS} -DCPPVAR_LIBXC_PLACEMENT"
+        fi
       fi
       FCFLAGS="${FCFLAGS} ${PC_CFLAGS}"
       LIBS="${LIBS} ${PC_LIBS}"
@@ -892,6 +895,28 @@ fi
 if [[ -z $LIB_XC_OK ]] ; then
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_NOLIBXC"
 fi
+
+case ${CPPAW_USE_LIBXC_CUDA:-no} in
+  yes)
+    if [[ ${COMPILER} != nvfortran || -z ${LIB_XC_OK} ]] || ! pkg-config --atleast-version=7.1.0 libxcf03; then
+      echo "CPPAW_USE_LIBXC_CUDA=yes requires NVHPC and matching CUDA Libxc >= 7.1 Fortran modules" >&2
+      exit 1
+    fi
+    XC_PROBE=$(mktemp -d "${TMPDIR:-/tmp}/paw-libxc.XXXXXX") || exit 1
+    if ! cmake -S "${BASEDIR}/src/Buildtools/libxc_cuda_check" -B "${XC_PROBE}" \
+          -DXC_PREFIX="$(pkg-config --variable=prefix libxcf03)" >/dev/null; then
+      rm -rf "${XC_PROBE}"
+      exit 1
+    fi
+    rm -rf "${XC_PROBE}"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_LIBXC_CUDA"
+    INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/openacc.mod"
+    FCFLAGS="${FCFLAGS} -acc"
+    LDFLAGS="${LDFLAGS} -acc"
+    ;;
+  no) ;;
+  *) echo "CPPAW_USE_LIBXC_CUDA must be yes or no" >&2; exit 1 ;;
+esac
 
 ################################################################################
 ## resolve selection 

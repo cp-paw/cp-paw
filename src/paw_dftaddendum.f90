@@ -202,6 +202,9 @@ END MODULE NEWDFT_MODULE
 !     == SOME FUNCTIONALS ARE COMPOSED OF SEVERAL PARTS TO BE ADDED UP        ==
 !     ==========================================================================
       TYPE(XC_F03_FUNC_T),ALLOCATABLE :: XC_FUNC(:)
+#IF DEFINED(CPPVAR_LIBXC_CUDA)
+      TYPE(XC_F03_FUNC_T),ALLOCATABLE :: DEVICE_FUNC(:)
+#ENDIF
       INTEGER(4)                      :: NXC=0
 !
 !     ==========================================================================
@@ -262,7 +265,129 @@ END MODULE NEWDFT_MODULE
      &                                   ,+0,+0,+0,+0,+0,+0,+0,+4,+4 &
      &                                   ,+0,+0,+0,+0,+0,+0,+0,+4,-4] &
      &                                   ,[9,9])),KIND=8)
+      CONTAINS
+      SUBROUTINE HOST_INIT(FUNC,ID,SPIN)
+      USE XC_F03_LIB_M
+      TYPE(XC_F03_FUNC_T),INTENT(INOUT):: FUNC
+      INTEGER,INTENT(IN) :: ID,SPIN
+      INTEGER :: IERR
+#IF DEFINED(CPPVAR_LIBXC_PLACEMENT)
+!     A CUDA-enabled Libxc defaults to device pointers. Scalar PAW calls use host arrays.
+      CALL XC_F03_FUNC_INIT_FLAGS(FUNC,ID,SPIN,XC_FLAGS_ON_HOST,IERR)
+#ELSE
+      CALL XC_F03_FUNC_INIT(FUNC,ID,SPIN,IERR)
+#ENDIF
+      IF(IERR.NE.0) ERROR STOP 'Libxc host functional initialization failed'
+      END SUBROUTINE HOST_INIT
       END MODULE PAWLIBXC_MODULE
+#IF DEFINED(CPPVAR_LIBXC_CUDA)
+
+      SUBROUTINE PAWLIBXC$CUDA_ACTIVE(ACTIVE)
+      USE XC_F03_LIB_M
+      USE PAWLIBXC_MODULE, ONLY: XC_FUNC,DEVICE_FUNC,NXC
+      USE DFT_MODULE, ONLY: TLIBXC,TINI
+      USE OPENACC, ONLY: ACC_GET_NUM_DEVICES,ACC_GET_DEVICE_TYPE,ACC_DEVICE_NVIDIA
+      IMPLICIT NONE
+      LOGICAL,INTENT(OUT) :: ACTIVE
+      CHARACTER(32) :: MODE
+      TYPE(XC_F03_FUNC_INFO_T) :: INFO
+      INTEGER :: I,RC,FLAGS
+      ACTIVE=.FALSE.
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_LIBXC_DEVICE',MODE,STATUS=RC)
+      IF(RC.EQ.1.OR.MODE.EQ.'cpu') RETURN
+      IF(RC.NE.0.OR.MODE.NE.'cuda') ERROR STOP 'CPPAW_LIBXC_DEVICE must be cpu or cuda'
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_MODE',MODE)
+      IF(MODE.EQ.'off') RETURN
+      IF(.NOT.TINI) CALL DFT_INITIALIZE
+      IF(.NOT.TLIBXC) RETURN
+      IF(ACC_GET_NUM_DEVICES(ACC_DEVICE_NVIDIA).LT.1) RETURN
+      IF(ACC_GET_DEVICE_TYPE().NE.ACC_DEVICE_NVIDIA) RETURN
+      IF(.NOT.ALLOCATED(DEVICE_FUNC)) THEN
+        CALL PAWLIBXC_INITIALIZE()
+        DO I=1,NXC
+          INFO=XC_F03_FUNC_GET_INFO(XC_FUNC(I))
+          SELECT CASE(XC_F03_FUNC_INFO_GET_FAMILY(INFO))
+          CASE(XC_FAMILY_LDA,XC_FAMILY_GGA,XC_FAMILY_HYB_GGA)
+          CASE DEFAULT
+            RETURN
+          END SELECT
+          FLAGS=XC_F03_FUNC_INFO_GET_FLAGS(INFO)
+          IF(IAND(FLAGS,XC_FLAGS_HAVE_EXC+XC_FLAGS_HAVE_VXC).NE.XC_FLAGS_HAVE_EXC+XC_FLAGS_HAVE_VXC) RETURN
+        END DO
+        ALLOCATE(DEVICE_FUNC(NXC))
+        DO I=1,NXC
+          INFO=XC_F03_FUNC_GET_INFO(XC_FUNC(I))
+          CALL XC_F03_FUNC_INIT_FLAGS(DEVICE_FUNC(I),XC_F03_FUNC_INFO_GET_NUMBER(INFO),XC_POLARIZED,XC_FLAGS_ON_DEVICE,RC)
+          IF(RC.NE.0) ERROR STOP 'Libxc device functional initialization failed'
+        END DO
+      END IF
+      ACTIVE=.TRUE.
+      END SUBROUTINE PAWLIBXC$CUDA_ACTIVE
+
+      SUBROUTINE PAWLIBXC$CUDA_GRID(FIRST,N,NNR,NNRX,NSPIN,TGRA,RHO,GRHO,OUT)
+      USE PAWLIBXC_MODULE, ONLY: DEVICE_FUNC,NXC,MAT_GGA
+      USE DFT_MODULE, ONLY: RHOTMIN,TSPIN
+      USE XC_F03_LIB_M
+      USE, INTRINSIC :: ISO_C_BINDING, ONLY: C_SIZE_T
+      USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: IEEE_IS_FINITE
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: FIRST,N,NNR,NNRX,NSPIN
+      LOGICAL,INTENT(IN) :: TGRA
+      REAL(8),INTENT(IN) :: RHO(NNRX,NSPIN),GRHO(NNR,3,NSPIN)
+      REAL(8),INTENT(OUT):: OUT(6,N)
+      REAL(8) :: D(2,N),S(3,N),VD(2,N),VS(3,N),E(N),V(5),X(5),TOTAL,T
+      INTEGER :: J,I,IR
+      TYPE(XC_F03_FUNC_INFO_T) :: INFO
+      DO J=1,N
+        IR=FIRST+J-1
+        V=0.D0
+        V(1)=MAX(RHO(IR,1),1.D-8,RHOTMIN)
+        IF(TGRA) V(3)=SUM(GRHO(IR,:,1)**2)
+        IF(NSPIN.EQ.2.AND.TSPIN) THEN
+          V(2)=MAX(-V(1)+RHOTMIN,MIN(V(1)-RHOTMIN,RHO(IR,2)))
+          IF(TGRA) THEN
+            V(4)=SUM(GRHO(IR,:,2)**2)
+            V(5)=SUM(GRHO(IR,:,1)*GRHO(IR,:,2))
+          END IF
+        END IF
+        X=MATMUL(MAT_GGA,V)
+        D(:,J)=X(1:2)
+        S(:,J)=X(3:5)
+      END DO
+      OUT=0.D0
+!$ACC DATA COPYIN(D,S) CREATE(E,VD,VS)
+      DO I=1,NXC
+        INFO=XC_F03_FUNC_GET_INFO(DEVICE_FUNC(I))
+        IF(XC_F03_FUNC_INFO_GET_FAMILY(INFO).EQ.XC_FAMILY_LDA) THEN
+!$ACC HOST_DATA USE_DEVICE(D,E,VD)
+          CALL XC_F03_LDA_EXC_VXC(DEVICE_FUNC(I),INT(N,C_SIZE_T),D,E,VD)
+!$ACC END HOST_DATA
+          VS=0.D0
+        ELSE
+!$ACC HOST_DATA USE_DEVICE(D,S,E,VD,VS)
+          CALL XC_F03_GGA_EXC_VXC(DEVICE_FUNC(I),INT(N,C_SIZE_T),D,S,E,VD,VS)
+!$ACC END HOST_DATA
+!$ACC UPDATE SELF(VS)
+        END IF
+!$ACC UPDATE SELF(E,VD)
+        DO J=1,N
+          TOTAL=MAX(RHO(FIRST+J-1,1),1.D-8,RHOTMIN)
+          OUT(1,J)=OUT(1,J)+TOTAL*E(J)
+          OUT(2:6,J)=OUT(2:6,J)+MATMUL([VD(:,J),VS(:,J)],MAT_GGA)
+        END DO
+      END DO
+!$ACC END DATA
+      DO J=1,N
+        T=MAX(1.D-8,RHO(FIRST+J-1,1))
+        IF(T.LT.RHOTMIN) THEN
+          OUT(2,J)=OUT(1,J)/RHOTMIN
+          OUT(3:6,J)=OUT(3:6,J)*(T/RHOTMIN)
+          OUT(1,J)=OUT(1,J)*(T/RHOTMIN)
+        END IF
+      END DO
+      IF(.NOT.ALL(IEEE_IS_FINITE(OUT))) ERROR STOP 'Nonfinite Libxc CUDA energy or derivative'
+      END SUBROUTINE PAWLIBXC$CUDA_GRID
+#ENDIF
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PAWLIBXC_INITIALIZE()
@@ -1141,7 +1266,6 @@ END MODULE NEWDFT_MODULE
 !     -- TO THE MODULE XC_F03_FUNCS_M.
 !     -- THE MODULE XC_F03_FUNCS_M  INCLUDES LIBXC_INC.F90.
       USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
-     &                          ,XC_F03_FUNC_INIT &! FUNCTION
      &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
      &                          ,XC_F03_FUNCTIONAL_GET_NAME
       USE XC_F03_FUNCS_M , ONLY: XC_LDA_X & 
@@ -1151,7 +1275,7 @@ END MODULE NEWDFT_MODULE
      &                          ,XC_MGGA_X_R2SCAN &
      &                          ,XC_MGGA_C_R2SCAN 
       USE PAWLIBXC_MODULE, ONLY: NXC &
-     &                          ,XC_FUNC
+     &                          ,XC_FUNC,HOST_INIT
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(*),INTENT(IN) :: VAL
@@ -1167,8 +1291,8 @@ END MODULE NEWDFT_MODULE
           END IF
           NXC=2
           ALLOCATE(XC_FUNC(NXC))          
-          CALL XC_F03_FUNC_INIT(XC_FUNC(1),XC_LDA_X,XC_POLARIZED)
-          CALL XC_F03_FUNC_INIT(XC_FUNC(2),XC_LDA_C_VWN,XC_POLARIZED)
+          CALL HOST_INIT(XC_FUNC(1),XC_LDA_X,XC_POLARIZED)
+          CALL HOST_INIT(XC_FUNC(2),XC_LDA_C_VWN,XC_POLARIZED)
 
 !       ========================================================================
 !       == PERDEW-BURKE ERNZERHOF (PBE) FUNCTIONAL                            ==
@@ -1180,8 +1304,8 @@ END MODULE NEWDFT_MODULE
           END IF
           NXC=2
           ALLOCATE(XC_FUNC(NXC))          
-          CALL XC_F03_FUNC_INIT(XC_FUNC(1),XC_GGA_X_PBE,XC_POLARIZED)
-          CALL XC_F03_FUNC_INIT(XC_FUNC(2),XC_GGA_C_PBE,XC_POLARIZED)
+          CALL HOST_INIT(XC_FUNC(1),XC_GGA_X_PBE,XC_POLARIZED)
+          CALL HOST_INIT(XC_FUNC(2),XC_GGA_C_PBE,XC_POLARIZED)
 !
 !       ========================================================================
 !       == SCAN-R2 FUNCTIONAL                                                 ==
@@ -1197,8 +1321,8 @@ END MODULE NEWDFT_MODULE
           END IF
           NXC=2
           ALLOCATE(XC_FUNC(NXC))          
-          CALL XC_F03_FUNC_INIT(XC_FUNC(1),XC_MGGA_X_R2SCAN,XC_POLARIZED)
-          CALL XC_F03_FUNC_INIT(XC_FUNC(2),XC_MGGA_C_R2SCAN,XC_POLARIZED)
+          CALL HOST_INIT(XC_FUNC(1),XC_MGGA_X_R2SCAN,XC_POLARIZED)
+          CALL HOST_INIT(XC_FUNC(2),XC_MGGA_C_R2SCAN,XC_POLARIZED)
 !
        ELSE
           PRINT*,'FUNCTIONAL ID NOT RECOGNIZED'
@@ -1223,7 +1347,6 @@ END MODULE NEWDFT_MODULE
 !     -- TO THE MODULE XC_F03_FUNCS_M.
 !     -- THE MODULE XC_F03_FUNCS_M  INCLUDES LIBXC_INC.F90.
       USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
-     &                          ,XC_F03_FUNC_INIT &! FUNCTION
      &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
      &                          ,XC_F03_FUNCTIONAL_GET_NAME
       USE XC_F03_FUNCS_M , ONLY: XC_LDA_X & 
@@ -1233,7 +1356,7 @@ END MODULE NEWDFT_MODULE
      &                          ,XC_MGGA_X_R2SCAN &
      &                          ,XC_MGGA_C_R2SCAN 
       USE PAWLIBXC_MODULE, ONLY: NXC &
-     &                          ,XC_FUNC &
+     &                          ,XC_FUNC,HOST_INIT &
      &                          ,NIDX &
      &                          ,XCID
       use strings_module
@@ -1275,7 +1398,7 @@ END MODULE NEWDFT_MODULE
           END IF
           NAME=XC_F03_FUNCTIONAL_GET_NAME(J)
 !          PRINT*,'INDEX ',J,' VAL=',TRIM(VAL(I)),' NAME=',TRIM(NAME)
-          CALL XC_F03_FUNC_INIT(XC_FUNC(I),J,XC_POLARIZED)
+          CALL HOST_INIT(XC_FUNC(I),J,XC_POLARIZED)
         ENDDO
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -1472,6 +1595,7 @@ END MODULE NEWDFT_MODULE
      &                            ,XC_F03_LDA_EXC_VXC_FXC_KXC &  !FUNCTION
      &                            ,XC_F03_GGA_EXC_VXC_FXC_KXC &  !FUNCTION
      &                            ,XC_F03_FUNC_GET_INFO &        !FUNCTION
+     &                            ,XC_F03_FUNC_INFO_GET_FLAGS,XC_FLAGS_HAVE_KXC &
      &                            ,XC_F03_FUNC_INFO_GET_FAMILY & !FUNCTION
      &                            ,XC_FAMILY_LDA &         !VALUE
      &                            ,XC_FAMILY_GGA &         !VALUE
@@ -1523,6 +1647,8 @@ END MODULE NEWDFT_MODULE
 ! F03_GGA_EXC_VXC_FXC_KXC?
 
       XC_INFO=XC_F03_FUNC_GET_INFO(XC_FUNC)
+      IF(IAND(XC_F03_FUNC_INFO_GET_FLAGS(XC_INFO),XC_FLAGS_HAVE_KXC).EQ.0) &
+     &  ERROR STOP 'PAW one-center XC requires KXC. Select a supporting functional and build Libxc with MAXORDER >= 3.'
       SELECT CASE (XC_F03_FUNC_INFO_GET_FAMILY(XC_INFO))
         CASE(XC_FAMILY_LDA)
           CALL XC_F03_LDA_EXC_VXC_FXC_KXC(XC_FUNC,NP,RHO &
