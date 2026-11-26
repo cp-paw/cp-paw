@@ -91,9 +91,9 @@
       USE SCAN_MODULE
       IMPLICIT NONE
       PRIVATE
-      PUBLIC :: SCAN_SPIN_RESPONSE
+      PUBLIC :: SCAN_SPIN_RESPONSE,SCAN_PAULI_RESPONSE,SCAN_PAULI_LINEAR_RESPONSE
       TYPE :: SCAN_JET
-        REAL(8) :: VALUE=0.D0,GRADIENT(9)=0.D0,TANGENT=0.D0,MIXED(9)=0.D0
+        REAL(8) :: VALUE=0.D0,GRADIENT(10)=0.D0,TANGENT=0.D0,MIXED(10)=0.D0
       END TYPE
       INTERFACE ASSIGNMENT(=)
         MODULE PROCEDURE JET_ASSIGN
@@ -343,11 +343,27 @@
         E=N*(EC1+FC*(EC0-EC1))
       END FUNCTION
 
+      FUNCTION RESPONSE_CHANNEL_ENERGY(N,S,GU2,GD2,GT2,TT,TS) RESULT(E)
+        TYPE(SCAN_JET),INTENT(IN) :: N,S,GU2,GD2,GT2,TT,TS
+        TYPE(SCAN_JET) :: E,RHOS,RUP,RDN,TUP,TDN
+        RHOS=S
+        IF(S%VALUE.GT.N%VALUE-RHOMIN) RHOS=N-RHOMIN
+        IF(S%VALUE.LT.-N%VALUE+RHOMIN) RHOS=-N+RHOMIN
+        RUP=0.5D0*(N+RHOS)
+        RDN=0.5D0*(N-RHOS)
+        TUP=JET_POSITIVE(0.5D0*(TT+TS))
+        TDN=JET_POSITIVE(0.5D0*(TT-TS))
+        E=0.D0
+        IF(N%VALUE+S%VALUE.GT.RHOMIN) E=E+0.5D0*RESPONSE_EXCHANGE(2.D0*RUP,4.D0*JET_POSITIVE(GU2),2.D0*TUP)
+        IF(N%VALUE-S%VALUE.GT.RHOMIN) E=E+0.5D0*RESPONSE_EXCHANGE(2.D0*RDN,4.D0*JET_POSITIVE(GD2),2.D0*TDN)
+        E=E+RESPONSE_CORRELATION(RUP,RDN,JET_POSITIVE(GT2),TUP+TDN)
+      END FUNCTION
+
       SUBROUTINE SCAN_SPIN_RESPONSE(VAL,EXC,DEXC,HRESPONSE)
         REAL(8),INTENT(IN) :: VAL(9)
         REAL(8),INTENT(OUT) :: EXC,DEXC(9),HRESPONSE(9)
         REAL(8),PARAMETER :: SCALE(9)=[0.D0,1.D0,0.D0,2.D0,1.D0,0.D0,0.D0,0.D0,1.D0]
-        TYPE(SCAN_JET) :: V(9),E,RHOS,RUP,RDN,SUU,SDD,TUP,TDN
+        TYPE(SCAN_JET) :: V(9),E,SUU,SDD
         INTEGER :: I
         EXC=0.D0
         DEXC=0.D0
@@ -358,22 +374,77 @@
           V(I)%GRADIENT(I)=1.D0
           V(I)%TANGENT=SCALE(I)*VAL(I)
         END DO
-        RHOS=V(2)
-        IF(VAL(2).GT.VAL(1)-RHOMIN) RHOS=V(1)-RHOMIN
-        IF(VAL(2).LT.-VAL(1)+RHOMIN) RHOS=-V(1)+RHOMIN
-        RUP=0.5D0*(V(1)+RHOS)
-        RDN=0.5D0*(V(1)-RHOS)
-        SUU=JET_POSITIVE(0.25D0*(V(3)+V(4)+2.D0*V(5)))
-        SDD=JET_POSITIVE(0.25D0*(V(3)+V(4)-2.D0*V(5)))
-        TUP=JET_POSITIVE(0.5D0*(V(8)+V(9)))
-        TDN=JET_POSITIVE(0.5D0*(V(8)-V(9)))
-        E=0.D0
-        IF(VAL(1)+VAL(2).GT.RHOMIN) E=E+0.5D0*RESPONSE_EXCHANGE(2.D0*RUP,4.D0*SUU,2.D0*TUP)
-        IF(VAL(1)-VAL(2).GT.RHOMIN) E=E+0.5D0*RESPONSE_EXCHANGE(2.D0*RDN,4.D0*SDD,2.D0*TDN)
-        E=E+RESPONSE_CORRELATION(RUP,RDN,JET_POSITIVE(V(3)),TUP+TDN)
+        SUU=0.25D0*(V(3)+V(4)+2.D0*V(5))
+        SDD=0.25D0*(V(3)+V(4)-2.D0*V(5))
+        E=RESPONSE_CHANNEL_ENERGY(V(1),V(2),SUU,SDD,V(3),V(8),V(9))
         EXC=E%VALUE
-        DEXC=E%GRADIENT
-        HRESPONSE=E%MIXED
+        DEXC=E%GRADIENT(1:9)
+        HRESPONSE=E%MIXED(1:9)
+      END SUBROUTINE
+
+      SUBROUTINE SCAN_PAULI_RESPONSE(RHO,GRAD,TAU,EXC,DEXC)
+        REAL(8),INTENT(IN) :: RHO(2),GRAD(3,2),TAU(2)
+        REAL(8),INTENT(OUT) :: EXC,DEXC(10)
+        REAL(8),PARAMETER :: SCALE(10)=[0.D0,1.D0,0.D0,0.D0,0.D0,1.D0,1.D0,1.D0,0.D0,1.D0]
+        REAL(8) :: VAL(10)
+        TYPE(SCAN_JET) :: V(10),E
+        INTEGER :: I
+        EXC=0.D0
+        DEXC=0.D0
+        IF(RHO(1).LT.RHOMIN) RETURN
+        VAL=[RHO,GRAD(:,1),GRAD(:,2),TAU]
+        DO I=1,10
+          V(I)=VAL(I)
+          V(I)%GRADIENT(I)=1.D0
+          V(I)%TANGENT=SCALE(I)*VAL(I)
+        END DO
+        E=PAULI_FIELD_ENERGY(V)
+        EXC=E%VALUE+E%TANGENT
+        DEXC=(1.D0+SCALE)*E%GRADIENT+E%MIXED
+      END SUBROUTINE
+
+      FUNCTION PAULI_FIELD_ENERGY(V) RESULT(E)
+        TYPE(SCAN_JET),INTENT(IN) :: V(10)
+        TYPE(SCAN_JET) :: E,SUU,SDD,STT
+        INTEGER :: I
+        SUU=0.D0
+        SDD=0.D0
+        STT=0.D0
+        DO I=1,3
+          ! Form each spin-channel gradient before squaring, including a
+          ! small minority channel near complete spin polarization.
+          SUU=SUU+(0.5D0*(V(I+2)+V(I+5)))**2
+          SDD=SDD+(0.5D0*(V(I+2)-V(I+5)))**2
+          STT=STT+V(I+2)**2
+        END DO
+        E=RESPONSE_CHANNEL_ENERGY(V(1),V(2),SUU,SDD,STT,V(9),V(10))
+      END FUNCTION
+
+      SUBROUTINE SCAN_PAULI_LINEAR_RESPONSE(RHO,GRAD,TAU,TANGENT,COEFFICIENT,EXC,DFIELD,DTANGENT)
+        USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: IEEE_IS_FINITE
+        REAL(8),INTENT(IN) :: RHO(2),GRAD(3,2),TAU(2),TANGENT(10),COEFFICIENT
+        REAL(8),INTENT(OUT) :: EXC,DFIELD(10),DTANGENT(10)
+        REAL(8) :: VAL(10)
+        TYPE(SCAN_JET) :: V(10),E
+        INTEGER :: I
+        VAL=[RHO,GRAD(:,1),GRAD(:,2),TAU]
+        IF(ANY(.NOT.IEEE_IS_FINITE(VAL)).OR.ANY(.NOT.IEEE_IS_FINITE(TANGENT)) &
+     &      .OR..NOT.IEEE_IS_FINITE(COEFFICIENT)) ERROR STOP 'Nonfinite SCAN linear-response input'
+        EXC=0.D0
+        DFIELD=0.D0
+        DTANGENT=0.D0
+        IF(RHO(1).LT.RHOMIN) RETURN
+        DO I=1,10
+          V(I)=VAL(I)
+          V(I)%GRADIENT(I)=1.D0
+          V(I)%TANGENT=TANGENT(I)
+        END DO
+        E=PAULI_FIELD_ENERGY(V)
+        EXC=COEFFICIENT*E%VALUE+E%TANGENT
+        ! The tangent is independent here. Its dependence on the original
+        ! Pauli fields is pulled back separately by the block caller.
+        DFIELD=COEFFICIENT*E%GRADIENT+E%MIXED
+        DTANGENT=E%GRADIENT
       END SUBROUTINE
       END MODULE SCAN_RESPONSE_MODULE
 !
@@ -1100,6 +1171,122 @@
         END DO
       END DO
       END SUBROUTINE SCAN$PAULI_BLOCK
+
+      SUBROUTINE SCAN$PAULI_LINEAR_BLOCK(NPOINT,NQ,RHO,GRAD,TAU,WEIGHT,AXIS,QWEIGHT &
+     &                                ,COEFFICIENT,RESPONSE,ENERGY,DRHO,DGRAD,DTAU,DWEIGHT)
+      USE SCAN_RESPONSE_MODULE, ONLY: SCAN_PAULI_LINEAR_RESPONSE
+      USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: IEEE_IS_FINITE
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NPOINT,NQ
+      REAL(8),INTENT(IN) :: RHO(NPOINT,4),GRAD(NPOINT,3,4),TAU(NPOINT,4),WEIGHT(NPOINT)
+      REAL(8),INTENT(IN) :: AXIS(3,NQ),QWEIGHT(NQ),COEFFICIENT(NQ),RESPONSE(3,NQ)
+      REAL(8),INTENT(OUT) :: ENERGY,DRHO(NPOINT,4),DGRAD(NPOINT,3,4),DTAU(NPOINT,4),DWEIGHT(NPOINT)
+      REAL(8) :: TANGENT(10),DE(10),DT(10),GS(3),EEFF,W
+      INTEGER :: I,Q,S
+      IF(NQ.LT.1.OR.NPOINT.LT.1) ERROR STOP 'SCAN requires nonempty fields and spin quadrature'
+      IF(ANY(.NOT.IEEE_IS_FINITE(AXIS)).OR.ANY(.NOT.IEEE_IS_FINITE(QWEIGHT)) &
+     &   .OR.ANY(.NOT.IEEE_IS_FINITE(COEFFICIENT)).OR.ANY(.NOT.IEEE_IS_FINITE(RESPONSE))) &
+     &  ERROR STOP 'Nonfinite SCAN linear spin quadrature'
+      IF(ANY(ABS(SUM(AXIS**2,DIM=1)-1.D0).GT.1.D-10) &
+     &   .OR..NOT.IEEE_IS_FINITE(SUM(QWEIGHT)).OR.ABS(SUM(QWEIGHT)-1.D0).GT.1.D-10) &
+     &  ERROR STOP 'SCAN linear spin quadrature requires unit axes and weights summing to one'
+      IF(ANY(.NOT.IEEE_IS_FINITE(RHO)).OR.ANY(.NOT.IEEE_IS_FINITE(GRAD)) &
+     &   .OR.ANY(.NOT.IEEE_IS_FINITE(TAU)).OR.ANY(.NOT.IEEE_IS_FINITE(WEIGHT))) &
+     &  ERROR STOP 'Nonfinite Pauli SCAN input'
+      ENERGY=0.D0
+      DRHO=0.D0
+      DGRAD=0.D0
+      DTAU=0.D0
+      DWEIGHT=0.D0
+      DO I=1,NPOINT
+        DO Q=1,NQ
+          GS=MATMUL(GRAD(I,:,2:4),AXIS(:,Q))
+          TANGENT=[0.D0,DOT_PRODUCT(RHO(I,2:4),RESPONSE(:,Q)),0.D0,0.D0,0.D0 &
+     &      ,MATMUL(GRAD(I,:,2:4),RESPONSE(:,Q)),0.D0,DOT_PRODUCT(TAU(I,2:4),RESPONSE(:,Q))]
+          CALL SCAN_PAULI_LINEAR_RESPONSE([RHO(I,1),DOT_PRODUCT(RHO(I,2:4),AXIS(:,Q))] &
+     &      ,RESHAPE([GRAD(I,:,1),GS],[3,2]),[TAU(I,1),DOT_PRODUCT(TAU(I,2:4),AXIS(:,Q))] &
+     &      ,TANGENT,COEFFICIENT(Q),EEFF,DE,DT)
+          IF(.NOT.IEEE_IS_FINITE(EEFF).OR.ANY(.NOT.IEEE_IS_FINITE(DE)).OR.ANY(.NOT.IEEE_IS_FINITE(DT))) &
+     &      ERROR STOP 'Nonfinite SCAN linear spin response'
+          W=WEIGHT(I)*QWEIGHT(Q)
+          ENERGY=ENERGY+W*EEFF
+          DWEIGHT(I)=DWEIGHT(I)+QWEIGHT(Q)*EEFF
+          DRHO(I,1)=DRHO(I,1)+W*DE(1)
+          DGRAD(I,:,1)=DGRAD(I,:,1)+W*DE(3:5)
+          DTAU(I,1)=DTAU(I,1)+W*DE(9)
+          DO S=2,4
+            DRHO(I,S)=DRHO(I,S)+W*(DE(2)*AXIS(S-1,Q)+DT(2)*RESPONSE(S-1,Q))
+            DGRAD(I,:,S)=DGRAD(I,:,S)+W*(DE(6:8)*AXIS(S-1,Q)+DT(6:8)*RESPONSE(S-1,Q))
+            DTAU(I,S)=DTAU(I,S)+W*(DE(10)*AXIS(S-1,Q)+DT(10)*RESPONSE(S-1,Q))
+          END DO
+        END DO
+      END DO
+      END SUBROUTINE SCAN$PAULI_LINEAR_BLOCK
+
+      SUBROUTINE SCAN_POLAR_POINT(R,G,T,W,NQ,AXIS,QW,COEFF,RESP,E,DR,DG,DT,DW)
+      USE PAW_SPIN_QUADRATURE_MODULE
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NQ
+      REAL(8),INTENT(IN) :: R(4),G(3,4),T(4),W,AXIS(3,NQ),QW(NQ),COEFF(NQ),RESP(3,NQ)
+      REAL(8),INTENT(OUT) :: E,DR(4),DG(3,4),DT(4),DW
+      TYPE(PAW_SPIN_FRAME) :: FRAME
+      REAL(8) :: F(5,4),L(5,4),D(5,4),TOTAL(5,4),BASE(1,4),GR(1,3,4),KIN(1,4)
+      REAL(8) :: AR(1,4),AG(1,3,4),AT(1,4),AW(1),WEIGHT_ADJ(1),ROT(3,3)
+      REAL(8) :: BR(3,3,PAW_SPIN_GAUGES),VALUES(PAW_SPIN_GAUGES),FIXED,EE,FACTOR
+      INTEGER :: K
+      BASE(1,:)=R
+      GR(1,:,:)=G
+      KIN(1,:)=T
+      CALL PAW_SPIN_FRAME_PREPARE(1,BASE,GR,KIN,[1.D0],FRAME)
+      F(1,:)=R
+      F(2:4,:)=G
+      F(5,:)=T
+      E=0.D0
+      DW=0.D0
+      TOTAL=0.D0
+      BR=0.D0
+      VALUES=0.D0
+      FIXED=0.D0
+      DO K=0,PAW_SPIN_GAUGES
+        IF(K.EQ.0) THEN
+          FACTOR=1.D0-FRAME%BLEND
+          ROT=0.D0
+          ROT(1,1)=1.D0
+          ROT(2,2)=1.D0
+          ROT(3,3)=1.D0
+        ELSE
+          FACTOR=FRAME%BLEND*FRAME%GAUGE_WEIGHT(K)
+          ROT=FRAME%ROTATION(:,:,K)
+        END IF
+        IF(FACTOR.EQ.0.D0) CYCLE
+        L(:,1)=F(:,1)
+        L(:,2:4)=MATMUL(F(:,2:4),ROT)
+        CALL SCAN$PAULI_LINEAR_BLOCK(1,NQ,RESHAPE(L(1,:),[1,4]),RESHAPE(L(2:4,:),[1,3,4]), &
+     &       RESHAPE(L(5,:),[1,4]),[W],AXIS,QW,COEFF,RESP,EE,AR,AG,AT,AW)
+        D(1,:)=AR(1,:)
+        D(2:4,:)=AG(1,:,:)
+        D(5,:)=AT(1,:)
+        E=E+FACTOR*EE
+        DW=DW+FACTOR*AW(1)
+        TOTAL(:,1)=TOTAL(:,1)+FACTOR*D(:,1)
+        TOTAL(:,2:4)=TOTAL(:,2:4)+FACTOR*MATMUL(D(:,2:4),TRANSPOSE(ROT))
+        IF(K.EQ.0) THEN
+          FIXED=EE
+        ELSE
+          VALUES(K)=EE
+          BR(:,:,K)=MATMUL(TRANSPOSE(F(:,2:4)),D(:,2:4))
+        END IF
+      END DO
+      ! The semilocal frame depends on the fields, not on the spatial weight.
+      AR(1,:)=TOTAL(1,:)
+      AG(1,:,:)=TOTAL(2:4,:)
+      AT(1,:)=TOTAL(5,:)
+      WEIGHT_ADJ=0.D0
+      CALL PAW_SPIN_FRAME_PULLBACK(1,BASE,GR,KIN,[1.D0],FRAME,BR,VALUES,FIXED,AR,AG,AT,WEIGHT_ADJ)
+      DR=AR(1,:)
+      DG=AG(1,:,:)
+      DT=AT(1,:)
+      END SUBROUTINE SCAN_POLAR_POINT
 
       SUBROUTINE SCAN$PAULI_FIELD_LIMITS(NPOINT,NQ,RHO,GRAD,TAU,WEIGHT,AXIS,QWEIGHT,STATS)
       IMPLICIT NONE
