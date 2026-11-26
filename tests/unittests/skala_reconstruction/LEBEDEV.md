@@ -8,17 +8,20 @@ CP-PAW selects the smallest supported rule satisfying it:
 | 48-53 | 53 | 974 |
 | 54-59 | 59 | 1202 |
 | 60-65, including 64 | 65 | 1454 |
+| 66-95 | 95 | 3074 |
+| 96-131 | 131 | 5810 |
 
 The existing lower-order rules and default 53 are unchanged. Values greater
-than 65 fail explicitly. The Skala report prints the requested minimum, the
+than 131 fail explicitly. The Skala report prints the requested minimum, the
 selected rule's actual exactness and its point count. Multiple orientations
 remain averages of rotated copies of the selected rule, not higher-degree
 rules themselves.
 
 ## Coefficient provenance
 
-The additional numerical tables are the published Lebedev-Laikov 1202- and
-1454-point rules, as distributed in PySCF's `pyscf/dft/LebedevGrid.py` at commit
+The additional numerical tables are the published Lebedev-Laikov 1202-,
+1454-, 3074- and 5810-point rules, as distributed in PySCF's
+`pyscf/dft/LebedevGrid.py` at commit
 `e47d1279f72ffd50cbad43fbfed50511d8415b7e`:
 
 https://github.com/pyscf/pyscf/blob/e47d1279f72ffd50cbad43fbfed50511d8415b7e/pyscf/dft/LebedevGrid.py
@@ -42,7 +45,11 @@ Russian Academy of Sciences Doklady Mathematics 50, 283-286 (1995).
 normalization, all even Cartesian monomials through each rule's exactness,
 and odd-parity moments. Analytic moments use double-factorial ratios, without
 reference to the source tables. Tests cover the minimum-order rounding
-(`54 -> 59`, `60..65 -> 65`) and reject an unsupported request of 66.
+(`54 -> 59`, `60..65 -> 65`, `66..95 -> 95`, `96..131 -> 131`) and reject
+an unsupported request of 132. Spin-direction integration uses the same
+tables, independently of the spatial atom-grid setting. Higher spin orders
+support convergence tests, not an unconditional accuracy guarantee for
+strongly polarized meta-GGA or neural-model potentials.
 
 Polynomial exactness alone does not guarantee converged functional energies
 or forces. The separate `partition_measure.x` probe tests the periodic

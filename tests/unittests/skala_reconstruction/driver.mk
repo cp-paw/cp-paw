@@ -4,13 +4,19 @@
 .PHONY: skala-source-resident-unit skala-source-resident-test
 .PHONY: skala-sampling-test skala-sampling-gpu-test
 .PHONY: skala-descriptor-grid-test
-.PHONY: skala-tau-test
+.PHONY: skala-tau-test skala-tau-gpu-test
 
 skala-tau-test: libpawfull.a
 	mkdir -p unit-tests
 	etc/f90pp $(CPPFLAGS) < $(BASEDIR)/tests/unittests/skala_reconstruction/tau_density.f90 > unit-tests/tau_density.f90
 	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/tau_density.x unit-tests/tau_density.f90 libpawfull.a $(LIBS)
 	./unit-tests/tau_density.x
+
+skala-tau-gpu-test: skala-tau-test
+	OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 CPPAW_TAU_REQUIRE_SOURCE_ACC=1 \
+	  CPPAW_SKALA_SOURCE_FWD_ACC=1 CPPAW_SKALA_SOURCE_FWD_ACC_MIN_ROWS=1 \
+	  CPPAW_SKALA_SOURCE_FWD_RESIDENT_MB=1 CPPAW_SKALA_SOURCE_BACK_ACC=1 \
+	  CPPAW_SKALA_SOURCE_BACK_ACC_MIN_ROWS=1 ./unit-tests/tau_density.x
 
 skala-descriptor-grid-test: libpawfull.a
 	mkdir -p unit-tests
@@ -23,7 +29,8 @@ skala-sampling-test: libpaw.a
 	CPPAW_SKALA_SAMPLE_BATCH=1 CPPAW_SKALA_SAMPLE_ACC=0 ./unit-tests/skala_sampling.x
 
 skala-sampling-gpu-test: skala-sampling-test
-	CPPAW_SKALA_SAMPLE_BATCH=1 CPPAW_SKALA_SAMPLE_ACC=1 ./unit-tests/skala_sampling.x gpu
+	CPPAW_SKALA_SAMPLE_BATCH=1 CPPAW_SKALA_SAMPLE_ACC=1 CPPAW_SKALA_GRID_BACK_ACC=1 \
+	  CPPAW_SKALA_GRID_BACK_ACC_MIN_POINTS=1 ./unit-tests/skala_sampling.x gpu
 
 skala-source-resident-unit: libpaw.a
 	mkdir -p unit-tests
