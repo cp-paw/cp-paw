@@ -104,6 +104,7 @@ export PAWLIST=" \
         paw_cg \
         paw_kpoints \
         paw_vext \
+        paw_d3bj \
         paw_vdw \
         paw_opteels" 
 

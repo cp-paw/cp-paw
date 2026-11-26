@@ -465,6 +465,42 @@ case ${SELECT} in
 esac
 
 #------------------------------------------------------------------------------
+case ${CPPAW_USE_D3BJ:-0} in
+  0) ;;
+  1)
+    if ! pkg-config --atleast-version=0.5.0 s-dftd3; then
+      echo "CPPAW_USE_D3BJ=1 requires the s-dftd3 library and its pkg-config file" >&2
+      exit 1
+    fi
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_D3BJ"
+    LIBS="${LIBS} $(pkg-config --libs s-dftd3)"
+    LDFLAGS="${LDFLAGS} -Wl,-rpath,$(pkg-config --variable=libdir s-dftd3)"
+    ;;
+  *) echo "CPPAW_USE_D3BJ must be 0 or 1" >&2; exit 1 ;;
+esac
+case ${CPPAW_OPENMP:-0} in
+  0) ;;
+  1)
+    case ${COMPILER} in
+      gfortran) omp_flag=-fopenmp ;;
+      ifort|ifx) omp_flag=-qopenmp ;;
+      nvfortran)
+        if [[ ${CPPFLAGS} == *-DCPPVAR_SKALA_FTORCH* && -n ${CPPAW_SKALA_FTORCH_ROOT:-} ]]; then
+          bridge="${CPPAW_SKALA_FTORCH_ROOT}/lib/libcppaw_skala_bridge.so"
+          if [[ -f ${bridge} ]] && command -v ldd >/dev/null && [[ $(ldd "${bridge}" 2>/dev/null) == *libgomp.so* ]]; then
+            echo "CPPAW_OPENMP=1: this Skala bridge loads GNU OpenMP; use CPPAW_OPENMP=0 with nvfortran" >&2
+            exit 1
+          fi
+        fi
+        omp_flag=-mp ;;
+      *) echo "CPPAW_OPENMP=1: unsupported Fortran compiler ${COMPILER}" >&2; exit 1 ;;
+    esac
+    FCFLAGS="${FCFLAGS} ${omp_flag}"
+    LDFLAGS="${LDFLAGS} ${omp_flag}"
+    ;;
+  *) echo "CPPAW_OPENMP must be 0 or 1" >&2; exit 1 ;;
+esac
+
 if [[ $COMPILER == ifort ]] ; then 
   export INTELDIR=${FC%/bin/*}
   # -mkl=sequential is deprecated option. shall we use -qmkl=sequential instead?
