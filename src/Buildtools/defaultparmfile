@@ -104,6 +104,18 @@ function command_path {
   command -v "$1" 2>/dev/null
 }
 
+function mpi_compiler_name {
+  local line name
+  line=$("$1" --showme:command 2>/dev/null) || line=$("$1" -show 2>/dev/null) || return 1
+  read -r name _ <<< "$line"
+  name=${name##*/}
+  if [[ $name =~ ^([[:alnum:]_.+-]+-)?gfortran(-[[:digit:]]+(\.[[:digit:]]+)*)?$ ]]; then
+    echo gfortran
+  else
+    echo "$name"
+  fi
+}
+
 function nvhpc_platform {
   case "${OS}_${ARCH}" in
     Linux_aarch64|Linux_arm64) echo "Linux_aarch64" ;;
@@ -482,9 +494,7 @@ case $SELECT in
          if [[ -z ${MPI_WRAPPER} ]] ; then
            continue
          fi
-         MPI_COMMAND=$("${MPI_WRAPPER}" --showme:command 2>/dev/null \
-                       || "${MPI_WRAPPER}" -show 2>/dev/null | awk '{print $1}')
-         if [[ $(basename "${MPI_COMMAND}") = gfortran ]] ; then
+         if [[ $(mpi_compiler_name "${MPI_WRAPPER}") = gfortran ]] ; then
            FC=${MPI_WRAPPER}
            LD=${FC}
            break
@@ -539,9 +549,8 @@ case ${FC_BASE} in
   nvfortran) COMPILER=nvfortran ;;
   mpiifort) COMPILER=ifort ;;
   mpifort|mpif90)
-    MPI_COMMAND=$("${FC}" --showme:command 2>/dev/null \
-                  || "${FC}" -show 2>/dev/null | awk '{print $1}')
-    case $(basename "${MPI_COMMAND}") in
+    MPI_COMMAND=$(mpi_compiler_name "${FC}")
+    case "${MPI_COMMAND}" in
       gfortran)   COMPILER=gfortran ;;
       ifort)      COMPILER=ifort ;;
       nvfortran)  COMPILER=nvfortran ;;
