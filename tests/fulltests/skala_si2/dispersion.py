@@ -24,7 +24,7 @@ STRUCTURE = """!STRUCTURE
 """
 
 # Original Bonn dftd3 (June 2016, not s-dftd3):
-# dftd3 POSCAR -pbc -bj -func b3-lyp (or pbe) -cutoff 75.58905 -cnthr 40 -grad
+# dftd3 POSCAR -pbc -bj (or -zero) -func b3-lyp (or pbe) -cutoff 75.58905 -cnthr 40 -grad
 # POSCAR used Cartesian coordinates as above and its native 0.52917726 scale.
 # Energies are printed to 8 decimals. Rows of dftd3_cellgradient correspond to
 # lattice vectors. Contract with the lattice to obtain dE/d(strain), in Ha.
@@ -36,6 +36,11 @@ STRAIN = CELL.T @ np.array([
     [-0.0041496480338034, 0.0041636905215205, 0.0041413154757329],
     [0.0043234951646394, -0.0042853553696135, 0.0044368274546618],
     [0.0042430399419265, 0.0043787472777366, -0.0042629803238258]])
+ZERO_F1 = np.array([-0.000033670094314918, 0.000053791194651845, 0.000017751937332810])
+ZERO_STRAIN = CELL.T @ np.array([
+    [-0.00084176989685273, 0.00085496548618414, 0.00082992608846099],
+    [0.0010176748144455, -0.00097295972291768, 0.0011238252427873],
+    [0.00092073087449150, 0.0010519207005564, -0.00094792032519453]])
 
 
 def main():
@@ -84,10 +89,10 @@ def main():
 
         run("seed", "F", seed=True)
         pbe = run("pbe", "BJ")
-        def term(text, method):
-            m = re.search(rf"^D3\(BJ\) {method} ATM=F PERIODIC=T ENERGY \[HA\]\s+(\S+)", text, re.M | re.I)
+        def term(text, method, damping="BJ"):
+            m = re.search(rf"^D3\({damping}\) {method} ATM=F PERIODIC=T ENERGY \[HA\]\s+(\S+)", text, re.M | re.I)
             if not m:
-                raise ValueError(f"Missing {method} D3(BJ) term")
+                raise ValueError(f"Missing {method} D3({damping}) term")
             return float(m[1])
         np.testing.assert_allclose(term(pbe, "pbe"), E_PBE_BJ, rtol=0, atol=1e-8)
         # Legacy PBE before the BJ integration (protocol printed to 7 decimals).
@@ -101,11 +106,15 @@ def main():
         # The 2016 dftd3 release lacks SCAN; use the standalone s-dftd3 1.7.0 result.
         scan = run("scan", "'BJ'", scan=True)
         np.testing.assert_allclose(term(scan, "scan"), -0.00728046904255, rtol=0, atol=1e-9)
+        scan_zero = run("scan-zero", "T", scan=True)
+        np.testing.assert_allclose(term(scan_zero, "scan", "0"), -0.00393670949126, rtol=0, atol=1e-9)
         for apply in ("T", "F"):
             off = run("off-" + apply, "F", apply)
             for mode in ("T", "BJ"):
                 on = run("on-" + apply + "-" + mode, mode, apply)
-                ed3 = term(on, "b3lyp")
+                damping, er, fr, sr = (("BJ", E_BJ, F1, STRAIN) if mode == "BJ" else
+                                       ("0", -0.01853348, ZERO_F1, ZERO_STRAIN))
+                ed3 = term(on, "b3lyp", damping)
                 def values(text):
                     e = float(re.search(r"^TOTAL ENERGY\s+(\S+)\s*$", text, re.M)[1])
                     def matrix(pattern):
@@ -116,13 +125,13 @@ def main():
                 e1, f1, s1 = values(on)
                 de, df, ds = e1-e0, f1-f0, s1-s0
                 assert df.shape == (2,3) and ds.shape == (3,3)
-                errors = abs(de-E_BJ), np.max(abs(df-[F1,-F1])), np.max(abs(ds-STRAIN))
+                errors = abs(de-er), np.max(abs(df-[fr,-fr])), np.max(abs(ds-sr))
                 print(f"APPLY={apply} VDW={mode}: delta E={de:.12g}, max reference errors E/F/dEdeps:",
                       *errors, flush=True)
                 np.testing.assert_allclose(de, ed3, rtol=0, atol=2e-9)
-                np.testing.assert_allclose(de, E_BJ, rtol=0, atol=1e-8)
-                np.testing.assert_allclose(df, [F1,-F1], rtol=0, atol=1e-8)
-                np.testing.assert_allclose(ds, STRAIN, rtol=0, atol=5e-8)
+                np.testing.assert_allclose(de, er, rtol=0, atol=2e-8 if mode == "T" else 1e-8)
+                np.testing.assert_allclose(df, [fr,-fr], rtol=0, atol=1e-8)
+                np.testing.assert_allclose(ds, sr, rtol=0, atol=5e-8)
 
 
 if __name__ == "__main__":

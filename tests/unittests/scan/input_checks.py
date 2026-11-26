@@ -37,14 +37,13 @@ def main():
         ("tau", "!SCAN APPLYTAU=F !END", "", "REQUIRES THE TAU OPERATOR"),
         ("one-center", "!SCAN APPLYONECENTER=F !END", "", "COMPLETE PAW OPERATOR"),
         ("distributed-model", "!SCAN DISTRIBUTEGPU=T !END", "", "NO DISTRIBUTED TORCH MODEL"),
-        ("dispersion", "!SCAN !END", "VDW=T", "NATIVE SCAN DOES NOT USE LEGACY VDW=T"),
         ("invalid-vdw", "", "VDW='BAD'", "VDW MUST BE F, T OR BJ"),
     ]
     env = dict(os.environ, CPPAW_GPU_MODE="off", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1")
     if args.with_skala:
         for apply in ("T", "F"):
             cases.append((f"skala-parameters-{apply}", f"!SKALA MODEL='absent.fun' APPLY={apply} !END",
-                          "VDW=T VDW-FUNCTIONAL='pbe'", "SKALA D3(BJ) REQUIRES THE B3LYP PARAMETER SET"))
+                          "VDW=T VDW-FUNCTIONAL='pbe'", "SKALA D3 REQUIRES THE B3LYP PARAMETER SET"))
     if args.without_d3bj:
         cases.append(("no-d3bj-library", "", "VDW=BJ", "THIS BUILD HAS NO S-DFTD3 SUPPORT"))
     if args.output is not None:
