@@ -141,6 +141,11 @@ SCAN rejects model/device settings, disabled operator contributions and
 `VDW=T`, which would otherwise select the auxiliary PBE dispersion parameters.
 Conventional input files without a `SCAN` or `SKALA` block are unchanged.
 
+To thread native SCAN grid rows within an MPI rank, build with
+`CPPAW_OPENMP=1 src/Buildtools/paw_build.sh -c fast_parallel -j8 -z` and
+set `OMP_NUM_THREADS` to the cores assigned to each rank. The default build
+does not require OpenMP. Grid rows are already distributed across MPI ranks.
+
 Run the kernel, independent LibXC-reference and backend tests with
 
 ```sh
