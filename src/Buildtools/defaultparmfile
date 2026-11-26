@@ -104,6 +104,18 @@ function command_path {
   command -v "$1" 2>/dev/null
 }
 
+function mpi_compiler_name {
+  local line name
+  line=$("$1" --showme:command 2>/dev/null) || line=$("$1" -show 2>/dev/null) || return 1
+  read -r name _ <<< "$line"
+  name=${name##*/}
+  if [[ $name =~ ^([[:alnum:]_.+-]+-)?gfortran(-[[:digit:]]+(\.[[:digit:]]+)*)?$ ]]; then
+    echo gfortran
+  else
+    echo "$name"
+  fi
+}
+
 function nvhpc_platform {
   case "${OS}_${ARCH}" in
     Linux_aarch64|Linux_arm64) echo "Linux_aarch64" ;;
@@ -482,9 +494,7 @@ case $SELECT in
          if [[ -z ${MPI_WRAPPER} ]] ; then
            continue
          fi
-         MPI_COMMAND=$("${MPI_WRAPPER}" --showme:command 2>/dev/null \
-                       || "${MPI_WRAPPER}" -show 2>/dev/null | awk '{print $1}')
-         if [[ $(basename "${MPI_COMMAND}") = gfortran ]] ; then
+         if [[ $(mpi_compiler_name "${MPI_WRAPPER}") = gfortran ]] ; then
            FC=${MPI_WRAPPER}
            LD=${FC}
            break
@@ -539,9 +549,8 @@ case ${FC_BASE} in
   nvfortran) COMPILER=nvfortran ;;
   mpiifort) COMPILER=ifort ;;
   mpifort|mpif90)
-    MPI_COMMAND=$("${FC}" --showme:command 2>/dev/null \
-                  || "${FC}" -show 2>/dev/null | awk '{print $1}')
-    case $(basename "${MPI_COMMAND}") in
+    MPI_COMMAND=$(mpi_compiler_name "${FC}")
+    case "${MPI_COMMAND}" in
       gfortran)   COMPILER=gfortran ;;
       ifort)      COMPILER=ifort ;;
       nvfortran)  COMPILER=nvfortran ;;
@@ -849,6 +858,9 @@ if [[ -n $(which pkg-config) ]] ; then
           echo "are not usable with ${COMPILER}; building without LibXC."
           continue
         fi
+        if pkg-config --atleast-version=7.1.0 libxcf03; then
+          CPPFLAGS="${CPPFLAGS} -DCPPVAR_LIBXC_PLACEMENT"
+        fi
       fi
       FCFLAGS="${FCFLAGS} ${PC_CFLAGS}"
       LIBS="${LIBS} ${PC_LIBS}"
@@ -892,6 +904,28 @@ fi
 if [[ -z $LIB_XC_OK ]] ; then
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_NOLIBXC"
 fi
+
+case ${CPPAW_USE_LIBXC_CUDA:-no} in
+  yes)
+    if [[ ${COMPILER} != nvfortran || -z ${LIB_XC_OK} ]] || ! pkg-config --atleast-version=7.1.0 libxcf03; then
+      echo "CPPAW_USE_LIBXC_CUDA=yes requires NVHPC and matching CUDA Libxc >= 7.1 Fortran modules" >&2
+      exit 1
+    fi
+    XC_PROBE=$(mktemp -d "${TMPDIR:-/tmp}/paw-libxc.XXXXXX") || exit 1
+    if ! cmake -S "${BASEDIR}/src/Buildtools/libxc_cuda_check" -B "${XC_PROBE}" \
+          -DXC_PREFIX="$(pkg-config --variable=prefix libxcf03)" >/dev/null; then
+      rm -rf "${XC_PROBE}"
+      exit 1
+    fi
+    rm -rf "${XC_PROBE}"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_LIBXC_CUDA"
+    INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/openacc.mod"
+    FCFLAGS="${FCFLAGS} -acc"
+    LDFLAGS="${LDFLAGS} -acc"
+    ;;
+  no) ;;
+  *) echo "CPPAW_USE_LIBXC_CUDA must be yes or no" >&2; exit 1 ;;
+esac
 
 ################################################################################
 ## resolve selection 
