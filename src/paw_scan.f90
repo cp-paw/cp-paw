@@ -1094,7 +1094,8 @@
       IF(ANY(.NOT.IEEE_IS_FINITE(RHO)).OR.ANY(.NOT.IEEE_IS_FINITE(GRAD)) &
      &   .OR.ANY(.NOT.IEEE_IS_FINITE(TAU)).OR.ANY(.NOT.IEEE_IS_FINITE(WEIGHT))) &
      &   ERROR STOP 'Nonfinite SCAN quadrature input'
-      ENERGY=0.D0
+!$OMP PARALLEL DO IF(NPOINT.GE.256) SCHEDULE(STATIC) DEFAULT(NONE) &
+!$OMP& SHARED(NPOINT,RHO,GRAD,TAU,WEIGHT,DWEIGHT,DRHO,DGRAD,DTAU) PRIVATE(V,E,D,GT,GS,SIGN,SPIN)
       DO I=1,NPOINT
         GT=GRAD(I,:,1)+GRAD(I,:,2)
         GS=GRAD(I,:,1)-GRAD(I,:,2)
@@ -1103,7 +1104,6 @@
         CALL SCAN$EVAL1(V,E,D)
         IF(.NOT.IEEE_IS_FINITE(E).OR.ANY(.NOT.IEEE_IS_FINITE(D))) &
      &    ERROR STOP 'Nonfinite SCAN quadrature result'
-        ENERGY=ENERGY+WEIGHT(I)*E
         DWEIGHT(I)=E
         DO SPIN=1,2
           SIGN=REAL(3-2*SPIN,8)
@@ -1112,6 +1112,12 @@
      &                                          +D(5)*(GS+SIGN*GT))
           DTAU(I,SPIN)=WEIGHT(I)*(D(8)+SIGN*D(9))
         END DO
+      END DO
+!$OMP END PARALLEL DO
+!     Sum the weighted row energies in the same order for every thread count.
+      ENERGY=0.D0
+      DO I=1,NPOINT
+        ENERGY=ENERGY+WEIGHT(I)*DWEIGHT(I)
       END DO
       END SUBROUTINE SCAN$BLOCK
 
