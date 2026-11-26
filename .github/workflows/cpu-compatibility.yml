@@ -62,6 +62,7 @@ jobs:
       - name: Check MPI communicator insertion
         env:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
+          PRTE_MCA_rmaps_default_mapping_policy: "slot:oversubscribe"
         run: |
           make -C bin/Build_fast_parallel -f Makefile \
             -f ../../tests/unittests/mpe_registry/driver.mk mpe-registry-test skala-point-exchange-test MPIEXEC=mpirun
@@ -98,6 +99,7 @@ jobs:
       - name: Check native SCAN energy, force and stress MPI parity
         env:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
+          PRTE_MCA_rmaps_default_mapping_policy: "slot:oversubscribe"
         run: |
           python3 tests/fulltests/scan_si2/parallel.py \
             --serial-executable bin/fast/paw_fast.x \
@@ -215,6 +217,7 @@ jobs:
       - name: Check cooperative Skala point ranges
         env:
           OMPI_MCA_rmaps_base_oversubscribe: "1"
+          PRTE_MCA_rmaps_default_mapping_policy: "slot:oversubscribe"
         run: |
           python tests/fulltests/skala_si2/parallel_grid.py \
             --executable bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x \
