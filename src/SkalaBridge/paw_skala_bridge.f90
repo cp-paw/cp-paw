@@ -29,6 +29,10 @@ module paw_skala_bridge
   public :: paw_skala_cuda_available
   public :: paw_skala_device_cpu, paw_skala_device_cuda
   public :: paw_skala_cache_stats
+  public :: paw_skala_set_spin_quadrature
+  public :: paw_skala_set_spin_response_quadrature
+  public :: paw_skala_spin_batch_stats
+  public :: paw_skala_gradient_fixes
 
 contains
 
@@ -189,7 +193,7 @@ contains
       end subroutine tensor_release_c
     end interface
 
-    integer :: i, ipoint, npoint, natom, max_grid_size
+    integer :: i, ipoint, npoint, natom, max_grid_size, nspin
     integer(c_int) :: rc
     logical :: need_geometry
     integer(ftorch_int), parameter :: layout1(1) = [1]
@@ -204,6 +208,8 @@ contains
     character(kind=c_char) :: error(error_capacity)
 
     energy = 0.0_real64
+    dict_handle = c_null_ptr
+    derivative_handles = c_null_ptr
     density_deriv = 0.0_real64
     grad_deriv = 0.0_real64
     kin_deriv = 0.0_real64
@@ -224,6 +230,7 @@ contains
     call model_set_block_c(model%handle, 0_c_int)
     if (present(block_id)) call model_set_block_c(model%handle, int(block_id, c_int))
     npoint = size(density, 1)
+    nspin = size(density, 2)
     natom = size(atom_coords, 1)
     if (present(block_energies)) then
       if (size(block_energies) /= natom) then
@@ -231,8 +238,8 @@ contains
         return
       end if
     end if
-    if (size(density, 2) /= 2 .or. size(kin, 1) /= npoint .or. size(kin, 2) /= 2 &
-        .or. size(grad, 1) /= npoint .or. size(grad, 2) /= 3 .or. size(grad, 3) /= 2 &
+    if ((nspin /= 2 .and. nspin /= 4) .or. size(kin, 1) /= npoint .or. size(kin, 2) /= nspin &
+        .or. size(grad, 1) /= npoint .or. size(grad, 2) /= 3 .or. size(grad, 3) /= nspin &
         .or. size(grid_coords, 1) /= npoint .or. size(grid_coords, 2) /= 3 &
         .or. size(grid_weights) /= npoint .or. size(atomic_grid_weights) /= npoint &
         .or. size(atom_coords, 2) /= 3 .or. size(atomic_grid_sizes) /= natom &
@@ -247,13 +254,13 @@ contains
     max_grid_size = int(maxval(atomic_grid_sizes))
 
     if (allocated(model%density_data)) then
-      if (size(model%density_data, 2) < npoint) then
+      if (size(model%density_data, 2) < npoint .or. size(model%density_data, 1) /= nspin) then
         deallocate(model%density_data, model%grad_data, model%kin_data, model%grid_gradient)
       end if
     end if
     if (.not. allocated(model%density_data)) then
-      allocate(model%density_data(2,npoint), model%grad_data(2,3,npoint), &
-        & model%kin_data(2,npoint), model%grid_gradient(3,npoint))
+      allocate(model%density_data(nspin,npoint), model%grad_data(nspin,3,npoint), &
+        & model%kin_data(nspin,npoint), model%grid_gradient(3,npoint))
     end if
     if (allocated(model%atom_gradient)) then
       if (size(model%atom_gradient, 2) < natom) deallocate(model%atom_gradient)
@@ -319,6 +326,7 @@ contains
       & derivative_handles(5), derivative_handles(6), derivative_handles(7), &
       & error, error_capacity)
     if (rc /= 0) then
+      status = 1
       call copy_c_message(error, message)
       call cleanup()
       return
@@ -392,6 +400,61 @@ contains
 
   end subroutine paw_skala_evaluate
 
+  subroutine paw_skala_set_spin_quadrature(model, directions, weights, status, message)
+    type(paw_skala_model), intent(inout) :: model
+    real(real64), intent(in), contiguous :: directions(:,:), weights(:)
+    integer, intent(out) :: status
+    character(*), intent(out) :: message
+    interface
+      function set_quadrature_c(handle, count, axes, values, error, capacity) result(rc) &
+          bind(c, name="cppaw_skala_model_set_spin_quadrature")
+        import :: c_ptr, c_int, c_double, c_char
+        type(c_ptr), value :: handle
+        integer(c_int), value :: count, capacity
+        real(c_double), intent(in) :: axes(*), values(*)
+        character(kind=c_char), intent(out) :: error(*)
+        integer(c_int) :: rc
+      end function set_quadrature_c
+    end interface
+    character(kind=c_char) :: error(error_capacity)
+    status = 1
+    message = "Skala spin quadrature requires a loaded model and 3-by-N unit directions"
+    if (.not. c_associated(model%handle)) return
+    if (size(directions, 1) /= 3 .or. size(directions, 2) /= size(weights) .or. size(weights) < 1) return
+    error = c_null_char
+    status = set_quadrature_c(model%handle, int(size(weights),c_int), directions, weights, error, error_capacity)
+    call copy_c_message(error, message)
+  end subroutine paw_skala_set_spin_quadrature
+
+  subroutine paw_skala_set_spin_response_quadrature(model, directions, weights, coefficients, responses, status, message)
+    type(paw_skala_model), intent(inout) :: model
+    real(real64), intent(in), contiguous :: directions(:,:), weights(:), coefficients(:), responses(:,:)
+    integer, intent(out) :: status
+    character(*), intent(out) :: message
+    interface
+      function set_response_quadrature_c(handle, count, axes, values, coefficients, responses, error, capacity) &
+          result(rc) bind(c, name="cppaw_skala_model_set_spin_response_quadrature")
+        import :: c_ptr, c_int, c_double, c_char
+        type(c_ptr), value :: handle
+        integer(c_int), value :: count, capacity
+        real(c_double), intent(in) :: axes(*), values(*), coefficients(*), responses(*)
+        character(kind=c_char), intent(out) :: error(*)
+        integer(c_int) :: rc
+      end function set_response_quadrature_c
+    end interface
+    character(kind=c_char) :: error(error_capacity)
+    status = 1
+    message = "Skala linear spin quadrature requires a loaded model and matching finite coefficients and directions"
+    if (.not. c_associated(model%handle)) return
+    if (size(directions, 1) /= 3 .or. size(directions, 2) /= size(weights) .or. size(weights) < 1) return
+    if (size(coefficients) /= size(weights) .or. size(responses, 1) /= 3 &
+        & .or. size(responses, 2) /= size(weights)) return
+    error = c_null_char
+    status = set_response_quadrature_c(model%handle, int(size(weights),c_int), directions, weights, &
+      & coefficients, responses, error, error_capacity)
+    call copy_c_message(error, message)
+  end subroutine paw_skala_set_spin_response_quadrature
+
   subroutine paw_skala_cache_stats(model, stats)
     type(paw_skala_model), intent(in) :: model
     integer(int64), intent(out) :: stats(3)
@@ -405,6 +468,33 @@ contains
     stats = 0
     if (c_associated(model%handle)) call cache_stats_c(model%handle, stats)
   end subroutine paw_skala_cache_stats
+
+  subroutine paw_skala_spin_batch_stats(model, stats)
+    type(paw_skala_model), intent(in) :: model
+    integer(int64), intent(out) :: stats(3)
+    interface
+      subroutine spin_batch_stats_c(handle, values) bind(c, name="cppaw_skala_model_spin_batch_stats")
+        import :: c_ptr, c_int64_t
+        type(c_ptr), value :: handle
+        integer(c_int64_t), intent(out) :: values(3)
+      end subroutine spin_batch_stats_c
+    end interface
+    stats = 0
+    if (c_associated(model%handle)) call spin_batch_stats_c(model%handle, stats)
+  end subroutine paw_skala_spin_batch_stats
+
+  integer function paw_skala_gradient_fixes(model) result(count)
+    type(paw_skala_model), intent(in) :: model
+    interface
+      function gradient_fixes_c(handle) result(value) bind(c, name="cppaw_skala_model_gradient_fixes")
+        import :: c_ptr, c_int
+        type(c_ptr), value :: handle
+        integer(c_int) :: value
+      end function gradient_fixes_c
+    end interface
+    count = 0
+    if (c_associated(model%handle)) count = gradient_fixes_c(model%handle)
+  end function paw_skala_gradient_fixes
 
   subroutine paw_skala_release(model)
     type(paw_skala_model), intent(inout) :: model

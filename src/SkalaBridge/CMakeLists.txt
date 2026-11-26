@@ -5,7 +5,9 @@ project(CPPAWSkalaBridge VERSION 0.1.0 LANGUAGES CXX Fortran)
 include(FetchContent)
 include(GNUInstallDirs)
 
-set(CMAKE_CXX_STANDARD 17)
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -40,6 +42,13 @@ if(NOT CPPAW_SKALA_DEVICE MATCHES "^(CPU|CUDA)$")
 endif()
 
 find_package(Torch REQUIRED)
+if(TARGET torch)
+  get_target_property(CPPAW_TORCH_CXX_STANDARD torch CXX_STANDARD)
+  if(CPPAW_TORCH_CXX_STANDARD)
+    # Imported CXX_STANDARD is not a transitive usage requirement.
+    target_compile_features(torch INTERFACE cxx_std_${CPPAW_TORCH_CXX_STANDARD})
+  endif()
+endif()
 if(CPPAW_SKALA_USE_SYSTEM_FTORCH)
   find_package(FTorch CONFIG REQUIRED)
 else()
@@ -93,6 +102,37 @@ set_target_properties(cppaw_skala_smoke PROPERTIES
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
    CMAKE_Fortran_COMPILER_ID MATCHES "^(NVHPC|PGI)$")
   target_link_options(cppaw_skala_smoke PRIVATE "LINKER:--disable-new-dtags")
+endif()
+
+option(CPPAW_SKALA_BUILD_TESTS "Build the focused Skala bridge derivative tests" OFF)
+if(CPPAW_SKALA_BUILD_TESTS)
+  enable_testing()
+  add_executable(skala_gradient_features tests/gradient_features.cxx)
+  set_target_properties(skala_gradient_features PROPERTIES LINKER_LANGUAGE Fortran)
+  target_link_libraries(skala_gradient_features PRIVATE cppaw_skala_bridge ${TORCH_LIBRARIES})
+  target_include_directories(skala_gradient_features PRIVATE ${TORCH_INCLUDE_DIRS})
+  if(TORCH_CXX_FLAGS)
+    target_compile_options(skala_gradient_features PRIVATE ${CPPAW_TORCH_CXX_FLAGS})
+  endif()
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
+     CMAKE_Fortran_COMPILER_ID MATCHES "^(NVHPC|PGI)$")
+    target_link_options(skala_gradient_features PRIVATE -Mnomain "LINKER:--disable-new-dtags")
+    set_property(TARGET skala_gradient_features APPEND PROPERTY
+      BUILD_RPATH "${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES}")
+  endif()
+  add_test(NAME skala_gradient_features COMMAND skala_gradient_features)
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/deterministic-tests")
+  add_test(NAME skala_deterministic_features COMMAND skala_gradient_features)
+  set_tests_properties(skala_deterministic_features PROPERTIES
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/deterministic-tests"
+    ENVIRONMENT "CPPAW_SKALA_DETERMINISTIC=1")
+  foreach(spin_batch IN ITEMS 1 3)
+    set(block_dir "${CMAKE_CURRENT_BINARY_DIR}/atom-block-spin-${spin_batch}")
+    file(MAKE_DIRECTORY "${block_dir}")
+    add_test(NAME skala_atom_block_spin_${spin_batch} COMMAND skala_gradient_features --atom-block-spin CPU)
+    set_tests_properties(skala_atom_block_spin_${spin_batch} PROPERTIES
+      WORKING_DIRECTORY "${block_dir}" ENVIRONMENT "CPPAW_SKALA_SPIN_BATCH=${spin_batch}")
+  endforeach()
 endif()
 
 install(TARGETS cppaw_skala_bridge cppaw_skala_smoke

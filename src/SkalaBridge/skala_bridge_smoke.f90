@@ -4,6 +4,7 @@ program skala_bridge_smoke
   use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
   use, intrinsic :: iso_fortran_env, only : int64, real64
   use paw_skala_bridge, only : paw_skala_evaluate, paw_skala_load, paw_skala_model, paw_skala_cache_stats
+  use paw_skala_bridge, only : paw_skala_set_spin_quadrature
   implicit none
 
   integer, parameter :: natom = 2, points_per_atom = 8, npoint = natom * points_per_atom
@@ -270,6 +271,60 @@ program skala_bridge_smoke
   call evaluate_energy(eminus)
   atomic_grid_weights(9) = original
   call compare_gradient("atomic_grid_weights", analytic(7), eplus, eminus)
+
+  block
+    real(real64) :: pauli_r(npoint,4), pauli_g(npoint,3,4), pauli_t(npoint,4)
+    real(real64) :: pauli_dr(npoint,4), pauli_dg(npoint,3,4), pauli_dt(npoint,4)
+    real(real64) :: axes(3,6), weights(6), expected_r(npoint), expected_g(npoint,3), expected_t(npoint)
+    real(real64) :: expected_energy, pauli_error
+    call evaluate_energy(expected_energy)
+    expected_r = 0.5_real64 * sum(density_deriv,dim=2)
+    expected_g = 0.5_real64 * sum(grad_deriv,dim=3)
+    expected_t = 0.5_real64 * sum(kin_deriv,dim=2)
+    pauli_r = 0.0_real64
+    pauli_g = 0.0_real64
+    pauli_t = 0.0_real64
+    pauli_r(:,1) = sum(density,dim=2)
+    pauli_g(:,:,1) = sum(grad,dim=3)
+    pauli_t(:,1) = sum(kin,dim=2)
+    call paw_skala_evaluate(model, pauli_r, pauli_g, pauli_t, grid_coords, grid_weights, &
+      & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, pauli_dr, pauli_dg, pauli_dt, &
+      & status, message)
+    if (status == 0 .or. index(message,"explicit normalized spin quadrature") == 0) &
+      & error stop 'Pauli inference without a spin quadrature was not rejected'
+    axes = 0.0_real64
+    do i = 1,3
+      axes(i,2*i-1) = 1.0_real64
+      axes(i,2*i) = -1.0_real64
+    end do
+    weights = 1.0_real64/12.0_real64
+    call paw_skala_set_spin_quadrature(model, axes, weights, status, message)
+    if (status == 0) error stop 'Unnormalized spin weights were accepted'
+    weights = 1.0_real64/6.0_real64
+    axes(:,1) = 2.0_real64*axes(:,1)
+    call paw_skala_set_spin_quadrature(model, axes, weights, status, message)
+    if (status == 0) error stop 'Non-unit spin direction was accepted'
+    axes(:,1) = 0.5_real64*axes(:,1)
+    call paw_skala_set_spin_quadrature(model, axes, weights, status, message)
+    if (status /= 0) error stop 'Valid spin quadrature was rejected'
+    call paw_skala_evaluate(model, pauli_r, pauli_g, pauli_t, grid_coords, grid_weights, &
+      & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, pauli_dr, pauli_dg, pauli_dt, &
+      & status, message, block_id=300, block_energies=block_energies)
+    if (status /= 0) then
+      write(*,'(A)') trim(message)
+      error stop 'Pauli closed-shell inference failed'
+    end if
+    pauli_error = max(abs(energy-expected_energy), abs(sum(block_energies)-energy), &
+      & maxval(abs(pauli_dr(:,1)-expected_r)), maxval(abs(pauli_dg(:,:,1)-expected_g)), &
+      & maxval(abs(pauli_dt(:,1)-expected_t)), maxval(abs(pauli_dr(:,2:4))), &
+      & maxval(abs(pauli_dg(:,:,2:4))), maxval(abs(pauli_dt(:,2:4))))
+    if (.not. ieee_is_finite(pauli_error) .or. pauli_error > repeat_tolerance) &
+      & error stop 'Pauli closed-shell energy or adjoint differs'
+    ! Reallocation between two and four input components must be reversible.
+    call evaluate_energy(energy)
+    if (abs(energy-expected_energy) > repeat_tolerance) error stop 'Collinear buffer reuse after Pauli inference'
+    write(*,'(A,ES12.4)') 'SKALA_BRIDGE_PAULI closed-shell error=', pauli_error
+  end block
 
   write (*, '(a,es24.16)') "SKALA_BRIDGE_SMOKE energy=", energy
   write (*, '(a,es12.4)') "SKALA_BRIDGE_SMOKE max gradient error=", max_error
