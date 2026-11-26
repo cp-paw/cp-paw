@@ -16,6 +16,7 @@ def main():
     parser.add_argument("executable", type=Path)
     parser.add_argument("--mpi-ranks", type=int, default=1)
     parser.add_argument("--mpiexec", default="mpirun")
+    parser.add_argument("--with-skala", action="store_true", help="also check a build with the optional Skala bridge")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.mpi_ranks < 1:
@@ -38,6 +39,9 @@ def main():
         ("dispersion", "!SCAN !END", "VDW=T", "SCAN D3 PARAMETRIZATION IS NOT IMPLEMENTED"),
     ]
     env = dict(os.environ, CPPAW_GPU_MODE="off", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1")
+    if args.with_skala:
+        cases.append(("skala-dispersion", "!SKALA MODEL='absent.fun' APPLY=T !END", "VDW=T",
+                      "VDW=T IS NOT THE SKALA D3(BJ) CORRECTION"))
     if args.output is not None:
         args.output.mkdir(parents=True, exist_ok=False)
     context = (nullcontext(args.output) if args.output is not None else

@@ -176,6 +176,8 @@ jobs:
           done
       - name: Check Skala reconstruction and adjoint kernels
         run: bash tests/unittests/skala_reconstruction/run.sh bin/Build_skala_cpu_fast
+      - name: Reject incompatible Skala dispersion input
+        run: python3 tests/unittests/scan/input_checks.py bin/Build_skala_cpu_fast/paw.x --with-skala
       - name: Check the shared collinear Skala and SCAN spin contract
         run: |
           for build in Build_skala_cpu_fast Build_skala_cpu_fast_parallel; do

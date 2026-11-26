@@ -152,6 +152,12 @@ weights and the independently constructed self-image descriptor window are
 distinct. This is a PAW-specific integration, not a literal copy of CP2K's GAPW
 implementation.
 
+With Skala applied, leave the legacy `VDW` switch off. It selects a
+zero-damped PBE dispersion term, not the D3(BJ) correction used in the
+Skala reference calculations. For fixed-geometry energies that require the
+latter, evaluate periodic D3(BJ) with the reference B3LYP damping parameters
+once per geometry. An energy-only correction does not correct forces or stress.
+
 The revised periodic partition sums compact, translated Becke seeds over all
 images in their support. Its force and strain derivatives include the cell
 dependence of the smooth image cutoffs. `RADIALPOINTS`, `LEBEDEVEXACTNESS`,
