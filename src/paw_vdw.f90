@@ -136,13 +136,14 @@ END MODULE PARSC6_MODULE
 !      *************************************************************************
 !      *************************************************************************
        USE DFTD3_MODULE, ONLY:TON,TINI
+       USE PAW_D3BJ_MODULE, ONLY: PAW_D3BJ_ACTIVE
        USE STRINGS_MODULE
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID
        LOGICAL     ,INTENT(OUT) :: VAL
 !      **************************************************************************
        IF(+ID.EQ.'ON') THEN
-         VAL=TON
+         VAL=TON.OR.PAW_D3BJ_ACTIVE()
        ELSE IF(+ID.EQ.'INIT') THEN
          VAL=TINI
        ELSE

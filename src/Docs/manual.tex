@@ -1058,20 +1058,29 @@ parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
 
 
 \mbax{\key{VDW}
-\vdescr{Adds van der Waals Interactions\cite{grimme10_jcp132_154104}. 
-The van der Waals interaction is described by an interatomic pair potential 
-that has a long-ranged $r^{-6}$ behavior and which is cut of smoothly 
-at short distances.}
-\vformat{logical}
-\vrules{optional (Untested)}
+\vdescr{F disables dispersion. T retains the original zero-damped PBE
+correction for conventional calculations. BJ selects D3 with Becke--Johnson
+damping from the optional s-dftd3 library for energy, forces and stress.
+With a SKALA block both T and BJ select the B3LYP damping parameters,
+independently of APPLY. Native SCAN accepts BJ but not T.}
+\vformat{F, T or BJ}
+\vrules{optional}
 \vdefault{F}}
+
+\mbax{\key{VDW-FUNCTIONAL}
+\vdescr{Parameter-set name passed to s-dftd3 for BJ damping. Native SCAN
+and conventional types 10--13 select their names automatically. Other
+combinations, including Libxc specifications, require an explicit matching
+name. Only B3LYP is accepted with SKALA.}
+\vformat{character string}
+\vrules{optional, BJ damping only}}
 
 \mbax{\key{VDW-3BODY} 
 \vdescr{adds three-body interactions\cite{grimme10_jcp132_154104} to
     the pair-wise van der Waals interactions of Grimme et al. (As of
     March 2012, not yet recommended by Grimme)}
 \vformat{logical} 
-\vrules{optional, only used when VDW=T,  (Untested)} 
+\vrules{optional, requires dispersion}
 \vdefault{F}}
 
 
