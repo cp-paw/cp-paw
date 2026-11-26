@@ -17,6 +17,7 @@ def main():
     parser.add_argument("--mpi-ranks", type=int, default=1)
     parser.add_argument("--mpiexec", default="mpirun")
     parser.add_argument("--with-skala", action="store_true", help="also check a build with the optional Skala bridge")
+    parser.add_argument("--without-d3bj", action="store_true", help="check the optional library is not silently bypassed")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.mpi_ranks < 1:
@@ -36,12 +37,16 @@ def main():
         ("tau", "!SCAN APPLYTAU=F !END", "", "REQUIRES THE TAU OPERATOR"),
         ("one-center", "!SCAN APPLYONECENTER=F !END", "", "COMPLETE PAW OPERATOR"),
         ("distributed-model", "!SCAN DISTRIBUTEGPU=T !END", "", "NO DISTRIBUTED TORCH MODEL"),
-        ("dispersion", "!SCAN !END", "VDW=T", "SCAN D3 PARAMETRIZATION IS NOT IMPLEMENTED"),
+        ("dispersion", "!SCAN !END", "VDW=T", "NATIVE SCAN DOES NOT USE LEGACY VDW=T"),
+        ("invalid-vdw", "", "VDW='BAD'", "VDW MUST BE F, T OR BJ"),
     ]
     env = dict(os.environ, CPPAW_GPU_MODE="off", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1")
     if args.with_skala:
-        cases.append(("skala-dispersion", "!SKALA MODEL='absent.fun' APPLY=T !END", "VDW=T",
-                      "VDW=T IS NOT THE SKALA D3(BJ) CORRECTION"))
+        for apply in ("T", "F"):
+            cases.append((f"skala-parameters-{apply}", f"!SKALA MODEL='absent.fun' APPLY={apply} !END",
+                          "VDW=T VDW-FUNCTIONAL='pbe'", "SKALA D3(BJ) REQUIRES THE B3LYP PARAMETER SET"))
+    if args.without_d3bj:
+        cases.append(("no-d3bj-library", "", "VDW=BJ", "THIS BUILD HAS NO S-DFTD3 SUPPORT"))
     if args.output is not None:
         args.output.mkdir(parents=True, exist_ok=False)
     context = (nullcontext(args.output) if args.output is not None else

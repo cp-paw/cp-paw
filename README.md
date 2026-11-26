@@ -152,11 +152,19 @@ weights and the independently constructed self-image descriptor window are
 distinct. This is a PAW-specific integration, not a literal copy of CP2K's GAPW
 implementation.
 
-With Skala applied, leave the legacy `VDW` switch off. It selects a
-zero-damped PBE dispersion term, not the D3(BJ) correction used in the
-Skala reference calculations. For fixed-geometry energies that require the
-latter, evaluate periodic D3(BJ) with the reference B3LYP damping parameters
-once per geometry. An energy-only correction does not correct forces or stress.
+In `!CONTROL !DFT`, `VDW=F` (default) disables dispersion. `VDW=BJ` selects
+Grimme D3 with Becke-Johnson damping for energies, nuclear forces and cell
+stress. Build with `CPPAW_USE_D3BJ=1` and an `s-dftd3` installation visible
+to `pkg-config`. Other builds do not link this library.
+
+With a Skala block, both `VDW=T` and `VDW=BJ` select the B3LYP damping
+parameters, including in observer mode (`APPLY=F`). Without Skala, `VDW=T`
+retains the original PBE dispersion implementation. Explicit BJ uses the
+functional's damping parameters, e.g. PBE for `TYPE=10` and SCAN for a native
+`!SCAN` block. For other combinations such as Libxc, supply the matching
+`VDW-FUNCTIONAL='name'` when no automatic match exists. A missing parameter
+set is an error. The optional three-body term is off by default. Do not add a
+second dispersion correction in post-processing.
 
 The revised periodic partition sums compact, translated Becke seeds over all
 images in their support. Its force and strain derivatives include the cell

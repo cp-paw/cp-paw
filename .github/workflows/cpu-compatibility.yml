@@ -94,7 +94,7 @@ jobs:
             -f ../../tests/unittests/scan/driver.mk scan-test scan-backend-test
           make -C bin/Build_fast_parallel -f Makefile \
             -f ../../tests/unittests/scan/driver.mk scan-test scan-backend-test
-          python3 tests/unittests/scan/input_checks.py bin/Build_fast/paw.x
+          python3 tests/unittests/scan/input_checks.py bin/Build_fast/paw.x --without-d3bj
           python3 tests/unittests/scan/input_checks.py bin/Build_fast_parallel/paw.x --mpi-ranks 2
       - name: Check native SCAN energy, force and stress MPI parity
         env:
@@ -160,7 +160,11 @@ jobs:
             bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun \
             "$RUNNER_TEMP/skala-precision-check.fun" --device cpu
       - name: Build dedicated serial and MPI Skala binaries
+        env:
+          CPPAW_USE_D3BJ: "1"
         run: |
+          "$CONDA/bin/conda" create -y -p "$RUNNER_TEMP/d3bj" --override-channels -c conda-forge simple-dftd3=1.7.0
+          export PKG_CONFIG_PATH="$RUNNER_TEMP/d3bj/lib/pkgconfig"
           src/Buildtools/paw_build.sh -c skala_cpu_fast -j2 -z
           src/Buildtools/paw_build.sh -c skala_cpu_fast_parallel -j2 -z
       - name: Reject CUDA dependencies
@@ -176,8 +180,13 @@ jobs:
           done
       - name: Check Skala reconstruction and adjoint kernels
         run: bash tests/unittests/skala_reconstruction/run.sh bin/Build_skala_cpu_fast
-      - name: Reject incompatible Skala dispersion input
-        run: python3 tests/unittests/scan/input_checks.py bin/Build_skala_cpu_fast/paw.x --with-skala
+      - name: Check D3(BJ) selection, forces and strain against original dftd3
+        run: |
+          python -m pip install numpy
+          python tests/unittests/scan/input_checks.py bin/Build_skala_cpu_fast/paw.x --with-skala
+          model=bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun
+          python tests/fulltests/skala_si2/dispersion.py bin/Build_skala_cpu_fast/paw.x "$model"
+          python tests/fulltests/skala_si2/dispersion.py bin/Build_skala_cpu_fast_parallel/paw.x "$model" --mpi-ranks 2
       - name: Check the shared collinear Skala and SCAN spin contract
         run: |
           for build in Build_skala_cpu_fast Build_skala_cpu_fast_parallel; do

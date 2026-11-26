@@ -2628,6 +2628,17 @@ CONTAINS
           END IF
           CALL BUFFER_TYPESIZE(BUFFER,TYPE,LENG)
 !         ==============================================================
+          IF(KEY=='VDW'.AND.TYPE=='INTEGER'.AND.LENG==1) THEN
+            I1=BUFFER%FIRST
+            CALL BUFFER_NEXTWORD(BUFFER,I1,I2)
+            CALL BUFFER_TOSTRING(BUFFER,I1,I2,SCRATCH)
+            IF(+SCRATCH=='BJ') THEN
+              CALL LINKEDLIST$SET(LIST,'VDW',-1,'BJ')
+              BUFFER%FIRST=I2+1
+              TDATA=.FALSE.
+              CYCLE
+            END IF
+          END IF
           IF(TRIM(TYPE).EQ.'REAL') THEN
             ALLOCATE(R8ARRAY(LENG))
             CALL BUFFER_READR8(BUFFER,R8ARRAY)
