@@ -1451,6 +1451,15 @@
       LOGICAL(4),INTENT(IN)   :: TSTRESS
       REAL(8)   ,INTENT(OUT)  :: STRESS(3,3)
       INTEGER(4),PARAMETER    :: NBLOCK=100    ! BLOCKS THE SUMMATION OVER GRID POINTS
+#IF DEFINED(CPPVAR_LIBXC_CUDA)
+      INTEGER,PARAMETER :: XC_TILE=4096
+      REAL(8),ALLOCATABLE :: XC_RESULT(:,:)
+      INTEGER :: IB
+      LOGICAL :: XC_ON_DEVICE
+      LOGICAL,SAVE :: XC_TIMER_SET=.FALSE.,XC_TIMER=.FALSE.
+      CHARACTER(8) :: XC_TIMER_ENV
+      INTEGER(8) :: XC_START,XC_END,XC_RATE
+#ENDIF
       LOGICAL(4)              :: TSPIN
       REAL(8)                 :: SXC,SSXC
       INTEGER(4)              :: IR,I,J
@@ -1487,6 +1496,16 @@
       STRESS1=0.D0
       DIAGSTRESS=0.D0
       DIAGSTRESS1=0.D0
+#IF DEFINED(CPPVAR_LIBXC_CUDA)
+      IF(.NOT.XC_TIMER_SET) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_LIBXC_TIMING',XC_TIMER_ENV)
+        XC_TIMER=XC_TIMER_ENV.EQ.'1'
+        XC_TIMER_SET=.TRUE.
+      END IF
+      IF(XC_TIMER) CALL SYSTEM_CLOCK(XC_START,XC_RATE)
+      CALL PAWLIBXC$CUDA_ACTIVE(XC_ON_DEVICE)
+      IF(XC_ON_DEVICE) ALLOCATE(XC_RESULT(6,MIN(XC_TILE,NNR)))
+#ENDIF
       DO IR=1,NNR
 !
 !       ================================================================
@@ -1525,7 +1544,22 @@
 !       ================================================================
 !       == EVALUATE DENSITY FUNCTIONAL                                ==
 !       ================================================================
-        CALL DFT(RHOT,RHOS,GRHOT2,GRHOS2,GRHOST,EXC1,VT,VS,GVT2,GVS2,GVST)
+#IF DEFINED(CPPVAR_LIBXC_CUDA)
+        IF(XC_ON_DEVICE) THEN
+          IB=1+MOD(IR-1,XC_TILE)
+          IF(IB.EQ.1) CALL PAWLIBXC$CUDA_GRID(IR,MIN(XC_TILE,NNR-IR+1),NNR,NNRX,NSPIN,TGRA,RHO,GRHO,XC_RESULT)
+          EXC1=XC_RESULT(1,IB)
+          VT=XC_RESULT(2,IB)
+          VS=XC_RESULT(3,IB)
+          GVT2=XC_RESULT(4,IB)
+          GVS2=XC_RESULT(5,IB)
+          GVST=XC_RESULT(6,IB)
+        ELSE
+#ENDIF
+          CALL DFT(RHOT,RHOS,GRHOT2,GRHOS2,GRHOST,EXC1,VT,VS,GVT2,GVS2,GVST)
+#IF DEFINED(CPPVAR_LIBXC_CUDA)
+        END IF
+#ENDIF
 !
 !       ================================================================
 !       == ADD TO TOTAL ENERGY AND POTENTIAL                          ==
@@ -1629,6 +1663,13 @@
         CALL ERROR$R8VAL('EXC',EXC)
         CALL ERROR$STOP('POTENTIAL_XC')
       END IF
+#IF DEFINED(CPPVAR_LIBXC_CUDA)
+      IF(XC_TIMER) THEN
+        CALL SYSTEM_CLOCK(XC_END)
+        WRITE(*,'(A,A,A,I0,A,ES16.8)') 'SMOOTH_XC mode=',MERGE('cuda','host',XC_ON_DEVICE), &
+     &     ' points=',NNR,' seconds=',REAL(XC_END-XC_START,8)/REAL(XC_RATE,8)
+      END IF
+#ENDIF
       RETURN 
       END
 !

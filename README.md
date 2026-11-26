@@ -79,6 +79,23 @@ The profile names describe user intent rather than every linked library
 combination. Use the profiling harness to compare them for the intended
 system and hardware.
 
+**Optional Libxc on NVIDIA GPUs.** CPU builds can use an ordinary CPU-only
+Libxc and need no CUDA runtime. To add device evaluation to an NVHPC build,
+install Libxc 7.1 or later in a separate prefix with the matching Fortran
+compiler and CMake options `-DENABLE_FORTRAN=ON -DENABLE_CUDA=ON -DMAXORDER=3`.
+Point `PKG_CONFIG_PATH` at that installation and set `CPPAW_USE_LIBXC_CUDA=yes`
+when building CP-PAW. Link only this Libxc and its Fortran interface. If it is
+a shared build, its library directory must also be on the runtime search path.
+
+At run time, `CPPAW_LIBXC_DEVICE=cuda` selects batched energy and first
+derivatives on the smooth grid for supported Libxc LDA/GGA functionals.
+The default is `cpu`. `CPPAW_GPU_MODE=off` also disables this path.
+PAW one-center evaluations use host handles from the same library. Where the
+one-center expansion requests third derivatives, the chosen functional must
+provide KXC. This switch does not accelerate native functionals or PyTorch.
+On a GPU, run `make -f Makefile -f ../../tests/unittests/libxc_device/driver.mk libxc-device-test`
+in the configured build directory to compare the host and device paths.
+
 Advanced targets include `nvhpc_gpu_acc_*` for the unconfigured combined
 libraries, `nvhpc_gpu_acc_residency_profile*` for the earlier focused-residency
 experiments, and individual cuBLAS, cuSOLVER, cuFFT, cuFFTW, NVLAMATH, and
