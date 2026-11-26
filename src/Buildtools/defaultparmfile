@@ -471,7 +471,15 @@ case ${CPPAW_OPENMP:-0} in
     case ${COMPILER} in
       gfortran) omp_flag=-fopenmp ;;
       ifort|ifx) omp_flag=-qopenmp ;;
-      nvfortran) omp_flag=-mp ;;
+      nvfortran)
+        if [[ ${CPPFLAGS} == *-DCPPVAR_SKALA_FTORCH* && -n ${CPPAW_SKALA_FTORCH_ROOT:-} ]]; then
+          bridge="${CPPAW_SKALA_FTORCH_ROOT}/lib/libcppaw_skala_bridge.so"
+          if [[ -f ${bridge} ]] && command -v ldd >/dev/null && [[ $(ldd "${bridge}" 2>/dev/null) == *libgomp.so* ]]; then
+            echo "CPPAW_OPENMP=1: this Skala bridge loads GNU OpenMP; use CPPAW_OPENMP=0 with nvfortran" >&2
+            exit 1
+          fi
+        fi
+        omp_flag=-mp ;;
       *) echo "CPPAW_OPENMP=1: unsupported Fortran compiler ${COMPILER}" >&2; exit 1 ;;
     esac
     FCFLAGS="${FCFLAGS} ${omp_flag}"
