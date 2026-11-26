@@ -3160,6 +3160,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       COMPLEX(8)               :: HAUX(NB,NB)    
       COMPLEX(8)               :: U(NB,NB)       
       LOGICAL(4)               :: TCONVERGED
+      LOGICAL(4)               :: TCANRETRY
       LOGICAL(4)               :: TESSL=.TRUE.
       COMPLEX(8)               :: CSVAR
       REAL(8)                  :: OCCI,OCCJ
@@ -3250,6 +3251,21 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       __CONSIDER AN EXPLICIT LOOP THAT SETS TCONVERGED=FALSE AND EXITS, WHEN__
 !       __THE FIRST ELEMENT WITH ABS(GAMN)>EPS IS ENCOUNTERES___________________
         DIGAM=MAXVAL(ABS(GAMN))
+!       A restart from a very different timestep can supply a divergent
+!       multiplier. Retry once without it if the trial orbitals are close.
+        IF(ITER.EQ.1) TCANRETRY=DIGAM.GT.1.D0
+        IF(TCANRETRY.AND.DIGAM.GT.1.D5) THEN
+          TCANRETRY=.FALSE.
+          HAUX=PSIPSI
+          DO I=1,NB
+            HAUX(I,I)=HAUX(I,I)-1.D0
+          ENDDO
+          IF(MAXVAL(ABS(HAUX)).LT.1.D0) THEN
+            WRITE(*,*)'WAVES_ORTHO_X_C: RETRY WITHOUT INITIAL MULTIPLIERS'
+            LAMBDA=(0.D0,0.D0)
+            CYCLE
+          ENDIF
+        ENDIF
         TCONVERGED=DIGAM.LT.EPS
 !       __CHECK CONVERGENCE_____________________________________________________
         IF(TCONVERGED) GOTO 9000
