@@ -21,3 +21,10 @@ xc-spin-noncollinear-test: libpawfull.a
 	etc/f90pp $(CPPFLAGS) < $(BASEDIR)/tests/unittests/xc_spin/noncollinear.f90 > unit-tests/xc_noncollinear.f90
 	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/xc_noncollinear.x unit-tests/xc_noncollinear.f90 libpawfull.a $(LIBS)
 	./unit-tests/xc_noncollinear.x "$(XC_FUNCTIONAL)" "$(XC_MODEL)" "$(XC_MODEL_PRECISION)" "$(XC_DEVICE)"
+
+.PHONY: scan-ibp-test
+scan-ibp-test: libpawfull.a
+	mkdir -p unit-tests
+	etc/f90pp $(CPPFLAGS) < $(BASEDIR)/tests/unittests/xc_spin/scan_ibp.f90 > unit-tests/scan_ibp.f90
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/scan_ibp.x unit-tests/scan_ibp.f90 libpawfull.a $(LIBS)
+	./unit-tests/scan_ibp.x
