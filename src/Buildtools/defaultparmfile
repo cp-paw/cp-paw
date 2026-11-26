@@ -1540,6 +1540,21 @@ if [[ ${COMPILER} = nvfortran \
 fi
 
 #------------------------------------------------------------------------------
+case ${CPPAW_OPENMP:-0} in
+  0) ;;
+  1)
+    case ${COMPILER} in
+      gfortran) omp_flag=-fopenmp ;;
+      ifort|ifx) omp_flag=-qopenmp ;;
+      nvfortran) omp_flag=-mp ;;
+      *) echo "CPPAW_OPENMP=1: unsupported Fortran compiler ${COMPILER}" >&2; exit 1 ;;
+    esac
+    FCFLAGS="${FCFLAGS} ${omp_flag}"
+    LDFLAGS="${LDFLAGS} ${omp_flag}"
+    ;;
+  *) echo "CPPAW_OPENMP must be 0 or 1" >&2; exit 1 ;;
+esac
+
 if [[ $COMPILER == ifort ]] ; then 
   export INTELDIR=${FC%/bin/*}
   # -mkl=sequential is deprecated option. shall we use -qmkl=sequential instead?
