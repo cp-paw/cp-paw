@@ -43,6 +43,7 @@ def main():
     parser.add_argument("binary", type=Path)
     parser.add_argument("model", type=Path)
     parser.add_argument("--mpi-ranks", type=int, default=1)
+    parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     args = parser.parse_args()
     cmd = [str(args.binary.resolve(strict=True)), "si2.cntl"]
     if args.mpi_ranks > 1:
@@ -52,13 +53,15 @@ def main():
     with tempfile.TemporaryDirectory(prefix="paw-d3bj-") as tmp:
         root = Path(tmp)
 
-        def run(name, vdw, apply=None, seed=False):
+        def run(name, vdw, apply=None, seed=False, scan=False, structure=STRUCTURE):
             work = root / name
             work.mkdir()
             skala = "" if apply is None else (
-                f"!SKALA MODEL='model.fun' DEVICE='CPU' RADIALPOINTS=32 LEBEDEVEXACTNESS=17 "
+                f"!SKALA MODEL='model.fun' DEVICE='{args.device.upper()}' RADIALPOINTS=32 LEBEDEVEXACTNESS=17 "
                 f"APPLY={apply} CHECK=T !END")
-            (work / "si2.strc").write_text(STRUCTURE)
+            if scan:
+                skala = "!SCAN RADIALPOINTS=32 LEBEDEVEXACTNESS=17 CHECK=T !END"
+            (work / "si2.strc").write_text(structure)
             (work / "model.fun").symlink_to(model)
             if not seed:
                 shutil.copyfile(root / "seed/si2.rstrt", work / "si2.rstrt")
@@ -87,6 +90,17 @@ def main():
                 raise ValueError(f"Missing {method} D3(BJ) term")
             return float(m[1])
         np.testing.assert_allclose(term(pbe, "pbe"), E_PBE_BJ, rtol=0, atol=1e-8)
+        # Legacy PBE before the BJ integration (protocol printed to 7 decimals).
+        # The legacy implementation also fits atomic charges. A single Gaussian
+        # per site avoids a singular fit on this deliberately coarse FFT grid.
+        legacy = run("pbe-legacy", "T", structure=STRUCTURE.replace(
+            " !KPOINTS", " !ISOLATE DECOUPLE=F NF=1 !END\n !KPOINTS"))
+        energy = re.search(r"^VAN DER WAALS ENERGY\s*:\s*([-+.\dEe]+)", legacy, re.M)
+        assert energy and "D3(BJ)" not in legacy
+        np.testing.assert_allclose(float(energy[1]), -0.0062751, rtol=0, atol=5e-8)
+        # The 2016 dftd3 release lacks SCAN; use the standalone s-dftd3 1.7.0 result.
+        scan = run("scan", "'BJ'", scan=True)
+        np.testing.assert_allclose(term(scan, "scan"), -0.00728046904255, rtol=0, atol=1e-9)
         for apply in ("T", "F"):
             off = run("off-" + apply, "F", apply)
             for mode in ("T", "BJ"):
