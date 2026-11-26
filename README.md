@@ -154,6 +154,8 @@ To thread native SCAN grid rows within an MPI rank, build with
 `CPPAW_OPENMP=1 src/Buildtools/paw_build.sh -c fast_parallel -j8 -z` and
 set `OMP_NUM_THREADS` to the cores assigned to each rank. The default build
 does not require OpenMP. Grid rows are already distributed across MPI ranks.
+With an NVIDIA compiler, leave this switch off if the Skala bridge or its
+PyTorch dependency already loads GNU OpenMP.
 
 Run the kernel, independent LibXC-reference and backend tests with
 
