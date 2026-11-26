@@ -1058,22 +1058,23 @@ parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
 
 
 \mbax{\key{VDW}
-\vdescr{F disables dispersion. T retains the original zero-damped PBE
-correction for conventional calculations. BJ selects D3 with Becke--Johnson
+\vdescr{F disables dispersion. T selects zero-damped D3 and retains the
+original implementation for conventional PBE. BJ selects D3 with Becke--Johnson
 damping from the optional s-dftd3 library for energy, forces and stress.
-With a SKALA block both T and BJ select the B3LYP damping parameters,
-independently of APPLY. Native SCAN accepts BJ but not T.}
+With a SKALA block, BJ selects the published B3LYP BJ parameters. T uses
+the B3LYP zero-damping set for comparison, not a fit to SKALA. Neither
+selection depends on APPLY. Native SCAN uses its own set for each damping.}
 \vformat{F, T or BJ}
 \vrules{optional}
 \vdefault{F}}
 
 \mbax{\key{VDW-FUNCTIONAL}
-\vdescr{Parameter-set name passed to s-dftd3 for BJ damping. Native SCAN
+\vdescr{Parameter-set name passed to s-dftd3 for the selected damping. Native SCAN
 and conventional types 10--13 select their names automatically. Other
 combinations, including Libxc specifications, require an explicit matching
 name. Only B3LYP is accepted with SKALA.}
 \vformat{character string}
-\vrules{optional, BJ damping only}}
+\vrules{optional, library D3 only}}
 
 \mbax{\key{VDW-3BODY} 
 \vdescr{adds three-body interactions\cite{grimme10_jcp132_154104} to
@@ -1105,7 +1106,7 @@ reconstructed XC energy are reported separately. Higher numerical SCAN
 derivatives are not used in this path.
 
 The full smooth, kinetic-density and one-center operators are mandatory.
-MODEL, DEVICE, DEVICEINDEX, DISTRIBUTEGPU=T and VDW=T are rejected.
+MODEL, DEVICE, DEVICEINDEX and DISTRIBUTEGPU=T are rejected.
 Input files without this block retain the conventional XC implementation.
 This joint reconstructed-density path is under validation. Numerical
 quadrature convergence and independent physical reference calculations
