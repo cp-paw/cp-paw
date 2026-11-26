@@ -4,7 +4,7 @@ program scan_ibp
   implicit none
   real(8), allocatable :: axes(:,:),qw(:),coef(:),resp(:,:)
   real(8), allocatable :: folded_axes(:,:),folded_w(:),folded_c(:),folded_b(:,:)
-  real(8) :: x(21),y(21),d(21),tmp(21),axis(3),v(3),q,e,ep,em,h,err,fd
+  real(8) :: x(21),y(21),d(21),tmp(21),axis(3),v(3),q,e,ep,em,h,err,fd,rot(3,3),want(21)
   integer :: i,k
   call MPE$INIT
   call SCAN_INITIALIZE()
@@ -32,6 +32,12 @@ program scan_ibp
   x(18:20)=x(18:20)+[.013d0,.021d0,.001d0]
   x(21)=.69d0
   call eval(x,e,d)
+  ! Rotate only Pauli components. Spatial gradient axes and the weight stay fixed.
+  rot=reshape([-20, -4, 22, -20, -10, -20, 10, -28, 4],[3,3])/30.d0
+  call rotate(x,y)
+  call rotate(d,want)
+  call eval(y,ep,tmp)
+  if(abs(e-ep)>2.d-12.or.maxval(abs(want-tmp))>2.d-10) error stop 'Noncollinear SCAN spin covariance'
   err=0.d0
   h=1.d-6
   do i=1,21
@@ -48,6 +54,17 @@ program scan_ibp
   if(err>2.d-8) error stop 'SCAN IBP field or weight derivative'
   call MPE$EXIT
 contains
+  subroutine rotate(a,b)
+    real(8),intent(in) :: a(21)
+    real(8),intent(out) :: b(21)
+    integer :: j
+    b=a
+    b(2:4)=matmul(rot,a(2:4))
+    b(18:20)=matmul(rot,a(18:20))
+    do j=8,10
+      b(j:j+6:3)=matmul(rot,a(j:j+6:3))
+    end do
+  end subroutine
   subroutine eval(z,en,der)
     real(8),intent(in) :: z(21)
     real(8),intent(out) :: en,der(21)
