@@ -99,12 +99,13 @@ CONTAINS
       ERROR STOP 'Invalid normalized polar spin quadrature'
   END SUBROUTINE
 
-  SUBROUTINE PAW_SPIN_POLAR_IBP_GRID(NPOL,NPHI,AXIS,WEIGHT,COEFFICIENT,RESPONSE)
+  SUBROUTINE PAW_SPIN_POLAR_IBP_GRID(NPOL,NPHI,AXIS,WEIGHT,COEFFICIENT,RESPONSE,ANTIPODAL_EVEN)
     INTEGER,INTENT(IN) :: NPOL,NPHI
+    LOGICAL,INTENT(IN),OPTIONAL :: ANTIPODAL_EVEN
     REAL(8),ALLOCATABLE,INTENT(OUT) :: AXIS(:,:),WEIGHT(:),COEFFICIENT(:),RESPONSE(:,:)
     REAL(8),ALLOCATABLE :: JACOBI(:,:),NODES(:),VECTORS(:,:)
     REAL(8) :: THETA,PHI,BETA,PI
-    INTEGER :: I,J,S,Q,NQ
+    INTEGER :: I,J,S,Q,NQ,NHEMI
     IF(NPOL.LT.8.OR.NPOL.GT.1024.OR.NPHI.LT.8.OR.NPHI.GT.PAW_SPIN_MAX_AZIMUTHAL.OR.MOD(NPHI,4).NE.0) &
       ERROR STOP 'Polar IBP grid requires 8..1024 polar and azimuthal points, azimuthal in multiples of four'
     ALLOCATE(JACOBI(NPOL,NPOL),NODES(NPOL),VECTORS(NPOL,NPOL))
@@ -115,27 +116,33 @@ CONTAINS
       JACOBI(I+1,I)=BETA
     END DO
     CALL LIB_LAPACK_DSYEV(NPOL,JACOBI,NODES,VECTORS)
-    NQ=2+2*NPOL*NPHI
+    NHEMI=2
+    IF(PRESENT(ANTIPODAL_EVEN)) THEN
+      IF(ANTIPODAL_EVEN) NHEMI=1
+    END IF
+    NQ=NHEMI*(1+NPOL*NPHI)
     ALLOCATE(AXIS(3,NQ),WEIGHT(NQ),COEFFICIENT(NQ),RESPONSE(3,NQ))
     AXIS=0.D0
     AXIS(3,1)=1.D0
-    AXIS(3,2)=-1.D0
-    WEIGHT(:2)=0.25D0
+    IF(NHEMI.EQ.2) AXIS(3,2)=-1.D0
+    WEIGHT(:NHEMI)=0.5D0/REAL(NHEMI,8)
     COEFFICIENT=0.D0
-    COEFFICIENT(:2)=2.D0
+    COEFFICIENT(:NHEMI)=2.D0
     RESPONSE=0.D0
     PI=ACOS(-1.D0)
-    Q=2
+    Q=NHEMI
     ! The two poles give [F(z)+F(-z)]/2. The remaining nodes integrate
     ! n(phi).grad_e F in dtheta dphi/(4 pi), not the original sphere measure.
-    DO S=-1,1,2
+    ! For a spin-inversion-even integrand, (-e,-response) exchanges spin
+    ! channels. Its energy and pullback to the unprojected fields coincide.
+    DO S=3-2*NHEMI,1,2
       DO I=1,NPOL
         THETA=0.25D0*PI*(NODES(I)+1.D0)
         DO J=0,NPHI-1
           Q=Q+1
           PHI=2.D0*PI*REAL(J,8)/REAL(NPHI,8)
           AXIS(:,Q)=[SIN(THETA)*COS(PHI),SIN(THETA)*SIN(PHI),REAL(S,8)*COS(THETA)]
-          WEIGHT(Q)=0.25D0*VECTORS(1,I)**2/REAL(NPHI,8)
+          WEIGHT(Q)=0.5D0*VECTORS(1,I)**2/REAL(NHEMI*NPHI,8)
           RESPONSE(:,Q)=PI*[COS(PHI),SIN(PHI),0.D0]
         END DO
       END DO
