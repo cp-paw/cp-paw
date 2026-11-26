@@ -67,6 +67,9 @@ else()
   FetchContent_MakeAvailable(ftorch)
 endif()
 if(TARGET ftorch AND CMAKE_Fortran_COMPILER_ID MATCHES "^(NVHPC|PGI)$")
+  # FTorch links with C++ but also depends on the NVHPC Fortran runtime.
+  set_property(TARGET ftorch APPEND PROPERTY
+    BUILD_RPATH "${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES}")
   set_property(TARGET ftorch APPEND PROPERTY
     INSTALL_RPATH "${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES}")
 endif()
