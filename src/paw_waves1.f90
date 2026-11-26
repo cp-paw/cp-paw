@@ -4501,7 +4501,7 @@ END IF
       ! Remove the whole current band space twice in the PAW metric.
       DO PASS=1,2
         CALL WAVES_PROJECTIONS(MAP,GSET,MAP%NAT,R0,NGL,NDIM,NBH,MAP%NPRO &
-     &                       ,CHI,PROJ,'SKALA_TANGENT')
+     &                       ,CHI,PROJ)
         CALL MPE$COMBINE('K','+',PROJ)
         SCHI=CHI
         CALL WAVES_OPSI(NB,NBH,MAP%NPRO,MAP%NAT,NGL,R0,PROJ,SCHI)
@@ -4512,7 +4512,7 @@ END IF
         CALL WAVES_ADDPSI(NGL,NDIM,NBH,NFULL,CHI,THIS%PSI0,GRAM)
       END DO
       CALL WAVES_PROJECTIONS(MAP,GSET,MAP%NAT,R0,NGL,NDIM,NBH,MAP%NPRO &
-     &                     ,CHI,PROJ,'SKALA_TANGENT')
+     &                     ,CHI,PROJ)
       CALL MPE$COMBINE('K','+',PROJ)
       SCHI=CHI
       CALL WAVES_OPSI(NB,NBH,MAP%NPRO,MAP%NAT,NGL,R0,PROJ,SCHI)
@@ -4612,7 +4612,7 @@ END IF
       REAL(8),ALLOCATABLE :: DETAIL(:,:,:,:)
       COMPLEX(8),ALLOCATABLE :: H(:,:),GRAM(:,:),RGRAM(:,:),FLAMBDA(:,:)
       COMPLEX(8),ALLOCATABLE :: SPSI(:,:,:),RESIDUAL(:,:,:)
-      REAL(8) :: R2,NOCC,RMAX,COMMUTATOR,ORTHO,HERMITIAN,FMAX,NORM2
+      REAL(8) :: R2,NOCC,RMAX,COMMUTATOR,ORTHO,HERMITIAN,FMAX,FSCALE,NORM2
       REAL(8) :: FORCE_LMAX,LEGACY_FORCE_LMAX,WEIGHTED_LMAX,LHERMITIAN
       INTEGER :: IK,IS,NB,NBH,NFULL,NGL,NBMAX,NPRO,I,J,NFIL,ISTEP
       INTEGER :: NTASKS,THISTASK,NK,KROOT
@@ -4664,6 +4664,8 @@ END IF
       WEIGHTED_LMAX=0.D0
       LHERMITIAN=0.D0
       DO IK=1,NKPTL
+        ! Include both spins so an empty channel cannot normalize its own noise.
+        FSCALE=MAXVAL(OCC(:,IK,:))
         IKG=0
         IF(TDETAIL.AND.KROOT.EQ.1) THEN
           KL=0
@@ -4715,7 +4717,7 @@ END IF
               DETAIL(1,I,IKG,IS)=OCC(I,IK,IS)
               DETAIL(3,I,IKG,IS)=REAL(H(I,I),KIND=8)
               DETAIL(5,I,IKG,IS)=1.D0
-              IF(FMAX.GT.0.D0) DETAIL(4,I,IKG,IS)= &
+              IF(FMAX.GT.EPSILON(1.D0)*FSCALE) DETAIL(4,I,IKG,IS)= &
      &          MAXVAL(ABS(H(I,1:NB))*ABS(OCC(I,IK,IS)-OCC(1:NB,IK,IS)))/FMAX
             END DO
           END IF
@@ -4726,7 +4728,7 @@ END IF
             ROTDATA(5)=1.D0
             ROTDATA(6)=MERGE(1.D0,0.D0,GSET%TINV)
           END IF
-          IF(FMAX.GT.0.D0) THEN
+          IF(FMAX.GT.EPSILON(1.D0)*FSCALE) THEN
             DO J=1,NB
               DO I=1,NB
                 COMMUTATOR=MAX(COMMUTATOR,ABS(H(I,J)) &
@@ -4763,8 +4765,8 @@ END IF
               CALL ERROR$STOP('WAVES_SKALA_STATIONARITY')
             END IF
             ! Empty states can retain roundoff from the occupation mapping.
-            ! Scale to this k-point/spin block, preserving k-weight invariance.
-            IF(KROOT.EQ.1.AND.OCC(I,IK,IS).GT.EPSILON(1.D0)*FMAX) THEN
+            ! Scale to this k-point across spins, preserving k-weight invariance.
+            IF(KROOT.EQ.1.AND.OCC(I,IK,IS).GT.EPSILON(1.D0)*FSCALE) THEN
               R2=R2+OCC(I,IK,IS)*MAX(0.D0,NORM2)
               NOCC=NOCC+OCC(I,IK,IS)
               RMAX=MAX(RMAX,SQRT(MAX(0.D0,NORM2)))
@@ -4798,6 +4800,7 @@ END IF
         CALL FILEHANDLER$UNIT('PROT',NFIL)
         CALL TIMESTEP$GETI4('ISTEP',ISTEP)
         WRITE(NFIL,'(/A,I10)') 'SKALA ELECTRONIC STATIONARITY STEP ',ISTEP
+        WRITE(NFIL,'(A)') 'SKALA RESIDUAL OCCUPATION SCOPE KPOINT'
         WRITE(NFIL,'(A,T48,ES24.14)') &
      &    'SKALA RESIDUAL OCCUPATION REL CUTOFF',EPSILON(1.D0)
         WRITE(NFIL,'(A,T38,ES24.14)') 'SKALA OCCUPIED RESIDUAL RMS',SQRT(R2/NOCC)

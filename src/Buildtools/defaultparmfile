@@ -164,7 +164,15 @@ for X in ifort mpifort mpif90 mpiifort gfortran ; do
      case $X in
        gfortran)       COMPILER=gfortran ;;
        ifort|mpiifort) COMPILER=ifort ;;
-       mpifort|mpif90) COMPILER=$(mpif90 --showme:command) ;;
+       mpifort|mpif90)
+          # A distribution wrapper can invoke a versioned or target-prefixed GNU driver.
+          if [[ $(LC_ALL=C "${FC}" --version 2>/dev/null) == "GNU Fortran"* ]]; then
+            COMPILER=gfortran
+          else
+            MPI_COMMAND=$("${FC}" --showme:command 2>/dev/null || "${FC}" -show)
+            COMPILER=$(basename "${MPI_COMMAND%% *}")
+          fi
+          ;;
        flang-new|ifx|nagfor|nvfortran|xlf) 
           echo "error in $0: compiler $X not yet supported by this parmfile"
           exit 1

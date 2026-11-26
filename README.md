@@ -154,13 +154,37 @@ references for complex Bloch waves, packed real orbitals, nonuniform
 occupations, analytic core orbitals and complex s/p/d PAW superpositions.
 These checks test the fields themselves, not just energy derivatives.
 
+The shared `tests/unittests/xc_spin/driver.mk` target `xc-spin-closed-test`
+checks equal-spin adjoints and charge/spin directional derivatives through
+the actual XC backend. It defaults to native SCAN. On a Skala-enabled build,
+set `XC_FUNCTIONAL=SKALA XC_MODEL=/path/to/skala-1.1-rev1.fun` to run the
+same checks with the neural model. These are backend consistency tests,
+not self-consistent physical reference calculations.
+The published Skala export uses mixed precision, so its finite differences
+use steps above its Float32 rounding floor. CI also checks the separately
+validated Float64 diagnostic export with smaller steps and a tighter bound.
+Select it with `XC_MODEL_PRECISION=diagnostic64`; this test setting does not
+change the production model or its arithmetic.
+The companion `xc-spin-open-test` target checks unequal spin channels,
+spin interchange of the energy and every adjoint, separate primitive
+derivatives, and finite results when one spin channel is empty. It does
+not replace self-consistent open-shell material or molecular references.
+
 `tests/fulltests/scan_si2/run.py` audits an existing restart, while
 `tests/fulltests/scan_si2/relax.py` requires explicit orbital-residual and
 occupation-commutator convergence. The shared orbital, force and stress
 verification drivers accept `--functional scan` without a model file.
-For basis and quadrature energy comparisons, native `relax.py` also accepts
-`--electronic-only`. It keeps the same stationarity tests while omitting
+Residual checks exclude occupation roundoff relative to the largest population
+across both spins at the same k-point. An empty spin channel therefore cannot
+normalize its own roundoff, while small k-point weights remain meaningful.
+For basis and quadrature energy comparisons, `relax.py` accepts
+`--functional scan` (the default) or `--functional skala --model MODEL`,
+including collinear open-shell inputs. It also accepts `--electronic-only`.
+It keeps the same stationarity tests while omitting
 ionic forces. Its results explicitly distinguish energies from force validation.
+Use `--charge-tolerance` to require agreement of the composite-grid electron
+count with the independent PAW trace and occupation/core count. This check is
+separate from electronic stationarity and does not certify energy convergence.
 Warmup and the final stationarity window share one process in this mode,
 so geometric quadrature caches do not need to be rebuilt between them.
 Their finite-difference tests establish derivative consistency, not
@@ -171,6 +195,9 @@ comparisons must also account for the PAW dataset, frozen-core reference
 and relativistic treatment. The retained
 numerical second- and third-derivative kernel entry points are diagnostic
 and are not used by this PAW path.
+Native SCAN tests include saturated-spin limits. A density floor does not
+create exchange in an otherwise empty spin channel. This avoids artificial
+large kinetic-energy-density potentials in fully polarized calculations.
 
 Start density-grid convergence checks at `CDUAL=4`, which is also the
 default in the native SCAN verification drivers. `CHECK=T` reports low-density,

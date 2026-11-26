@@ -1,10 +1,66 @@
+from contextlib import redirect_stdout
+import io
+import json
+from pathlib import Path
+import sys
+import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
+import relax
 import run
 
 
 class NativeScanDriverTest(unittest.TestCase):
+    def test_relaxation_checks_both_functionals_without_relaxing_the_gate(self):
+        for functional in ("scan", "skala"):
+            for stationary, tolerance, charge_error in (
+                    (False, None, None), (True, None, None), (True, 1e-3, 1e-6),
+                    (True, 1e-3, 33.3), (True, 1e-3, None)):
+                passed = stationary and (tolerance is None or (
+                    charge_error is not None and charge_error <= tolerance))
+                with self.subTest(functional=functional, stationary=stationary,
+                                  tolerance=tolerance, charge_error=charge_error), \
+                        tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    argv = ["relax.py", "--functional", functional, "--electronic-only",
+                            "--output", str(root / "result")]
+                    if tolerance is not None:
+                        argv.extend(["--charge-tolerance", str(tolerance)])
+                    keys = ("executable", "restart", "structure")
+                    if functional == "skala":
+                        keys += ("model",)
+                    for key in keys:
+                        path = root / key
+                        path.write_bytes(b"fixture")
+                        argv.extend(["--" + key, str(path)])
+
+                    def leg(name, delta, args, inputs, env, *, energy_only):
+                        self.assertEqual((name, delta, args.functional), ("relax", 0., functional))
+                        self.assertEqual(set(inputs), set(keys))
+                        self.assertTrue(energy_only)
+                        self.assertEqual((args.residual_tolerance, args.commutator_tolerance),
+                                         (1e-7, 1e-7))
+                        control = relax.fd.control(args, electronic_only=True)
+                        self.assertIn("START=F", control)
+                        self.assertIn("!SCAN" if functional == "scan" else "!SKALA MODEL=", control)
+                        result = {"blocks": [], "stationary": stationary}
+                        if charge_error is not None:
+                            result["quadrature_charge"] = {
+                                "final_window_max_error_electrons": charge_error}
+                        return name, result
+
+                    with patch.object(sys, "argv", argv), \
+                            patch.object(relax.fd, "run_leg", side_effect=leg), \
+                            redirect_stdout(io.StringIO()):
+                        self.assertEqual(relax.main(), 0 if passed else 1)
+                    result = json.loads((root / "result/results.json").read_text())
+                    self.assertEqual(result["functional"], functional)
+                    self.assertEqual(result["stationary"], stationary)
+                    self.assertEqual(result["passed"], passed)
+                    self.assertFalse(result["forces_evaluated"])
+
     def test_kernel_runs_on_every_nonempty_rank(self):
         text = "GRID POINTS PER MPI RANK 3 3 2 0\nMODEL CALLS PER MPI RANK 1 1 1 0\n"
         self.assertEqual(run.parallel_work(text, 1, 4),
