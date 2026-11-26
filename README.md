@@ -61,6 +61,12 @@ require the NVIDIA extensions in `cp-paw-nvhpc`. Conventional `dbg`, `fast`
 and `fast_parallel` builds do not link PyTorch, FTorch or CUDA. Skala is used
 only when explicitly selected in the input.
 
+With Skala applied, leave the legacy `VDW` switch off. It selects a
+zero-damped PBE dispersion term, not the D3(BJ) correction used in the
+Skala reference calculations. For fixed-geometry energies that require the
+latter, evaluate periodic D3(BJ) with the reference B3LYP damping parameters
+once per geometry. An energy-only correction does not correct forces or stress.
+
 Provide a CPU PyTorch or LibTorch installation, then prepare the optional
 Fortran bridge and hash-pinned model:
 
