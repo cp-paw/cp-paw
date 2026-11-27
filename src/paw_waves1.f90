@@ -1647,6 +1647,7 @@ END MODULE WAVES_MODULE
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (2000)***********
       USE MPE_MODULE
+      USE PAW_D3BJ_MODULE, ONLY: PAW_D3BJ_ADD
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4)             :: LMRXX
@@ -2358,6 +2359,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     == FORCES ================================================================
       ALLOCATE(FORCET(3,NAT))
       CALL ATOMLIST$GETR8A('FORCE',0,3*NAT,FORCET)
+      CALL PAW_D3BJ_ADD(NAT,R,RBAS,TFORCE,TSTRESS,FORCE,STRESS)
       FORCE=FORCET+FORCE
       CALL ATOMLIST$SETR8A('FORCE',0,3*NAT,FORCE)
       CALL SKALA$TOTALFORCEREPORT(NAT,FORCE)

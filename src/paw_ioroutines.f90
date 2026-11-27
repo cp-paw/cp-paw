@@ -1041,7 +1041,9 @@ CALL TRACE$PASS('DONE')
 !     **  CAUTION: VARIABLE CHTYPE OCCURS WITH SAME NAME IN LINKEDLIST_MODULE **
 !     **           THAT IS THE REASON THE USE STATEMENT BEING VERY EXPLICIT   **
 !     **************************************************************************
-      USE LINKEDLIST_MODULE, ONLY : LL_TYPE &
+      USE PAW_D3BJ_MODULE, ONLY: PAW_D3BJ_SELECT
+      USE STRINGS_MODULE, ONLY: OPERATOR(+)
+      USE LINKEDLIST_MODULE, ONLY : LL_TYPE,LINKEDLIST$TYPE &
      &                             ,LINKEDLIST$GET &
      &                             ,LINKEDLIST$EXISTD &
      &                             ,LINKEDLIST$EXISTL &
@@ -1054,6 +1056,9 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)               :: ILDA
       LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       LOGICAL(4)               :: TSCAN
+      LOGICAL                  :: TBJ,TATM,TMETHOD,TLIBD3
+      CHARACTER(64)            :: BJMETHOD
+      CHARACTER(32)            :: VDWTYPE,VDWMODE
       REAL(8)                  :: SVAR
       CHARACTER(32)            :: MODUS
       CHARACTER(32)            :: CHTYPE(3)  ! LIBXC IDENTIFIERS
@@ -1079,6 +1084,7 @@ CALL TRACE$PASS('DONE')
 !     == FUNCTIONAL TYPE                                                      ==
 !     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'LIBXC',1,TCHK)
+      ILDA=-1
       CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK1)
       IF(TCHK.AND.TCHK1) THEN
         CALL ERROR$MSG('TYPE AND LIBXC ARE MUTUALLY EXCLUSIVE')
@@ -1268,26 +1274,70 @@ CALL TRACE$PASS('DONE')
 !     == VAN DER WAALS INTERFACE                                              ==
 !     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'VDW',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'VDW',1,TCHK)
+      TBJ=.FALSE.
       IF(TCHK) THEN
-        IF(TSCAN) THEN
-          CALL ERROR$MSG('NATIVE SCAN D3 PARAMETRIZATION IS NOT IMPLEMENTED')
-          CALL ERROR$MSG('VDW=T WOULD SELECT THE PBE CORRECTION; REMOVE VDW=T')
+        CALL LINKEDLIST$TYPE(LL_CNTL,'VDW',1,VDWTYPE)
+        IF(VDWTYPE=='L(4)') THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'VDW',1,TCHK)
+        ELSE IF(VDWTYPE(1:2)=='CH') THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'VDW',1,VDWMODE)
+          TBJ=(+VDWMODE=='BJ')
+          IF(.NOT.TBJ) THEN
+            CALL ERROR$MSG('VDW MUST BE F, T OR BJ')
+            CALL ERROR$STOP('READIN_DFT')
+          END IF
+        ELSE
+          CALL ERROR$MSG('VDW MUST BE F, T OR BJ')
           CALL ERROR$STOP('READIN_DFT')
         END IF
+      END IF
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'VDW-FUNCTIONAL',1,TMETHOD)
+!     Conventional PBE retains its built-in zero-damping implementation.
+      TLIBD3=TBJ.OR.(TCHK.AND.(TCHK2.OR.TSCAN.OR.ILDA/=10))
+      IF(TMETHOD.AND..NOT.TLIBD3) THEN
+        CALL ERROR$MSG('VDW-FUNCTIONAL REQUIRES LIBRARY D3')
+        CALL ERROR$STOP('READIN_DFT')
+      END IF
+      IF(TLIBD3) THEN
+        BJMETHOD=' '
+        IF(TMETHOD) CALL LINKEDLIST$GET(LL_CNTL,'VDW-FUNCTIONAL',1,BJMETHOD)
+        IF(TCHK2) THEN
+          IF(TMETHOD.AND.+BJMETHOD/='B3LYP') THEN
+            CALL ERROR$MSG('SKALA D3 REQUIRES THE B3LYP PARAMETER SET')
+            CALL ERROR$STOP('READIN_DFT')
+          END IF
+          BJMETHOD='b3lyp'
+        ELSE IF(.NOT.TMETHOD) THEN
+          IF(TSCAN) THEN
+            BJMETHOD='scan'
+          ELSE
+            SELECT CASE(ILDA)
+            CASE(10)
+              BJMETHOD='pbe'
+            CASE(11)
+              BJMETHOD='rpbe'
+            CASE(12)
+              BJMETHOD='pw91'
+            CASE(13)
+              BJMETHOD='revpbe'
+            CASE DEFAULT
+              CALL ERROR$MSG('NO AUTOMATIC D3 MATCH; SPECIFY A VALIDATED VDW-FUNCTIONAL')
+              CALL ERROR$STOP('READIN_DFT')
+            END SELECT
+          END IF
+        END IF
+        TATM=.FALSE.
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'VDW-3BODY',1,TCHK1)
+        IF(TCHK1) CALL LINKEDLIST$GET(LL_CNTL,'VDW-3BODY',1,TATM)
+        CALL PAW_D3BJ_SELECT(TRIM(BJMETHOD),TBJ,TATM)
+      ELSE IF(TCHK) THEN
         CALL VDW$SETL4('ON',TCHK)
 !       == SET ISOLATE OBJECT TO ON. DECOUPLE IS OFF PER DEFAULT 
         CALL ISOLATE$SETL4('ON',.TRUE.)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'VDW-3BODY',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'VDW-3BODY',1,TCHK)
         CALL VDW$SETL4('E63',TCHK)
-        IF(ILDA.EQ.10) THEN
-          CALL VDW$SETCH('FUNCTIONAL','PBE')
-        ELSE
-          CALL ERROR$MSG('GRIMMES VAN DER WAALS CORRECTION')
-          CALL ERROR$MSG('INCLUDED ONLY FOR PBE0 FUNCTIONAL (ILDA=10)')
-          CALL ERROR$STOP('READIN_DFT')
-        END IF
+        CALL VDW$SETCH('FUNCTIONAL','PBE')
       END IF
 !
 !     ==========================================================================

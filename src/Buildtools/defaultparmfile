@@ -465,6 +465,19 @@ case ${SELECT} in
 esac
 
 #------------------------------------------------------------------------------
+case ${CPPAW_USE_D3BJ:-0} in
+  0) ;;
+  1)
+    if ! pkg-config --atleast-version=0.5.0 s-dftd3; then
+      echo "CPPAW_USE_D3BJ=1 requires the s-dftd3 library and its pkg-config file" >&2
+      exit 1
+    fi
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_D3BJ"
+    LIBS="${LIBS} $(pkg-config --libs s-dftd3)"
+    LDFLAGS="${LDFLAGS} -Wl,-rpath,$(pkg-config --variable=libdir s-dftd3)"
+    ;;
+  *) echo "CPPAW_USE_D3BJ must be 0 or 1" >&2; exit 1 ;;
+esac
 case ${CPPAW_OPENMP:-0} in
   0) ;;
   1)
