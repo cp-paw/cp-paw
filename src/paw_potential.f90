@@ -352,6 +352,7 @@
       INTEGER(4)               :: ISVAR
       LOGICAL(4)               :: TGRA
       LOGICAL(4)               :: TSKALA
+      LOGICAL(4)               :: TMULTICOLLINEAR,TSKALAAPPLY
       REAL(8)   ,ALLOCATABLE   :: RHOTEMP(:,:)
       REAL(8)                  :: SVAR
       REAL(8)   ,ALLOCATABLE   :: VEXT(:)
@@ -412,8 +413,12 @@
       CALL SKALA$GETL4('ON',TSKALA)
       TGRA=TGRA.OR.TSKALA
       IF(TSKALA.AND.NDIMD.EQ.4) THEN
-        CALL ERROR$MSG('SKALA CURRENTLY SUPPORTS COLLINEAR SPIN ONLY')
-        CALL ERROR$STOP('POTENTIAL$VOFRHO')
+        CALL SKALA$GETL4('MULTICOLLINEAR',TMULTICOLLINEAR)
+        CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
+        IF(.NOT.TMULTICOLLINEAR.OR..NOT.TSKALAAPPLY) THEN
+          CALL ERROR$MSG('NONCOLLINEAR ATOM-GRID XC REQUIRES MULTICOLLINEAR=T AND APPLY=T')
+          CALL ERROR$STOP('POTENTIAL$VOFRHO')
+        END IF
       END IF
 !
 !     ==========================================================================
@@ -434,7 +439,7 @@
 !     ==========================================================================
 !     == POTENTIAL; BRANCH INTO COLLINEAR AND NON-COLLINEAR CASE              ==
 !     ==========================================================================
-      IF(NDIMD.EQ.4) THEN
+      IF(NDIMD.EQ.4.AND..NOT.TSKALA) THEN
         NSPIN=2
         ALLOCATE(RHOTEMP(NRL,2))
         DO IR=1,NRL
@@ -595,6 +600,8 @@
       NNR=NR1*NR2*NR3
       NSPIN=1
       IF(NDIMD.GT.1) NSPIN=2
+!     Atom-grid XC consumes all Pauli fields, not the local spin magnitude.
+      IF(TSKALA.AND.NDIMD.EQ.4) NSPIN=4
       TSPIN=(NSPIN.EQ.2)
       LRXX=INT(SQRT(REAL(LMRXX-1)+1.E-5))
 !
