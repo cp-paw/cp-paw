@@ -150,5 +150,8 @@ skala-lebedev-test: libpaw.a
 	mkdir -p unit-tests
 	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/lebedev_exactness.x $(BASEDIR)/tests/unittests/skala_reconstruction/lebedev_exactness.f90 libpaw.a $(LIBS)
 	./unit-tests/lebedev_exactness.x
-	@if GFORTRAN_UNBUFFERED_ALL=1 ./unit-tests/lebedev_exactness.x 66 > unit-tests/lebedev_invalid.log 2>&1; then exit 1; fi
-	grep -q 'Lebedev minimum exactness must lie in 1..65' unit-tests/lebedev_invalid.log
+	@for arg in 0 above-max; do \
+		log="unit-tests/lebedev_invalid_$$arg.log"; \
+		if GFORTRAN_UNBUFFERED_ALL=1 ./unit-tests/lebedev_exactness.x "$$arg" > "$$log" 2>&1; then exit 1; fi; \
+		grep -Fq 'Lebedev minimum exactness must lie in 1..' "$$log" || exit 1; \
+	done
