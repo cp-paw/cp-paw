@@ -8,3 +8,6 @@ orthogonality-tolerance-test: paw.x
 	  if GFORTRAN_UNBUFFERED_ALL=1 ./unit-tests/orthogonality_tolerance.x $$mode > unit-tests/orthogonality_$$mode.log 2>&1; then exit 1; fi; \
 	  grep -q 'ORTHOTOL MUST' unit-tests/orthogonality_$$mode.log || exit 1; \
 	done
+	@if GFORTRAN_UNBUFFERED_ALL=1 ./unit-tests/orthogonality_tolerance.x unsolvable > unit-tests/orthogonality_unsolvable.log 2>&1; then exit 1; fi
+	@grep -q 'IS ABOUT TO DIVERGE' unit-tests/orthogonality_unsolvable.log
+	@test "$$(grep -c 'RETRY WITHOUT INITIAL MULTIPLIERS' unit-tests/orthogonality_unsolvable.log)" = 1
