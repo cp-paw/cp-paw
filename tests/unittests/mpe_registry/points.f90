@@ -3,9 +3,10 @@ program skala_point_layout_test
   use paw_skala_module
   implicit none
   integer, parameter :: np=7
-  real(8) :: rho(np,2), grad(np,3,2), tau(np,2), x(np,3), w(np), d(np)
+  real(8), allocatable :: rho(:,:), grad(:,:,:), tau(:,:)
+  real(8) :: x(np,3), w(np), d(np)
   real(8) :: weights(4)=[1.d0,4.d0,0.25d0,16.d0]
-  integer :: nt, me, first, last, prior, lo, hi, n, k, a, b, c, mode
+  integer :: nt, me, first, last, prior, lo, hi, n, k, a, b, c, mode, nc
   integer, allocatable :: color(:)
   call MPE$INIT
   call MPE$QUERY('~',nt,me)
@@ -16,6 +17,8 @@ program skala_point_layout_test
   point_rank=me
   point_cid='MONOMER'
   allocate(forward_deriv(3,1))
+  do nc=2,4,2
+  allocate(rho(np,nc),grad(np,3,nc),tau(np,nc))
   do mode=1,2
     point_packed=mode==1
     do k=1,size(weights)
@@ -37,7 +40,7 @@ program skala_point_layout_test
       w=0.d0
       d=0.d0
       do a=first,last
-        do b=1,2
+        do b=1,nc
           rho(a,b)=100*b+a
           tau(a,b)=200*b+a
           do c=1,3
@@ -45,7 +48,7 @@ program skala_point_layout_test
           end do
         end do
       end do
-      call SKALA_POINT_EXCHANGE(np,.true.,rho,grad,tau,x,w,d)
+      call SKALA_POINT_EXCHANGE(np,nc,.true.,rho,grad,tau,x,w,d)
       if(me==1) then
         call check(1,np)
         do a=1,np
@@ -59,21 +62,23 @@ program skala_point_layout_test
         grad=0.d0
         tau=0.d0
       end if
-      call SKALA_POINT_EXCHANGE(np,.false.,rho,grad,tau,x,w,d)
+      call SKALA_POINT_EXCHANGE(np,nc,.false.,rho,grad,tau,x,w,d)
       call check(first,last)
       do a=first,last
         if(any(x(a,:)/=a).or.w(a)/=2*a.or.d(a)/=3*a) error stop 'geometry scatter changed'
       end do
     end do
   end do
-  if(me==1) print *, 'PASS: packed/unpacked exchange, weighted and empty point ranges'
+  deallocate(rho,grad,tau)
+  end do
+  if(me==1) print *, 'PASS: two/four-component packed/unpacked exchange, weighted and empty ranges'
   call MPE$EXIT
 contains
   subroutine check(lo,hi)
     integer,intent(in) :: lo,hi
     integer :: i,j,l
     do i=lo,hi
-      do j=1,2
+      do j=1,nc
         if(rho(i,j)/=100*j+i.or.tau(i,j)/=200*j+i) error stop 'field exchange changed'
         do l=1,3
           if(grad(i,l,j)/=1000*j+100*l+i) error stop 'gradient exchange changed'
