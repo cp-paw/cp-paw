@@ -555,14 +555,21 @@
         CALL SCAN_XUNP(2.D0*RUP,4.D0*SUU,2.D0*TUP,AX,XU_N,XU_S,XU_T)
         EXC=EXC+0.5D0*AX
       END IF
-      XU_S=2.D0*XU_S
       XD_N=0.D0
       XD_S=0.D0
       XD_T=0.D0
       IF(VAL(1)-VAL(2).GT.RHOMIN) THEN
-        CALL SCAN_XUNP(2.D0*RDN,4.D0*SDD,2.D0*TDN,AX,XD_N,XD_S,XD_T)
+        ! Identical spin-channel inputs have identical exchange and derivatives.
+        IF(VAL(2).EQ.0.D0.AND.VAL(5).EQ.0.D0.AND.VAL(9).EQ.0.D0) THEN
+          XD_N=XU_N
+          XD_S=XU_S
+          XD_T=XU_T
+        ELSE
+          CALL SCAN_XUNP(2.D0*RDN,4.D0*SDD,2.D0*TDN,AX,XD_N,XD_S,XD_T)
+        END IF
         EXC=EXC+0.5D0*AX
       END IF
+      XU_S=2.D0*XU_S
       XD_S=2.D0*XD_S
 !
 !     ==========================================================================

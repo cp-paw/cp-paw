@@ -8,7 +8,7 @@ MODULE PAW_SKALA_PARTITION_MODULE
     REAL(8) :: CELL(3,3),AINV(3,3)
     REAL(8),ALLOCATABLE :: ATOM(:,:),OFFSET(:,:,:),INVDIST(:,:)
     REAL(8),ALLOCATABLE :: CUTOFF(:,:),DCUTOFF(:,:,:)
-    INTEGER,ALLOCATABLE :: OWNER(:,:),SELF(:)
+    INTEGER,ALLOCATABLE :: OWNER(:,:),NACTIVE(:)
   END TYPE
   TYPE, PUBLIC :: PAW_SKALA_PARTITION_CACHE
     PRIVATE
@@ -208,7 +208,7 @@ CONTAINS
     ALLOCATE(LAYOUT%INVDIST(LAYOUT%NNEIGHBOR,NAT))
     ALLOCATE(LAYOUT%CUTOFF(LAYOUT%NNEIGHBOR,NAT))
     ALLOCATE(LAYOUT%DCUTOFF(3,LAYOUT%NNEIGHBOR,NAT))
-    ALLOCATE(LAYOUT%OWNER(LAYOUT%NNEIGHBOR,NAT),LAYOUT%SELF(NAT))
+    ALLOCATE(LAYOUT%OWNER(LAYOUT%NNEIGHBOR,NAT),LAYOUT%NACTIVE(NAT))
     ! Every image uses its own translated neighbour set, not a common finite
     ! cluster whose edge images have different environments.
     DO A=1,NAT
@@ -219,14 +219,15 @@ CONTAINS
           DO N2=-SHELL-1,SHELL+1
             DO N1=-SHELL-1,SHELL+1
               SHIFT=BASE+(/N1,N2,N3/)
+              IF(A.EQ.B.AND.ALL(SHIFT.EQ.0)) CYCLE
               K=K+1
               LAYOUT%OWNER(K,A)=B
               LAYOUT%OFFSET(:,K,A)=ATOM(B,:)-ATOM(A,:)+MATMUL(CELL,REAL(SHIFT,KIND=8))
               CALL COMPACT_WINDOW(LAYOUT,LAYOUT%OFFSET(:,K,A) &
      &             ,LAYOUT%CUTOFF(K,A),LAYOUT%DCUTOFF(:,K,A))
-              IF(A.EQ.B.AND.ALL(SHIFT.EQ.0)) THEN
-                LAYOUT%SELF(A)=K
-                LAYOUT%INVDIST(K,A)=0.D0
+              ! A zero cutoff gives an exact unit factor and zero derivative.
+              IF(LAYOUT%CUTOFF(K,A).EQ.0.D0) THEN
+                K=K-1
                 CYCLE
               END IF
               DIST=SQRT(SUM(LAYOUT%OFFSET(:,K,A)**2))
@@ -239,6 +240,7 @@ CONTAINS
           END DO
         END DO
       END DO
+      LAYOUT%NACTIVE(A)=K
     END DO
   END SUBROUTINE
 
@@ -301,9 +303,7 @@ CONTAINS
     Q=C
     IF(LOGARITHMIC) Q=LOG(C)
     RI=SQRT(SUM(X**2))
-    DO K=1,LAYOUT%NNEIGHBOR
-      IF(K.EQ.LAYOUT%SELF(A)) CYCLE
-      IF(LAYOUT%CUTOFF(K,A).EQ.0.D0) CYCLE
+    DO K=1,LAYOUT%NACTIVE(A)
       RJ=SQRT(SUM((X-LAYOUT%OFFSET(:,K,A))**2))
       MU=(RI-RJ)*LAYOUT%INVDIST(K,A)
       CALL PAIR_SHAPE(MU,S,DS)
@@ -341,9 +341,7 @@ CONTAINS
     END DO
     RI=SQRT(SUM(X**2))
     U=X/MAX(RI,1.D-30)
-    DO K=1,LAYOUT%NNEIGHBOR
-      IF(K.EQ.LAYOUT%SELF(A)) CYCLE
-      IF(LAYOUT%CUTOFF(K,A).EQ.0.D0) CYCLE
+    DO K=1,LAYOUT%NACTIVE(A)
       B=LAYOUT%OWNER(K,A)
       Y=X-LAYOUT%OFFSET(:,K,A)
       RJ=SQRT(SUM(Y**2))
