@@ -960,6 +960,7 @@
       INTEGER,INTENT(IN) :: NAT,ISP(NAT),LMNXX,NDIMD
       COMPLEX(8),INTENT(IN) :: DENMAT(LMNXX,LMNXX,NDIMD,NAT)
       INTEGER :: I,GID,NR,LNX,LMNX,J,LAST
+      CHARACTER(16) :: RELTYPE
       REAL(8),ALLOCATABLE :: CORE(:),COORD(:,:)
       REAL(8) :: CORE_ENERGY
       LOGICAL :: CHANGED
@@ -972,6 +973,10 @@
         ALLOCATE(SOURCES(NAT))
         DO I=1,NAT
           CALL SETUP$ISELECT(ISP(I))
+          IF(NDIMD.EQ.4) THEN
+            CALL SETUP$GETCH('RELTYPE',RELTYPE)
+            IF(RELTYPE.EQ.'SPINORBIT') ERROR STOP 'Multicollinear XC with spin-orbit coupling is not validated'
+          END IF
           CALL SETUP$GETI4('GID',GID)
           CALL RADIAL$GETI4(GID,'NR',NR)
           CALL SETUP$GETI4('LNX',LNX)

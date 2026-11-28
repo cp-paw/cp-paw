@@ -23,6 +23,14 @@ xc-spin-noncollinear-test: libpawfull.a
 	./unit-tests/xc_noncollinear.x "$(XC_FUNCTIONAL)" "$(XC_MODEL)" "$(XC_MODEL_PRECISION)" "$(XC_DEVICE)"
 
 .PHONY: scan-ibp-test
+.PHONY: xc-spin-no-soc-guard-test
+xc-spin-no-soc-guard-test: libpawfull.a
+	mkdir -p unit-tests
+	etc/f90pp $(CPPFLAGS) < $(BASEDIR)/tests/unittests/xc_spin/reject_spin_orbit.f90 > unit-tests/reject_spin_orbit.f90
+	$(LD) $(FCFLAGS) $(LDFLAGS) -I. -o unit-tests/reject_spin_orbit.x unit-tests/reject_spin_orbit.f90 libpawfull.a $(LIBS)
+	@rc=0; ./unit-tests/reject_spin_orbit.x "$(XC_FUNCTIONAL)" > unit-tests/reject_spin_orbit.log 2>&1 || rc=$$?; \
+	  test "$$rc" -gt 0 && test "$$rc" -lt 128 && grep -Fq 'Multicollinear XC with spin-orbit coupling is not validated' unit-tests/reject_spin_orbit.log
+
 scan-ibp-test: libpawfull.a
 	mkdir -p unit-tests
 	etc/f90pp $(CPPFLAGS) < $(BASEDIR)/tests/unittests/xc_spin/scan_ibp.f90 > unit-tests/scan_ibp.f90

@@ -100,7 +100,7 @@ jobs:
       - name: Check collinear XC and noncollinear native SCAN without Torch
         run: |
           make -C bin/Build_fast -f Makefile \
-            -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test xc-spin-noncollinear-test scan-ibp-test
+            -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test xc-spin-noncollinear-test scan-ibp-test xc-spin-no-soc-guard-test
           make -C bin/Build_fast_parallel -f Makefile \
             -f ../../tests/unittests/xc_spin/driver.mk xc-spin-closed-test xc-spin-open-test
       - name: Check one-center primitive quadrature and derivatives
