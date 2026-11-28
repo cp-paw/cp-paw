@@ -83,6 +83,370 @@
      &                               ,3.6231D0,0.88026D0,0.49671D0/)
       REAL(8)   ,PARAMETER:: FDD0=4.D0/(9.D0*(2.D0**(1.D0/3.D0)-1.D0))
       END MODULE SCAN_MODULE
+
+! The multicollinear potential needs H times the spin-scaling direction,
+! not a full Hessian. A forward-over-forward jet carries this mixed derivative
+! without displacing a nearly empty spin channel through a density/tau floor.
+      MODULE SCAN_RESPONSE_MODULE
+      USE SCAN_MODULE
+      IMPLICIT NONE
+      PRIVATE
+      PUBLIC :: SCAN_SPIN_RESPONSE,SCAN_PAULI_RESPONSE,SCAN_PAULI_LINEAR_RESPONSE
+      TYPE :: SCAN_JET
+        REAL(8) :: VALUE=0.D0,GRADIENT(10)=0.D0,TANGENT=0.D0,MIXED(10)=0.D0
+      END TYPE
+      INTERFACE ASSIGNMENT(=)
+        MODULE PROCEDURE JET_ASSIGN
+      END INTERFACE
+      INTERFACE OPERATOR(+)
+        MODULE PROCEDURE JET_ADD,JET_ADD_REAL,REAL_ADD_JET
+      END INTERFACE
+      INTERFACE OPERATOR(-)
+        MODULE PROCEDURE JET_SUB,JET_SUB_REAL,REAL_SUB_JET,JET_NEGATE
+      END INTERFACE
+      INTERFACE OPERATOR(*)
+        MODULE PROCEDURE JET_MUL,JET_MUL_REAL,REAL_MUL_JET
+      END INTERFACE
+      INTERFACE OPERATOR(/)
+        MODULE PROCEDURE JET_DIV,JET_DIV_REAL,REAL_DIV_JET
+      END INTERFACE
+      INTERFACE OPERATOR(**)
+        MODULE PROCEDURE JET_POWER,JET_INTEGER_POWER
+      END INTERFACE
+      INTERFACE EXP
+        MODULE PROCEDURE JET_EXP
+      END INTERFACE
+      INTERFACE LOG
+        MODULE PROCEDURE JET_LOG
+      END INTERFACE
+      INTERFACE SQRT
+        MODULE PROCEDURE JET_SQRT
+      END INTERFACE
+      CONTAINS
+      ELEMENTAL SUBROUTINE JET_ASSIGN(A,B)
+        TYPE(SCAN_JET),INTENT(OUT) :: A
+        REAL(8),INTENT(IN) :: B
+        A%VALUE=B
+        A%GRADIENT=0.D0
+        A%TANGENT=0.D0
+        A%MIXED=0.D0
+      END SUBROUTINE
+      ELEMENTAL FUNCTION JET_ADD(A,B) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A,B
+        TYPE(SCAN_JET) :: C
+        C%VALUE=A%VALUE+B%VALUE
+        C%GRADIENT=A%GRADIENT+B%GRADIENT
+        C%TANGENT=A%TANGENT+B%TANGENT
+        C%MIXED=A%MIXED+B%MIXED
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_ADD_REAL(A,B) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        REAL(8),INTENT(IN) :: B
+        TYPE(SCAN_JET) :: C
+        C=A
+        C%VALUE=A%VALUE+B
+      END FUNCTION
+      ELEMENTAL FUNCTION REAL_ADD_JET(A,B) RESULT(C)
+        REAL(8),INTENT(IN) :: A
+        TYPE(SCAN_JET),INTENT(IN) :: B
+        TYPE(SCAN_JET) :: C
+        C=B+A
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_NEGATE(A) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        TYPE(SCAN_JET) :: C
+        C%VALUE=-A%VALUE
+        C%GRADIENT=-A%GRADIENT
+        C%TANGENT=-A%TANGENT
+        C%MIXED=-A%MIXED
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_SUB(A,B) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A,B
+        TYPE(SCAN_JET) :: C
+        C=A+(-B)
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_SUB_REAL(A,B) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        REAL(8),INTENT(IN) :: B
+        TYPE(SCAN_JET) :: C
+        C=A+(-B)
+      END FUNCTION
+      ELEMENTAL FUNCTION REAL_SUB_JET(A,B) RESULT(C)
+        REAL(8),INTENT(IN) :: A
+        TYPE(SCAN_JET),INTENT(IN) :: B
+        TYPE(SCAN_JET) :: C
+        C=(-B)+A
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_MUL(A,B) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A,B
+        TYPE(SCAN_JET) :: C
+        C%VALUE=A%VALUE*B%VALUE
+        C%GRADIENT=A%GRADIENT*B%VALUE+A%VALUE*B%GRADIENT
+        C%TANGENT=A%TANGENT*B%VALUE+A%VALUE*B%TANGENT
+        C%MIXED=A%MIXED*B%VALUE+A%GRADIENT*B%TANGENT &
+     &         +A%TANGENT*B%GRADIENT+A%VALUE*B%MIXED
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_MUL_REAL(A,B) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        REAL(8),INTENT(IN) :: B
+        TYPE(SCAN_JET) :: C
+        C%VALUE=A%VALUE*B
+        C%GRADIENT=A%GRADIENT*B
+        C%TANGENT=A%TANGENT*B
+        C%MIXED=A%MIXED*B
+      END FUNCTION
+      ELEMENTAL FUNCTION REAL_MUL_JET(A,B) RESULT(C)
+        REAL(8),INTENT(IN) :: A
+        TYPE(SCAN_JET),INTENT(IN) :: B
+        TYPE(SCAN_JET) :: C
+        C=B*A
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_UNARY(A,F,DF,D2F) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        REAL(8),INTENT(IN) :: F,DF,D2F
+        TYPE(SCAN_JET) :: C
+        C%VALUE=F
+        C%GRADIENT=DF*A%GRADIENT
+        C%TANGENT=DF*A%TANGENT
+        C%MIXED=DF*A%MIXED+D2F*A%TANGENT*A%GRADIENT
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_POWER(A,P) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        REAL(8),INTENT(IN) :: P
+        TYPE(SCAN_JET) :: C
+        C=JET_UNARY(A,A%VALUE**P,P*A%VALUE**(P-1.D0),P*(P-1.D0)*A%VALUE**(P-2.D0))
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_INTEGER_POWER(A,P) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        INTEGER,INTENT(IN) :: P
+        TYPE(SCAN_JET) :: C
+        IF(P.EQ.0) THEN
+          C=1.D0
+        ELSE IF(P.EQ.1) THEN
+          C=A
+        ELSE
+          C=JET_UNARY(A,A%VALUE**P,REAL(P,8)*A%VALUE**(P-1) &
+     &                    ,REAL(P,8)*REAL(P-1,8)*A%VALUE**(P-2))
+        END IF
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_DIV(A,B) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A,B
+        TYPE(SCAN_JET) :: C
+        C=A*B**(-1)
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_DIV_REAL(A,B) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        REAL(8),INTENT(IN) :: B
+        TYPE(SCAN_JET) :: C
+        C=A*(1.D0/B)
+      END FUNCTION
+      ELEMENTAL FUNCTION REAL_DIV_JET(A,B) RESULT(C)
+        REAL(8),INTENT(IN) :: A
+        TYPE(SCAN_JET),INTENT(IN) :: B
+        TYPE(SCAN_JET) :: C
+        C=A*B**(-1)
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_EXP(A) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        TYPE(SCAN_JET) :: C
+        REAL(8) :: F
+        F=EXP(A%VALUE)
+        C=JET_UNARY(A,F,F,F)
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_LOG(A) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        TYPE(SCAN_JET) :: C
+        C=JET_UNARY(A,LOG(A%VALUE),1.D0/A%VALUE,-1.D0/A%VALUE**2)
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_SQRT(A) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        TYPE(SCAN_JET) :: C
+        C=A**0.5D0
+      END FUNCTION
+      ELEMENTAL FUNCTION JET_POSITIVE(A) RESULT(C)
+        TYPE(SCAN_JET),INTENT(IN) :: A
+        TYPE(SCAN_JET) :: C
+        C=A
+        IF(A%VALUE.LT.0.D0) C=0.D0
+      END FUNCTION
+
+      FUNCTION RESPONSE_INTERPOLATE(ALPHA,C1,C2,D) RESULT(F)
+        TYPE(SCAN_JET),INTENT(IN) :: ALPHA
+        REAL(8),INTENT(IN) :: C1,C2,D
+        TYPE(SCAN_JET) :: F
+        IF(ALPHA%VALUE.LT.1.D0-1.D-8) THEN
+          F=EXP(-C1*ALPHA/(1.D0-ALPHA))
+        ELSE IF(ALPHA%VALUE.GT.1.D0+1.D-8) THEN
+          F=-D*EXP(C2/(1.D0-ALPHA))
+        ELSE
+          F=0.D0
+        END IF
+      END FUNCTION
+
+      FUNCTION RESPONSE_EXCHANGE(N,GN2,TAU) RESULT(E)
+        TYPE(SCAN_JET),INTENT(IN) :: N,GN2,TAU
+        TYPE(SCAN_JET) :: E,P,ALPHA,OMA,U,X,H1,GX,EXPO,FXA
+        P=GN2/(4.D0*C23*N**(8.D0/3.D0))
+        ALPHA=(TAU-GN2/(8.D0*N))/(0.3D0*C23*N**(5.D0/3.D0))
+        OMA=1.D0-ALPHA
+        U=B1*P+B2*OMA*EXP(-B3*OMA**2)
+        X=MUAK*P*(1.D0+(B4*P/MUAK)*EXP(-B4*P/MUAK))+U**2
+        H1=1.D0+K1-K1/(1.D0+X/K1)
+        GX=1.D0
+        IF(P%VALUE.GT.1.D-12) THEN
+          EXPO=A1/P**0.25D0
+          IF(EXPO%VALUE.LT.500.D0) GX=1.D0-EXP(-EXPO)
+        END IF
+        FXA=RESPONSE_INTERPOLATE(ALPHA,C1X,C2X,DX)
+        E=-CEX*N**(4.D0/3.D0)*(H1+FXA*(H0X-H1))*GX
+      END FUNCTION
+
+      FUNCTION RESPONSE_PW92G(RS,P) RESULT(E)
+        TYPE(SCAN_JET),INTENT(IN) :: RS
+        REAL(8),INTENT(IN) :: P(6)
+        TYPE(SCAN_JET) :: E,Q
+        Q=2.D0*P(1)*(P(3)*SQRT(RS)+P(4)*RS+P(5)*RS*SQRT(RS)+P(6)*RS**2)
+        E=-2.D0*P(1)*(1.D0+P(2)*RS)*LOG(1.D0+1.D0/Q)
+      END FUNCTION
+
+      FUNCTION RESPONSE_CORRELATION(RUP,RDN,GNT2,TAU) RESULT(E)
+        TYPE(SCAN_JET),INTENT(IN) :: RUP,RDN,GNT2,TAU
+        TYPE(SCAN_JET) :: E,N,ZETA,OPZ,OMZ,RS,P,DS,PHI,ALPHA,F,EU,EP,ALFM,ELSDA
+        TYPE(SCAN_JET) :: W1,BETA,Y,H1,EC1,ECLDA0,W0,H0,GC,EC0,FC
+        REAL(8),PARAMETER :: ZETAMAX=1.D0-1.D-10
+        N=RUP+RDN
+        ZETA=(RUP-RDN)/N
+        IF(ABS(ZETA%VALUE).GE.ZETAMAX) ZETA=SIGN(ZETAMAX,ZETA%VALUE)
+        OPZ=1.D0+ZETA
+        OMZ=1.D0-ZETA
+        RS=CRS/N**(1.D0/3.D0)
+        P=GNT2/(4.D0*C23*N**(8.D0/3.D0))
+        DS=(OPZ**(5.D0/3.D0)+OMZ**(5.D0/3.D0))/2.D0
+        PHI=(OPZ**(2.D0/3.D0)+OMZ**(2.D0/3.D0))/2.D0
+        ALPHA=(TAU-GNT2/(8.D0*N))/(0.3D0*C23*N**(5.D0/3.D0)*DS)
+        F=(OPZ**(4.D0/3.D0)+OMZ**(4.D0/3.D0)-2.D0)/(2.D0**(4.D0/3.D0)-2.D0)
+        EU=RESPONSE_PW92G(RS,PWU)
+        EP=RESPONSE_PW92G(RS,PWP)
+        ALFM=RESPONSE_PW92G(RS,PWA)
+        ELSDA=EU-ALFM*F/FDD0*(1.D0-ZETA**4)+(EP-EU)*F*ZETA**4
+        W1=EXP(-ELSDA/(GAMMAC*PHI**3))-1.D0
+        BETA=BETA0*(1.D0+0.1D0*RS)/(1.D0+0.1778D0*RS)
+        Y=BETA/(GAMMAC*W1)*CT2*P/(PHI**2*RS)
+        H1=GAMMAC*PHI**3*LOG(1.D0+W1*(1.D0-(1.D0+4.D0*Y)**(-0.25D0)))
+        EC1=ELSDA+H1
+        ECLDA0=-B1C/(1.D0+B2C*SQRT(RS)+B3C*RS)
+        W0=EXP(-ECLDA0/B1C)-1.D0
+        H0=B1C*LOG(1.D0+W0*(1.D0-(1.D0+4.D0*CHIINF*P)**(-0.25D0)))
+        GC=(1.D0-GCPREF*((OPZ**(4.D0/3.D0)+OMZ**(4.D0/3.D0))/2.D0-1.D0))*(1.D0-ZETA**12)
+        EC0=(ECLDA0+H0)*GC
+        FC=RESPONSE_INTERPOLATE(ALPHA,C1C,C2C,DC)
+        E=N*(EC1+FC*(EC0-EC1))
+      END FUNCTION
+
+      FUNCTION RESPONSE_CHANNEL_ENERGY(N,S,GU2,GD2,GT2,TT,TS) RESULT(E)
+        TYPE(SCAN_JET),INTENT(IN) :: N,S,GU2,GD2,GT2,TT,TS
+        TYPE(SCAN_JET) :: E,RHOS,RUP,RDN,TUP,TDN
+        RHOS=S
+        IF(S%VALUE.GT.N%VALUE-RHOMIN) RHOS=N-RHOMIN
+        IF(S%VALUE.LT.-N%VALUE+RHOMIN) RHOS=-N+RHOMIN
+        RUP=0.5D0*(N+RHOS)
+        RDN=0.5D0*(N-RHOS)
+        TUP=JET_POSITIVE(0.5D0*(TT+TS))
+        TDN=JET_POSITIVE(0.5D0*(TT-TS))
+        E=0.D0
+        IF(N%VALUE+S%VALUE.GT.RHOMIN) E=E+0.5D0*RESPONSE_EXCHANGE(2.D0*RUP,4.D0*JET_POSITIVE(GU2),2.D0*TUP)
+        IF(N%VALUE-S%VALUE.GT.RHOMIN) E=E+0.5D0*RESPONSE_EXCHANGE(2.D0*RDN,4.D0*JET_POSITIVE(GD2),2.D0*TDN)
+        E=E+RESPONSE_CORRELATION(RUP,RDN,JET_POSITIVE(GT2),TUP+TDN)
+      END FUNCTION
+
+      SUBROUTINE SCAN_SPIN_RESPONSE(VAL,EXC,DEXC,HRESPONSE)
+        REAL(8),INTENT(IN) :: VAL(9)
+        REAL(8),INTENT(OUT) :: EXC,DEXC(9),HRESPONSE(9)
+        REAL(8),PARAMETER :: SCALE(9)=[0.D0,1.D0,0.D0,2.D0,1.D0,0.D0,0.D0,0.D0,1.D0]
+        TYPE(SCAN_JET) :: V(9),E,SUU,SDD
+        INTEGER :: I
+        EXC=0.D0
+        DEXC=0.D0
+        HRESPONSE=0.D0
+        IF(VAL(1).LT.RHOMIN) RETURN
+        DO I=1,9
+          V(I)=VAL(I)
+          V(I)%GRADIENT(I)=1.D0
+          V(I)%TANGENT=SCALE(I)*VAL(I)
+        END DO
+        SUU=0.25D0*(V(3)+V(4)+2.D0*V(5))
+        SDD=0.25D0*(V(3)+V(4)-2.D0*V(5))
+        E=RESPONSE_CHANNEL_ENERGY(V(1),V(2),SUU,SDD,V(3),V(8),V(9))
+        EXC=E%VALUE
+        DEXC=E%GRADIENT(1:9)
+        HRESPONSE=E%MIXED(1:9)
+      END SUBROUTINE
+
+      SUBROUTINE SCAN_PAULI_RESPONSE(RHO,GRAD,TAU,EXC,DEXC)
+        REAL(8),INTENT(IN) :: RHO(2),GRAD(3,2),TAU(2)
+        REAL(8),INTENT(OUT) :: EXC,DEXC(10)
+        REAL(8),PARAMETER :: SCALE(10)=[0.D0,1.D0,0.D0,0.D0,0.D0,1.D0,1.D0,1.D0,0.D0,1.D0]
+        REAL(8) :: VAL(10)
+        TYPE(SCAN_JET) :: V(10),E
+        INTEGER :: I
+        EXC=0.D0
+        DEXC=0.D0
+        IF(RHO(1).LT.RHOMIN) RETURN
+        VAL=[RHO,GRAD(:,1),GRAD(:,2),TAU]
+        DO I=1,10
+          V(I)=VAL(I)
+          V(I)%GRADIENT(I)=1.D0
+          V(I)%TANGENT=SCALE(I)*VAL(I)
+        END DO
+        E=PAULI_FIELD_ENERGY(V)
+        EXC=E%VALUE+E%TANGENT
+        DEXC=(1.D0+SCALE)*E%GRADIENT+E%MIXED
+      END SUBROUTINE
+
+      FUNCTION PAULI_FIELD_ENERGY(V) RESULT(E)
+        TYPE(SCAN_JET),INTENT(IN) :: V(10)
+        TYPE(SCAN_JET) :: E,SUU,SDD,STT
+        INTEGER :: I
+        SUU=0.D0
+        SDD=0.D0
+        STT=0.D0
+        DO I=1,3
+          ! Form each spin-channel gradient before squaring, including a
+          ! small minority channel near complete spin polarization.
+          SUU=SUU+(0.5D0*(V(I+2)+V(I+5)))**2
+          SDD=SDD+(0.5D0*(V(I+2)-V(I+5)))**2
+          STT=STT+V(I+2)**2
+        END DO
+        E=RESPONSE_CHANNEL_ENERGY(V(1),V(2),SUU,SDD,STT,V(9),V(10))
+      END FUNCTION
+
+      SUBROUTINE SCAN_PAULI_LINEAR_RESPONSE(RHO,GRAD,TAU,TANGENT,COEFFICIENT,EXC,DFIELD,DTANGENT)
+        USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: IEEE_IS_FINITE
+        REAL(8),INTENT(IN) :: RHO(2),GRAD(3,2),TAU(2),TANGENT(10),COEFFICIENT
+        REAL(8),INTENT(OUT) :: EXC,DFIELD(10),DTANGENT(10)
+        REAL(8) :: VAL(10)
+        TYPE(SCAN_JET) :: V(10),E
+        INTEGER :: I
+        VAL=[RHO,GRAD(:,1),GRAD(:,2),TAU]
+        IF(ANY(.NOT.IEEE_IS_FINITE(VAL)).OR.ANY(.NOT.IEEE_IS_FINITE(TANGENT)) &
+     &      .OR..NOT.IEEE_IS_FINITE(COEFFICIENT)) ERROR STOP 'Nonfinite SCAN linear-response input'
+        EXC=0.D0
+        DFIELD=0.D0
+        DTANGENT=0.D0
+        IF(RHO(1).LT.RHOMIN) RETURN
+        DO I=1,10
+          V(I)=VAL(I)
+          V(I)%GRADIENT(I)=1.D0
+          V(I)%TANGENT=TANGENT(I)
+        END DO
+        E=PAULI_FIELD_ENERGY(V)
+        EXC=COEFFICIENT*E%VALUE+E%TANGENT
+        ! The tangent is independent here. Its dependence on the original
+        ! Pauli fields is pulled back separately by the block caller.
+        DFIELD=COEFFICIENT*E%GRADIENT+E%MIXED
+        DTANGENT=E%GRADIENT
+      END SUBROUTINE
+      END MODULE SCAN_RESPONSE_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCAN_INITIALIZE()
@@ -763,6 +1127,203 @@
         ENERGY=ENERGY+WEIGHT(I)*DWEIGHT(I)
       END DO
       END SUBROUTINE SCAN$BLOCK
+
+      SUBROUTINE SCAN$PAULI_BLOCK(NPOINT,NQ,RHO,GRAD,TAU,WEIGHT &
+     &                          ,AXIS,QWEIGHT,ENERGY,DRHO,DGRAD,DTAU,DWEIGHT)
+!     ** Multicollinear extension, Pu et al., PRResearch 5, 013036 (2023). **
+!     ** Eeff = Ecol + d/dlambda Ecol[n,lambda*s,lambda*grad_s,lambda*tau_s]. **
+!     ** The Hessian action is obtained by forward automatic differentiation. **
+      USE SCAN_RESPONSE_MODULE, ONLY: SCAN_SPIN_RESPONSE
+      USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: IEEE_IS_FINITE
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NPOINT,NQ
+      REAL(8),INTENT(IN) :: RHO(NPOINT,4),GRAD(NPOINT,3,4),TAU(NPOINT,4),WEIGHT(NPOINT)
+      REAL(8),INTENT(IN) :: AXIS(3,NQ),QWEIGHT(NQ)
+      REAL(8),INTENT(OUT) :: ENERGY,DRHO(NPOINT,4),DGRAD(NPOINT,3,4),DTAU(NPOINT,4),DWEIGHT(NPOINT)
+      REAL(8),PARAMETER :: SCALE(9)=[0.D0,1.D0,0.D0,2.D0,1.D0,0.D0,0.D0,0.D0,1.D0]
+      REAL(8) :: V(9),D(9),E,DE(9),RESPONSE(9),GT(3),GS(3),W,EEFF
+      REAL(8) :: HD(9)
+      INTEGER :: I,Q,S
+      IF(NQ.LT.1) ERROR STOP 'SCAN requires a nonempty spin quadrature'
+      IF(ANY(.NOT.IEEE_IS_FINITE(AXIS)).OR.ANY(.NOT.IEEE_IS_FINITE(QWEIGHT))) &
+     &  ERROR STOP 'Nonfinite SCAN spin quadrature'
+      IF(ANY(ABS(SUM(AXIS**2,DIM=1)-1.D0).GT.1.D-10) &
+     &   .OR..NOT.IEEE_IS_FINITE(SUM(QWEIGHT)).OR.ABS(SUM(QWEIGHT)-1.D0).GT.1.D-10) &
+     &  ERROR STOP 'SCAN spin quadrature requires unit axes and weights summing to one'
+      IF(ANY(.NOT.IEEE_IS_FINITE(RHO)).OR.ANY(.NOT.IEEE_IS_FINITE(GRAD)) &
+     &   .OR.ANY(.NOT.IEEE_IS_FINITE(TAU)).OR.ANY(.NOT.IEEE_IS_FINITE(WEIGHT))) &
+     &  ERROR STOP 'Nonfinite Pauli SCAN input'
+      ENERGY=0.D0
+      DRHO=0.D0
+      DGRAD=0.D0
+      DTAU=0.D0
+      DWEIGHT=0.D0
+      DO I=1,NPOINT
+        GT=GRAD(I,:,1)
+        DO Q=1,NQ
+          GS=MATMUL(GRAD(I,:,2:4),AXIS(:,Q))
+          V=[RHO(I,1),DOT_PRODUCT(RHO(I,2:4),AXIS(:,Q)),SUM(GT**2),SUM(GS**2) &
+     &      ,DOT_PRODUCT(GT,GS),0.D0,0.D0,TAU(I,1),DOT_PRODUCT(TAU(I,2:4),AXIS(:,Q))]
+          CALL SCAN_SPIN_RESPONSE(V,E,D,HD)
+          RESPONSE=SCALE*V
+          EEFF=E+SUM(RESPONSE*D)
+          DE=(1.D0+SCALE)*D+HD
+          IF(.NOT.IEEE_IS_FINITE(EEFF).OR.ANY(.NOT.IEEE_IS_FINITE(DE))) &
+     &      ERROR STOP 'Nonfinite multicollinear SCAN result'
+          W=WEIGHT(I)*QWEIGHT(Q)
+          ENERGY=ENERGY+W*EEFF
+          DWEIGHT(I)=DWEIGHT(I)+QWEIGHT(Q)*EEFF
+          DRHO(I,1)=DRHO(I,1)+W*DE(1)
+          DGRAD(I,:,1)=DGRAD(I,:,1)+W*(2.D0*DE(3)*GT+DE(5)*GS)
+          DTAU(I,1)=DTAU(I,1)+W*DE(8)
+          DO S=2,4
+            DRHO(I,S)=DRHO(I,S)+W*DE(2)*AXIS(S-1,Q)
+            DGRAD(I,:,S)=DGRAD(I,:,S)+W*AXIS(S-1,Q)*(2.D0*DE(4)*GS+DE(5)*GT)
+            DTAU(I,S)=DTAU(I,S)+W*DE(9)*AXIS(S-1,Q)
+          END DO
+        END DO
+      END DO
+      END SUBROUTINE SCAN$PAULI_BLOCK
+
+      SUBROUTINE SCAN$PAULI_LINEAR_BLOCK(NPOINT,NQ,RHO,GRAD,TAU,WEIGHT,AXIS,QWEIGHT &
+     &                                ,COEFFICIENT,RESPONSE,ENERGY,DRHO,DGRAD,DTAU,DWEIGHT)
+      USE SCAN_RESPONSE_MODULE, ONLY: SCAN_PAULI_LINEAR_RESPONSE
+      USE, INTRINSIC :: IEEE_ARITHMETIC, ONLY: IEEE_IS_FINITE
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NPOINT,NQ
+      REAL(8),INTENT(IN) :: RHO(NPOINT,4),GRAD(NPOINT,3,4),TAU(NPOINT,4),WEIGHT(NPOINT)
+      REAL(8),INTENT(IN) :: AXIS(3,NQ),QWEIGHT(NQ),COEFFICIENT(NQ),RESPONSE(3,NQ)
+      REAL(8),INTENT(OUT) :: ENERGY,DRHO(NPOINT,4),DGRAD(NPOINT,3,4),DTAU(NPOINT,4),DWEIGHT(NPOINT)
+      REAL(8) :: TANGENT(10),DE(10),DT(10),GS(3),EEFF,W
+      INTEGER :: I,Q,S
+      IF(NQ.LT.1.OR.NPOINT.LT.1) ERROR STOP 'SCAN requires nonempty fields and spin quadrature'
+      IF(ANY(.NOT.IEEE_IS_FINITE(AXIS)).OR.ANY(.NOT.IEEE_IS_FINITE(QWEIGHT)) &
+     &   .OR.ANY(.NOT.IEEE_IS_FINITE(COEFFICIENT)).OR.ANY(.NOT.IEEE_IS_FINITE(RESPONSE))) &
+     &  ERROR STOP 'Nonfinite SCAN linear spin quadrature'
+      IF(ANY(ABS(SUM(AXIS**2,DIM=1)-1.D0).GT.1.D-10) &
+     &   .OR..NOT.IEEE_IS_FINITE(SUM(QWEIGHT)).OR.ABS(SUM(QWEIGHT)-1.D0).GT.1.D-10) &
+     &  ERROR STOP 'SCAN linear spin quadrature requires unit axes and weights summing to one'
+      IF(ANY(.NOT.IEEE_IS_FINITE(RHO)).OR.ANY(.NOT.IEEE_IS_FINITE(GRAD)) &
+     &   .OR.ANY(.NOT.IEEE_IS_FINITE(TAU)).OR.ANY(.NOT.IEEE_IS_FINITE(WEIGHT))) &
+     &  ERROR STOP 'Nonfinite Pauli SCAN input'
+      ENERGY=0.D0
+      DRHO=0.D0
+      DGRAD=0.D0
+      DTAU=0.D0
+      DWEIGHT=0.D0
+      DO I=1,NPOINT
+        DO Q=1,NQ
+          GS=MATMUL(GRAD(I,:,2:4),AXIS(:,Q))
+          TANGENT=[0.D0,DOT_PRODUCT(RHO(I,2:4),RESPONSE(:,Q)),0.D0,0.D0,0.D0 &
+     &      ,MATMUL(GRAD(I,:,2:4),RESPONSE(:,Q)),0.D0,DOT_PRODUCT(TAU(I,2:4),RESPONSE(:,Q))]
+          CALL SCAN_PAULI_LINEAR_RESPONSE([RHO(I,1),DOT_PRODUCT(RHO(I,2:4),AXIS(:,Q))] &
+     &      ,RESHAPE([GRAD(I,:,1),GS],[3,2]),[TAU(I,1),DOT_PRODUCT(TAU(I,2:4),AXIS(:,Q))] &
+     &      ,TANGENT,COEFFICIENT(Q),EEFF,DE,DT)
+          IF(.NOT.IEEE_IS_FINITE(EEFF).OR.ANY(.NOT.IEEE_IS_FINITE(DE)).OR.ANY(.NOT.IEEE_IS_FINITE(DT))) &
+     &      ERROR STOP 'Nonfinite SCAN linear spin response'
+          W=WEIGHT(I)*QWEIGHT(Q)
+          ENERGY=ENERGY+W*EEFF
+          DWEIGHT(I)=DWEIGHT(I)+QWEIGHT(Q)*EEFF
+          DRHO(I,1)=DRHO(I,1)+W*DE(1)
+          DGRAD(I,:,1)=DGRAD(I,:,1)+W*DE(3:5)
+          DTAU(I,1)=DTAU(I,1)+W*DE(9)
+          DO S=2,4
+            DRHO(I,S)=DRHO(I,S)+W*(DE(2)*AXIS(S-1,Q)+DT(2)*RESPONSE(S-1,Q))
+            DGRAD(I,:,S)=DGRAD(I,:,S)+W*(DE(6:8)*AXIS(S-1,Q)+DT(6:8)*RESPONSE(S-1,Q))
+            DTAU(I,S)=DTAU(I,S)+W*(DE(10)*AXIS(S-1,Q)+DT(10)*RESPONSE(S-1,Q))
+          END DO
+        END DO
+      END DO
+      END SUBROUTINE SCAN$PAULI_LINEAR_BLOCK
+
+      SUBROUTINE SCAN_POLAR_POINT(R,G,T,W,NQ,AXIS,QW,COEFF,RESP,E,DR,DG,DT,DW)
+      USE PAW_SPIN_QUADRATURE_MODULE
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NQ
+      REAL(8),INTENT(IN) :: R(4),G(3,4),T(4),W,AXIS(3,NQ),QW(NQ),COEFF(NQ),RESP(3,NQ)
+      REAL(8),INTENT(OUT) :: E,DR(4),DG(3,4),DT(4),DW
+      TYPE(PAW_SPIN_FRAME) :: FRAME
+      REAL(8) :: F(5,4),L(5,4),D(5,4),TOTAL(5,4),BASE(1,4),GR(1,3,4),KIN(1,4)
+      REAL(8) :: AR(1,4),AG(1,3,4),AT(1,4),AW(1),WEIGHT_ADJ(1),ROT(3,3)
+      REAL(8) :: BR(3,3,PAW_SPIN_GAUGES),VALUES(PAW_SPIN_GAUGES),FIXED,EE,FACTOR
+      INTEGER :: K
+      BASE(1,:)=R
+      GR(1,:,:)=G
+      KIN(1,:)=T
+      CALL PAW_SPIN_FRAME_PREPARE(1,BASE,GR,KIN,[1.D0],FRAME)
+      F(1,:)=R
+      F(2:4,:)=G
+      F(5,:)=T
+      E=0.D0
+      DW=0.D0
+      TOTAL=0.D0
+      BR=0.D0
+      VALUES=0.D0
+      FIXED=0.D0
+      DO K=0,PAW_SPIN_GAUGES
+        IF(K.EQ.0) THEN
+          FACTOR=1.D0-FRAME%BLEND
+          ROT=0.D0
+          ROT(1,1)=1.D0
+          ROT(2,2)=1.D0
+          ROT(3,3)=1.D0
+        ELSE
+          FACTOR=FRAME%BLEND*FRAME%GAUGE_WEIGHT(K)
+          ROT=FRAME%ROTATION(:,:,K)
+        END IF
+        IF(FACTOR.EQ.0.D0) CYCLE
+        L(:,1)=F(:,1)
+        L(:,2:4)=MATMUL(F(:,2:4),ROT)
+        CALL SCAN$PAULI_LINEAR_BLOCK(1,NQ,RESHAPE(L(1,:),[1,4]),RESHAPE(L(2:4,:),[1,3,4]), &
+     &       RESHAPE(L(5,:),[1,4]),[W],AXIS,QW,COEFF,RESP,EE,AR,AG,AT,AW)
+        D(1,:)=AR(1,:)
+        D(2:4,:)=AG(1,:,:)
+        D(5,:)=AT(1,:)
+        E=E+FACTOR*EE
+        DW=DW+FACTOR*AW(1)
+        TOTAL(:,1)=TOTAL(:,1)+FACTOR*D(:,1)
+        TOTAL(:,2:4)=TOTAL(:,2:4)+FACTOR*MATMUL(D(:,2:4),TRANSPOSE(ROT))
+        IF(K.EQ.0) THEN
+          FIXED=EE
+        ELSE
+          VALUES(K)=EE
+          BR(:,:,K)=MATMUL(TRANSPOSE(F(:,2:4)),D(:,2:4))
+        END IF
+      END DO
+      ! The semilocal frame depends on the fields, not on the spatial weight.
+      AR(1,:)=TOTAL(1,:)
+      AG(1,:,:)=TOTAL(2:4,:)
+      AT(1,:)=TOTAL(5,:)
+      WEIGHT_ADJ=0.D0
+      CALL PAW_SPIN_FRAME_PULLBACK(1,BASE,GR,KIN,[1.D0],FRAME,BR,VALUES,FIXED,AR,AG,AT,WEIGHT_ADJ)
+      DR=AR(1,:)
+      DG=AG(1,:,:)
+      DT=AT(1,:)
+      END SUBROUTINE SCAN_POLAR_POINT
+
+      SUBROUTINE SCAN$PAULI_FIELD_LIMITS(NPOINT,NQ,RHO,GRAD,TAU,WEIGHT,AXIS,QWEIGHT,STATS)
+      IMPLICIT NONE
+      INTEGER,INTENT(IN) :: NPOINT,NQ
+      REAL(8),INTENT(IN) :: RHO(NPOINT,4),GRAD(NPOINT,3,4),TAU(NPOINT,4),WEIGHT(NPOINT)
+      REAL(8),INTENT(IN) :: AXIS(3,NQ),QWEIGHT(NQ)
+      REAL(8),INTENT(OUT) :: STATS(8)
+      REAL(8) :: PROJECTED_RHO(NPOINT,2),PROJECTED_GRAD(NPOINT,3,2),PROJECTED_TAU(NPOINT,2)
+      REAL(8) :: PART(8),SIGN
+      INTEGER :: Q,S,I
+      STATS=0.D0
+      DO Q=1,NQ
+        DO S=1,2
+          SIGN=REAL(3-2*S,8)
+          PROJECTED_RHO(:,S)=0.5D0*(RHO(:,1)+SIGN*MATMUL(RHO(:,2:4),AXIS(:,Q)))
+          PROJECTED_TAU(:,S)=0.5D0*(TAU(:,1)+SIGN*MATMUL(TAU(:,2:4),AXIS(:,Q)))
+          DO I=1,NPOINT
+            PROJECTED_GRAD(I,:,S)=0.5D0*(GRAD(I,:,1)+SIGN*MATMUL(GRAD(I,:,2:4),AXIS(:,Q)))
+          END DO
+        END DO
+        CALL SCAN$FIELD_LIMITS(NPOINT,PROJECTED_RHO,PROJECTED_GRAD,PROJECTED_TAU,WEIGHT,PART)
+        STATS=STATS+QWEIGHT(Q)*PART
+      END DO
+      END SUBROUTINE SCAN$PAULI_FIELD_LIMITS
 
       SUBROUTINE SCAN$FIELD_LIMITS(NPOINT,RHO,GRAD,TAU,WEIGHT,STATS)
       USE SCAN_MODULE, ONLY: RHOMIN

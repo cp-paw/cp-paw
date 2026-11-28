@@ -8163,10 +8163,17 @@ RETURN
 		END IF
 !===============================================================================
           IF(TSKALA) THEN
-            CALL WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,THIS%NB,NBH,THIS%PSI0 &
+            IF(NDIM.EQ.1) THEN
+              CALL WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,THIS%NB,NBH,THIS%PSI0 &
      &                              ,VTAU(:,ISPIN),THIS%HPSI &
      &                              ,TCHECK,OCC(:,IKPT,ISPIN),TAUEXPECT &
      &                              ,TSTRESS,SKALATAUSTRESS)
+            ELSE
+              CALL WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,THIS%NB,NBH,THIS%PSI0 &
+     &                              ,VTAU,THIS%HPSI &
+     &                              ,TCHECK,OCC(:,IKPT,ISPIN),TAUEXPECT &
+     &                              ,TSTRESS,SKALATAUSTRESS)
+            END IF
           END IF
 		        ENDDO
 	      ENDDO
@@ -8191,13 +8198,14 @@ RETURN
      &                              ,TCHECK,OCC,EXPECTATION,TSTRESS,STRESS)
 !     ***************************************************************************
 !     ** APPLY -1/2 DIV(VTAU GRAD(PSI)) FOR THE POSITIVE-TAU ADJOINT.          **
+!     ** SPINOR VTAU COMPONENTS ARE (TOTAL,X,Y,Z) IN THE PAULI BASIS.         **
 !     ***************************************************************************
       USE MPE_MODULE
       IMPLICIT NONE
       COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
       INTEGER(4),INTENT(IN) :: NGL,NRL,NDIM,NB,NBH
       COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH)
-      REAL(8),INTENT(IN) :: VTAU(NRL)
+      REAL(8),INTENT(IN) :: VTAU(NRL,NDIM**2)
       COMPLEX(8),INTENT(INOUT) :: HPSI(NGL,NDIM,NBH)
       LOGICAL(4),INTENT(IN) :: TCHECK
       LOGICAL(4),INTENT(IN) :: TSTRESS
@@ -8206,25 +8214,29 @@ RETURN
       REAL(8),INTENT(INOUT) :: STRESS(3,3)
       REAL(8),ALLOCATABLE :: GVEC(:,:)
       COMPLEX(8),ALLOCATABLE :: WORKG(:,:),WORKR(:,:)
-      COMPLEX(8),ALLOCATABLE :: DPSIG(:,:),DPSIR(:,:),EI2KR(:)
+      COMPLEX(8),ALLOCATABLE :: DPSIG(:,:,:),DPSIR(:,:,:),EI2KR(:)
       COMPLEX(8),ALLOCATABLE :: DELTAHPSI(:,:,:),HAMILTON(:,:)
       INTEGER(4) :: IB,IDIM,IDIR,JDIR,IG,IR,NTASKS,THISTASK
-      COMPLEX(8) :: DELTAH,CWEIGHTED(3)
+      COMPLEX(8) :: DELTAH,CWEIGHTED(3),SPINWORK(2,3)
       REAL(8) :: F1,F2,FPLUS,FMINUS,RWEIGHT,SVAR
       LOGICAL(4) :: TINV
 
-      IF(NDIM.NE.1) THEN
-        CALL ERROR$MSG('SKALA TAU OPERATOR SUPPORTS COLLINEAR SPIN ONLY')
+      IF(NDIM.NE.1.AND.NDIM.NE.2) THEN
+        CALL ERROR$MSG('TAU OPERATOR REQUIRES SCALAR OR TWO-COMPONENT SPINORS')
         CALL ERROR$STOP('WAVES_SKALA_TAUPSI')
       END IF
       ALLOCATE(GVEC(3,NGL),WORKG(NGL,NDIM),WORKR(NRL,NDIM))
-      ALLOCATE(DPSIG(NGL,3),DPSIR(NRL,3))
+      ALLOCATE(DPSIG(NGL,NDIM,3),DPSIR(NRL,NDIM,3))
       IF(TCHECK) THEN
         ALLOCATE(DELTAHPSI(NGL,NDIM,NBH),HAMILTON(NB,NB))
         DELTAHPSI=CMPLX(0.D0,0.D0,KIND=8)
       END IF
       CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
       CALL PLANEWAVE$GETL4('TINV',TINV)
+      IF(TINV.AND.NDIM.NE.1) THEN
+        CALL ERROR$MSG('SPINOR TAU OPERATOR DOES NOT USE PACKED REAL ORBITALS')
+        CALL ERROR$STOP('WAVES_SKALA_TAUPSI')
+      END IF
       IF(TSTRESS) CALL PLANEWAVE$GETR8('RWEIGHT',RWEIGHT)
       IF(TSTRESS.AND.TINV) THEN
         ALLOCATE(EI2KR(NRL))
@@ -8233,11 +8245,13 @@ RETURN
       END IF
       DO IB=1,NBH
         DO IDIR=1,3
-          DO IG=1,NGL
-            DPSIG(IG,IDIR)=CI*GVEC(IDIR,IG)*PSI(IG,1,IB)
+          DO IDIM=1,NDIM
+            DO IG=1,NGL
+              DPSIG(IG,IDIM,IDIR)=CI*GVEC(IDIR,IG)*PSI(IG,IDIM,IB)
+            END DO
           END DO
         END DO
-        CALL PLANEWAVE$FFT('GTOR',3,NGL,DPSIG,NRL,DPSIR)
+        CALL PLANEWAVE$FFT('GTOR',3*NDIM,NGL,DPSIG,NRL,DPSIR)
         IF(TSTRESS) THEN
           IF(TINV) THEN
             F1=OCC(2*IB-1)
@@ -8247,15 +8261,26 @@ RETURN
             FMINUS=0.5D0*(F1-F2)
             DO IR=1,NRL
               DO IDIR=1,3
-                CWEIGHTED(IDIR)=FPLUS*CONJG(DPSIR(IR,IDIR)) &
-     &              +FMINUS*DPSIR(IR,IDIR)*EI2KR(IR)
+                CWEIGHTED(IDIR)=FPLUS*CONJG(DPSIR(IR,1,IDIR)) &
+     &              +FMINUS*DPSIR(IR,1,IDIR)*EI2KR(IR)
               END DO
               DO IDIR=1,3
                 DO JDIR=1,3
-                  SVAR=0.5D0*REAL(DPSIR(IR,IDIR)*CWEIGHTED(JDIR) &
-     &                            +DPSIR(IR,JDIR)*CWEIGHTED(IDIR),KIND=8)
+                  SVAR=0.5D0*REAL(DPSIR(IR,1,IDIR)*CWEIGHTED(JDIR) &
+     &                            +DPSIR(IR,1,JDIR)*CWEIGHTED(IDIR),KIND=8)
                   STRESS(IDIR,JDIR)=STRESS(IDIR,JDIR) &
-     &                -RWEIGHT*VTAU(IR)*SVAR
+     &                -RWEIGHT*VTAU(IR,1)*SVAR
+                END DO
+              END DO
+            END DO
+          ELSE IF(NDIM.EQ.1) THEN
+            F1=OCC(IB)
+            DO IR=1,NRL
+              DO IDIR=1,3
+                DO JDIR=1,3
+                  STRESS(IDIR,JDIR)=STRESS(IDIR,JDIR) &
+     &                -RWEIGHT*F1*VTAU(IR,1) &
+     &                 *REAL(DPSIR(IR,1,IDIR)*CONJG(DPSIR(IR,1,JDIR)),KIND=8)
                 END DO
               END DO
             END DO
@@ -8263,17 +8288,30 @@ RETURN
             F1=OCC(IB)
             DO IR=1,NRL
               DO IDIR=1,3
+                SPINWORK(1,IDIR)=(VTAU(IR,1)+VTAU(IR,4))*DPSIR(IR,1,IDIR) &
+     &                         +(VTAU(IR,2)-CI*VTAU(IR,3))*DPSIR(IR,2,IDIR)
+                SPINWORK(2,IDIR)=(VTAU(IR,2)+CI*VTAU(IR,3))*DPSIR(IR,1,IDIR) &
+     &                         +(VTAU(IR,1)-VTAU(IR,4))*DPSIR(IR,2,IDIR)
+              END DO
+              DO IDIR=1,3
                 DO JDIR=1,3
-                  STRESS(IDIR,JDIR)=STRESS(IDIR,JDIR) &
-     &                -RWEIGHT*F1*VTAU(IR) &
-     &                 *REAL(DPSIR(IR,IDIR)*CONJG(DPSIR(IR,JDIR)),KIND=8)
+                  SVAR=0.5D0*REAL(DOT_PRODUCT(DPSIR(IR,:,IDIR),SPINWORK(:,JDIR)) &
+     &                          +DOT_PRODUCT(DPSIR(IR,:,JDIR),SPINWORK(:,IDIR)),8)
+                  STRESS(IDIR,JDIR)=STRESS(IDIR,JDIR)-RWEIGHT*F1*SVAR
                 END DO
               END DO
             END DO
           END IF
         END IF
         DO IDIR=1,3
-          WORKR(:,1)=VTAU(:)*DPSIR(:,IDIR)
+          IF(NDIM.EQ.1) THEN
+            WORKR(:,1)=VTAU(:,1)*DPSIR(:,1,IDIR)
+          ELSE
+            WORKR(:,1)=(VTAU(:,1)+VTAU(:,4))*DPSIR(:,1,IDIR) &
+     &                +(VTAU(:,2)-CI*VTAU(:,3))*DPSIR(:,2,IDIR)
+            WORKR(:,2)=(VTAU(:,2)+CI*VTAU(:,3))*DPSIR(:,1,IDIR) &
+     &                +(VTAU(:,1)-VTAU(:,4))*DPSIR(:,2,IDIR)
+          END IF
           CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,WORKG,NRL,WORKR)
           DO IDIM=1,NDIM
             DO IG=1,NGL
@@ -9138,7 +9176,7 @@ RETURN
       LOGICAL(4),INTENT(IN)  :: TRHOKIN
       REAL(8)   ,INTENT(OUT) :: RHOKIN(NRL,NDIM**2) ! KINETIC-ENERGY DENSITY
       LOGICAL(4),INTENT(IN)  :: TTAUPOS
-      REAL(8)   ,INTENT(OUT) :: TAUPOS(NRL,NDIM**2) ! 1/2 SUM F |GRAD PSI|**2
+      REAL(8)   ,INTENT(OUT) :: TAUPOS(NRL,NDIM**2) ! POSITIVE TAU, PAULI ORDER FOR SPINORS
       COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSIKINOFR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: DPSIOFG(:,:,:)
@@ -9150,7 +9188,7 @@ RETURN
       COMPLEX(8),ALLOCATABLE :: PSIKINOFG(:,:,:) !(NGL,NDIM,NBH)
       COMPLEX(8)             :: CSVAR
       LOGICAL(4)             :: TINV
-      INTEGER(4)             :: IBH,IR,IDIM
+      INTEGER(4)             :: IBH,IR,IDIM,ISPINOR
       REAL(8)                :: F1,F2
       REAL(8)                :: RE,IM
       REAL(8)                :: SVAR1,SVAR2
@@ -9258,8 +9296,12 @@ RETURN
 !     ==========================================================================
       TAUPOS(:,:)=0.D0
       IF(TTAUPOS) THEN
-        IF(NDIM.NE.1) THEN
-          CALL ERROR$MSG('SKALA POSITIVE TAU SUPPORTS COLLINEAR SPIN ONLY')
+        IF(NDIM.NE.1.AND.NDIM.NE.2) THEN
+          CALL ERROR$MSG('POSITIVE TAU REQUIRES SCALAR OR TWO-COMPONENT SPINORS')
+          CALL ERROR$STOP('WAVES_DENSITY')
+        END IF
+        IF(TINV.AND.NDIM.NE.1) THEN
+          CALL ERROR$MSG('SPINOR POSITIVE TAU DOES NOT USE PACKED REAL ORBITALS')
           CALL ERROR$STOP('WAVES_DENSITY')
         END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -9283,14 +9325,16 @@ RETURN
           CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
           DO IBH=1,NBH
-            DPSIOFG(:,1,IBH)=CI*GVEC(IDIM,:)*PSIOFG(:,1,IBH)
+            DO ISPINOR=1,NDIM
+              DPSIOFG(:,ISPINOR,IBH)=CI*GVEC(IDIM,:)*PSIOFG(:,ISPINOR,IBH)
+            END DO
           END DO
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T1)
           ACCEL_TAU_PREP_T=ACCEL_TAU_PREP_T+ACCEL_T1-ACCEL_T0
           CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
-          CALL PLANEWAVE$FFT('GTOR',NBH,NGL,DPSIOFG,NRL,DPSIOFR)
+          CALL PLANEWAVE$FFT('GTOR',NBH*NDIM,NGL,DPSIOFG,NRL,DPSIOFR)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T1)
           ACCEL_TAU_FFT_T=ACCEL_TAU_FFT_T+ACCEL_T1-ACCEL_T0
@@ -9313,7 +9357,7 @@ RETURN
      &                       +0.5D0*REAL(DPSIOFR(IR,1,IBH)*CSVAR,KIND=8)
               END DO
             END DO
-          ELSE
+          ELSE IF(NDIM.EQ.1) THEN
             DO IBH=1,NB
               F1=F(IBH)
               IF(F1.EQ.0.D0) CYCLE
@@ -9321,6 +9365,21 @@ RETURN
                 RE=REAL(DPSIOFR(IR,1,IBH),KIND=8)
                 IM=AIMAG(DPSIOFR(IR,1,IBH))
                 TAUPOS(IR,1)=TAUPOS(IR,1)+0.5D0*F1*(RE**2+IM**2)
+              END DO
+            END DO
+          ELSE
+            ! Pauli order is (total,x,y,z), as for the spinor charge density.
+            DO IBH=1,NB
+              F1=F(IBH)
+              IF(F1.EQ.0.D0) CYCLE
+              DO IR=1,NRL
+                SVAR1=REAL(DPSIOFR(IR,1,IBH)*CONJG(DPSIOFR(IR,1,IBH)),8)
+                SVAR2=REAL(DPSIOFR(IR,2,IBH)*CONJG(DPSIOFR(IR,2,IBH)),8)
+                CSVAR=DPSIOFR(IR,1,IBH)*CONJG(DPSIOFR(IR,2,IBH))
+                TAUPOS(IR,1)=TAUPOS(IR,1)+0.5D0*F1*(SVAR1+SVAR2)
+                TAUPOS(IR,2)=TAUPOS(IR,2)+F1*REAL(CSVAR,8)
+                TAUPOS(IR,3)=TAUPOS(IR,3)-F1*AIMAG(CSVAR)
+                TAUPOS(IR,4)=TAUPOS(IR,4)+0.5D0*F1*(SVAR1-SVAR2)
               END DO
             END DO
           END IF

@@ -39,6 +39,7 @@ export LIBLIST=" \
         paw_constants \
         paw_spherical \
         paw_lebedev \
+        paw_spin_quadrature \
         paw_skala_grid \
         paw_skala_partition \
         paw_skala_primitives \
